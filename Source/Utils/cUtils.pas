@@ -2,10 +2,10 @@
 {                                                                              }
 {   Library:          Fundamentals 4.00                                        }
 {   File name:        cUtils.pas                                               }
-{   File version:     4.54                                                     }
+{   File version:     4.55                                                     }
 {   Description:      Utility functions for simple data types                  }
 {                                                                              }
-{   Copyright:        Copyright (c) 2000-2014, David J Butler                  }
+{   Copyright:        Copyright (c) 2000-2015, David J Butler                  }
 {                     All rights reserved.                                     }
 {                     Redistribution and use in source and binary forms, with  }
 {                     or without modification, are permitted provided that     }
@@ -103,23 +103,25 @@
 {   2013/03/22  4.52  Minor fixes.                                             }
 {   2013/05/12  4.53  Added string type definitions.                           }
 {   2013/11/15  4.54  Revision.                                                }
+{   2015/03/13  4.55  RawByteString functions.                                 }
 {                                                                              }
 { Supported compilers:                                                         }
 {                                                                              }
-{   Delphi 5 Win32 i386                                                        }
-{   Delphi 6 Win32 i386                                                        }
-{   Delphi 7 Win32 i386                 4.50  2012/08/30                       }
+{   Delphi 5 Win32                                                             }
+{   Delphi 6 Win32                                                             }
+{   Delphi 7 Win32                      4.50  2012/08/30                       }
 {   Delphi 8 .NET                                                              }
-{   Delphi 2005 Win32 i386                                                     }
-{   Delphi 2006 Win32 i386                                                     }
-{   Delphi 2007 Win32 i386              4.50  2012/08/26                       }
-{   Delphi 2009 Win32 i386              4.46  2011/09/27                       }
+{   Delphi 2005 Win32                                                          }
+{   Delphi 2006 Win32                                                          }
+{   Delphi 2007 Win32                   4.50  2012/08/26                       }
+{   Delphi 2009 Win32                   4.46  2011/09/27                       }
 {   Delphi 2009 .NET                    4.45  2009/10/09                       }
 {   Delphi XE                           4.52  2013/03/22                       }
 {   Delphi XE2 Win32                    4.54  2014/01/31                       }
 {   Delphi XE2 Win64                    4.54  2014/01/31                       }
 {   Delphi XE3 Win64                    4.51  2013/01/29                       }
 {   Delphi XE6 Win32                    4.54  2014/12/28                       }
+{   Delphi XE7 Win64                    4.55  2015/03/13                       }
 {   FreePascal 2.0.4 Linux i386                                                }
 {   FreePascal 2.4.0 OSX x86-64         4.46  2010/06/27                       }
 {   FreePascal 2.6.0 Win32              4.50  2012/08/30                       }
@@ -153,7 +155,7 @@ const
   LibraryMajorVersion = 4;
   LibraryMinorVersion = 0;
   LibraryName         = 'Fundamentals ' + LibraryVersion;
-  LibraryCopyright    = 'Copyright (c) 1998-2014 David J Butler';
+  LibraryCopyright    = 'Copyright (c) 1998-2015 David J Butler';
 
 
 
@@ -415,7 +417,9 @@ type
   RawByteString = AnsiString;
   {$ENDIF}
   RawByteCharSet = set of RawByteChar;
-  RawByteStringArray = array of RawByteString;
+
+const
+  StrEmptyB = '';
 
 
 
@@ -813,6 +817,7 @@ procedure Swap(var X, Y: Double); overload;
 procedure Swap(var X, Y: Extended); overload;
 procedure Swap(var X, Y: Currency); overload;
 procedure SwapA(var X, Y: AnsiString); overload;
+procedure SwapB(var X, Y: RawByteString);
 procedure SwapW(var X, Y: WideString); overload;
 procedure SwapU(var X, Y: UnicodeString); overload;
 procedure Swap(var X, Y: String); overload;
@@ -841,6 +846,8 @@ function  iif(const Expr: Boolean; const TrueValue: Extended;
           const FalseValue: Extended = 0.0): Extended; overload;          {$IFDEF UseInline}inline;{$ENDIF}
 function  iifA(const Expr: Boolean; const TrueValue: AnsiString;
           const FalseValue: AnsiString = StrEmptyA): AnsiString; overload;{$IFDEF UseInline}inline;{$ENDIF}
+function  iifB(const Expr: Boolean; const TrueValue: RawByteString;
+          const FalseValue: RawByteString = StrEmptyB): RawByteString; overload; {$IFDEF UseInline}inline;{$ENDIF}
 function  iifW(const Expr: Boolean; const TrueValue: WideString;
           const FalseValue: WideString = StrEmptyW): WideString; overload;       {$IFDEF UseInline}inline;{$ENDIF}
 function  iifU(const Expr: Boolean; const TrueValue: UnicodeString;
@@ -863,6 +870,7 @@ function  Compare(const I1, I2: Integer): TCompareResult; overload;
 function  Compare(const I1, I2: Int64): TCompareResult; overload;
 function  Compare(const I1, I2: Extended): TCompareResult; overload;
 function  CompareA(const I1, I2: AnsiString): TCompareResult;
+function  CompareB(const I1, I2: RawByteString): TCompareResult;
 function  CompareW(const I1, I2: WideString): TCompareResult;
 function  CompareU(const I1, I2: UnicodeString): TCompareResult;
 function  CompareChA(const I1, I2: AnsiChar): TCompareResult;
@@ -918,31 +926,37 @@ function  IntToLowerHexWideChar(const A: Integer): WideChar;
 function  IntToLowerHexChar(const A: Integer): Char;                            {$IFDEF UseInline}inline;{$ENDIF}
 
 function  IntToStringA(const A: Int64): AnsiString;
+function  IntToStringB(const A: Int64): RawByteString;
 function  IntToStringW(const A: Int64): WideString;
 function  IntToStringU(const A: Int64): UnicodeString;
 function  IntToString(const A: Int64): String;
 
 function  UIntToStringA(const A: NativeUInt): AnsiString;
+function  UIntToStringB(const A: NativeUInt): RawByteString;
 function  UIntToStringW(const A: NativeUInt): WideString;
 function  UIntToStringU(const A: NativeUInt): UnicodeString;
 function  UIntToString(const A: NativeUInt): String;
 
 function  LongWordToStrA(const A: LongWord; const Digits: Integer = 0): AnsiString;
+function  LongWordToStrB(const A: LongWord; const Digits: Integer = 0): RawByteString;
 function  LongWordToStrW(const A: LongWord; const Digits: Integer = 0): WideString;
 function  LongWordToStrU(const A: LongWord; const Digits: Integer = 0): UnicodeString;
 function  LongWordToStr(const A: LongWord; const Digits: Integer = 0): String;
 
 function  LongWordToHexA(const A: LongWord; const Digits: Integer = 0; const UpperCase: Boolean = True): AnsiString;
+function  LongWordToHexB(const A: LongWord; const Digits: Integer = 0; const UpperCase: Boolean = True): RawByteString;
 function  LongWordToHexW(const A: LongWord; const Digits: Integer = 0; const UpperCase: Boolean = True): WideString;
 function  LongWordToHexU(const A: LongWord; const Digits: Integer = 0; const UpperCase: Boolean = True): UnicodeString;
 function  LongWordToHex(const A: LongWord; const Digits: Integer = 0; const UpperCase: Boolean = True): String;
 
 function  LongWordToOctA(const A: LongWord; const Digits: Integer = 0): AnsiString;
+function  LongWordToOctB(const A: LongWord; const Digits: Integer = 0): RawByteString;
 function  LongWordToOctW(const A: LongWord; const Digits: Integer = 0): WideString;
 function  LongWordToOctU(const A: LongWord; const Digits: Integer = 0): UnicodeString;
 function  LongWordToOct(const A: LongWord; const Digits: Integer = 0): String;
 
 function  LongWordToBinA(const A: LongWord; const Digits: Integer = 0): AnsiString;
+function  LongWordToBinB(const A: LongWord; const Digits: Integer = 0): RawByteString;
 function  LongWordToBinW(const A: LongWord; const Digits: Integer = 0): WideString;
 function  LongWordToBinU(const A: LongWord; const Digits: Integer = 0): UnicodeString;
 function  LongWordToBin(const A: LongWord; const Digits: Integer = 0): String;
@@ -952,76 +966,91 @@ function  TryStringToInt64PW(const BufP: Pointer; const BufLen: Integer; out Val
 function  TryStringToInt64P(const BufP: Pointer; const BufLen: Integer; out Value: Int64; out StrLen: Integer): TConvertResult;
 
 function  TryStringToInt64A(const S: AnsiString; out A: Int64): Boolean;
+function  TryStringToInt64B(const S: RawByteString; out A: Int64): Boolean;
 function  TryStringToInt64W(const S: WideString; out A: Int64): Boolean;
 function  TryStringToInt64U(const S: UnicodeString; out A: Int64): Boolean;
 function  TryStringToInt64(const S: String; out A: Int64): Boolean;
 
 function  StringToInt64DefA(const S: AnsiString; const Default: Int64): Int64;
+function  StringToInt64DefB(const S: RawByteString; const Default: Int64): Int64;
 function  StringToInt64DefW(const S: WideString; const Default: Int64): Int64;
 function  StringToInt64DefU(const S: UnicodeString; const Default: Int64): Int64;
 function  StringToInt64Def(const S: String; const Default: Int64): Int64;
 
 function  StringToInt64A(const S: AnsiString): Int64;
+function  StringToInt64B(const S: RawByteString): Int64;
 function  StringToInt64W(const S: WideString): Int64;
 function  StringToInt64U(const S: UnicodeString): Int64;
 function  StringToInt64(const S: String): Int64;
 
 function  TryStringToIntA(const S: AnsiString; out A: Integer): Boolean;
+function  TryStringToIntB(const S: RawByteString; out A: Integer): Boolean;
 function  TryStringToIntW(const S: WideString; out A: Integer): Boolean;
 function  TryStringToIntU(const S: UnicodeString; out A: Integer): Boolean;
 function  TryStringToInt(const S: String; out A: Integer): Boolean;
 
 function  StringToIntDefA(const S: AnsiString; const Default: Integer): Integer;
+function  StringToIntDefB(const S: RawByteString; const Default: Integer): Integer;
 function  StringToIntDefW(const S: WideString; const Default: Integer): Integer;
 function  StringToIntDefU(const S: UnicodeString; const Default: Integer): Integer;
 function  StringToIntDef(const S: String; const Default: Integer): Integer;
 
 function  StringToIntA(const S: AnsiString): Integer;
+function  StringToIntB(const S: RawByteString): Integer;
 function  StringToIntW(const S: WideString): Integer;
 function  StringToIntU(const S: UnicodeString): Integer;
 function  StringToInt(const S: String): Integer;
 
 function  TryStringToLongWordA(const S: AnsiString; out A: LongWord): Boolean;
+function  TryStringToLongWordB(const S: RawByteString; out A: LongWord): Boolean;
 function  TryStringToLongWordW(const S: WideString; out A: LongWord): Boolean;
 function  TryStringToLongWordU(const S: UnicodeString; out A: LongWord): Boolean;
 function  TryStringToLongWord(const S: String; out A: LongWord): Boolean;
 
 function  StringToLongWordA(const S: AnsiString): LongWord;
+function  StringToLongWordB(const S: RawByteString): LongWord;
 function  StringToLongWordW(const S: WideString): LongWord;
 function  StringToLongWordU(const S: UnicodeString): LongWord;
 function  StringToLongWord(const S: String): LongWord;
 
 function  HexToUIntA(const S: AnsiString): NativeUInt;
+function  HexToUIntB(const S: RawByteString): NativeUInt;
 function  HexToUIntW(const S: WideString): NativeUInt;
 function  HexToUIntU(const S: UnicodeString): NativeUInt;
 function  HexToUInt(const S: String): NativeUInt;
 
 function  TryHexToLongWordA(const S: AnsiString; out A: LongWord): Boolean;
+function  TryHexToLongWordB(const S: RawByteString; out A: LongWord): Boolean;
 function  TryHexToLongWordW(const S: WideString; out A: LongWord): Boolean;
 function  TryHexToLongWordU(const S: UnicodeString; out A: LongWord): Boolean;
 function  TryHexToLongWord(const S: String; out A: LongWord): Boolean;
 
 function  HexToLongWordA(const S: AnsiString): LongWord;
+function  HexToLongWordB(const S: RawByteString): LongWord;
 function  HexToLongWordW(const S: WideString): LongWord;
 function  HexToLongWordU(const S: UnicodeString): LongWord;
 function  HexToLongWord(const S: String): LongWord;
 
 function  TryOctToLongWordA(const S: AnsiString; out A: LongWord): Boolean;
+function  TryOctToLongWordB(const S: RawByteString; out A: LongWord): Boolean;
 function  TryOctToLongWordW(const S: WideString; out A: LongWord): Boolean;
 function  TryOctToLongWordU(const S: UnicodeString; out A: LongWord): Boolean;
 function  TryOctToLongWord(const S: String; out A: LongWord): Boolean;
 
 function  OctToLongWordA(const S: AnsiString): LongWord;
+function  OctToLongWordB(const S: RawByteString): LongWord;
 function  OctToLongWordW(const S: WideString): LongWord;
 function  OctToLongWordU(const S: UnicodeString): LongWord;
 function  OctToLongWord(const S: String): LongWord;
 
 function  TryBinToLongWordA(const S: AnsiString; out A: LongWord): Boolean;
+function  TryBinToLongWordB(const S: RawByteString; out A: LongWord): Boolean;
 function  TryBinToLongWordW(const S: WideString; out A: LongWord): Boolean;
 function  TryBinToLongWordU(const S: UnicodeString; out A: LongWord): Boolean;
 function  TryBinToLongWord(const S: String; out A: LongWord): Boolean;
 
 function  BinToLongWordA(const S: AnsiString): LongWord;
+function  BinToLongWordB(const S: RawByteString): LongWord;
 function  BinToLongWordW(const S: WideString): LongWord;
 function  BinToLongWordU(const S: UnicodeString): LongWord;
 function  BinToLongWord(const S: String): LongWord;
@@ -1032,6 +1061,7 @@ function  BinToLongWord(const S: String): LongWord;
 { Float-String conversions                                                     }
 {                                                                              }
 function  FloatToStringA(const A: Extended): AnsiString;
+function  FloatToStringB(const A: Extended): RawByteString;
 function  FloatToStringW(const A: Extended): WideString;
 function  FloatToStringU(const A: Extended): UnicodeString;
 function  FloatToString(const A: Extended): String;
@@ -1041,16 +1071,19 @@ function  TryStringToFloatPW(const BufP: Pointer; const BufLen: Integer; out Val
 function  TryStringToFloatP(const BufP: Pointer; const BufLen: Integer; out Value: Extended; out StrLen: Integer): TConvertResult;
 
 function  TryStringToFloatA(const A: AnsiString; out B: Extended): Boolean;
+function  TryStringToFloatB(const A: RawByteString; out B: Extended): Boolean;
 function  TryStringToFloatW(const A: WideString; out B: Extended): Boolean;
 function  TryStringToFloatU(const A: UnicodeString; out B: Extended): Boolean;
 function  TryStringToFloat(const A: String; out B: Extended): Boolean;
 
 function  StringToFloatA(const A: AnsiString): Extended;
+function  StringToFloatB(const A: RawByteString): Extended;
 function  StringToFloatW(const A: WideString): Extended;
 function  StringToFloatU(const A: UnicodeString): Extended;
 function  StringToFloat(const A: String): Extended;
 
 function  StringToFloatDefA(const A: AnsiString; const Default: Extended): Extended;
+function  StringToFloatDefB(const A: RawByteString; const Default: Extended): Extended;
 function  StringToFloatDefW(const A: WideString; const Default: Extended): Extended;
 function  StringToFloatDefU(const A: UnicodeString; const Default: Extended): Extended;
 function  StringToFloatDef(const A: String; const Default: Extended): Extended;
@@ -1109,10 +1142,12 @@ function  ntoh64(const A: Int64): Int64;
 {                                                                              }
 {$IFNDEF ManagedCode}
 function  PointerToStrA(const P: Pointer): AnsiString;
+function  PointerToStrB(const P: Pointer): RawByteString;
 function  PointerToStrW(const P: Pointer): WideString;
 function  PointerToStr(const P: Pointer): String;
 
 function  StrToPointerA(const S: AnsiString): Pointer;
+function  StrToPointerB(const S: RawByteString): Pointer;
 function  StrToPointerW(const S: WideString): Pointer;
 function  StrToPointer(const S: String): Pointer;
 
@@ -1143,6 +1178,10 @@ function  StrToCharSet(const S: AnsiString): CharSet;
 function  HashBuf(const Hash: LongWord; const Buf; const BufSize: Integer): LongWord;
 
 function  HashStrA(const S: AnsiString;
+          const Index: Integer = 1; const Count: Integer = -1;
+          const AsciiCaseSensitive: Boolean = True;
+          const Slots: LongWord = 0): LongWord;
+function  HashStrB(const S: RawByteString;
           const Index: Integer = 1; const Count: Integer = -1;
           const AsciiCaseSensitive: Boolean = True;
           const Slots: LongWord = 0): LongWord;
@@ -1240,6 +1279,7 @@ const
   {$IFNDEF CLR}
   MaxCurrencyArrayElements = MaxArraySize div Sizeof(Currency);
   MaxAnsiStringArrayElements = MaxArraySize div Sizeof(AnsiString);
+  MaxRawByteStringArrayElements = MaxArraySize div Sizeof(RawByteString);
   MaxWideStringArrayElements = MaxArraySize div Sizeof(WideString);
   MaxUnicodeStringArrayElements = MaxArraySize div Sizeof(UnicodeString);
   {$IFDEF StringIsUnicode}
@@ -1272,10 +1312,11 @@ type
   {$IFNDEF CLR}
   TStaticCurrencyArray = array[0..MaxCurrencyArrayElements - 1] of Currency;
   TStaticAnsiStringArray = array[0..MaxAnsiStringArrayElements - 1] of AnsiString;
+  TStaticRawByteStringArray = array[0..MaxRawByteStringArrayElements - 1] of RawByteString;
   TStaticWideStringArray = array[0..MaxWideStringArrayElements - 1] of WideString;
   TStaticUnicodeStringArray = array[0..MaxUnicodeStringArrayElements - 1] of UnicodeString;
   {$IFDEF StringIsUnicode}
-  TStaticStringArray = TStaticWideStringArray;
+  TStaticStringArray = TStaticUnicodeStringArray;
   {$ELSE}
   TStaticStringArray = TStaticAnsiStringArray;
   {$ENDIF}
@@ -1308,6 +1349,7 @@ type
   {$IFNDEF CLR}
   PStaticCurrencyArray = ^TStaticCurrencyArray;
   PStaticAnsiStringArray = ^TStaticAnsiStringArray;
+  PStaticRawByteStringArray = ^TStaticRawByteStringArray;
   PStaticWideStringArray = ^TStaticWideStringArray;
   PStaticUnicodeStringArray = ^TStaticUnicodeStringArray;
   PStaticStringArray = ^TStaticStringArray;
@@ -1341,6 +1383,7 @@ type
   CurrencyArray = array of Currency;
   BooleanArray = array of Boolean;
   AnsiStringArray = array of AnsiString;
+  RawByteStringArray = array of RawByteString;
   WideStringArray = array of WideString;
   UnicodeStringArray = array of UnicodeString;
   StringArray = array of String;
@@ -3317,6 +3360,14 @@ begin
   Y := F;
 end;
 
+procedure SwapB(var X, Y: RawByteString);
+var F : RawByteString;
+begin
+  F := X;
+  X := Y;
+  Y := F;
+end;
+
 procedure SwapW(var X, Y: WideString);
 var F : WideString;
 begin
@@ -3412,6 +3463,14 @@ begin
     Result := FalseValue;
 end;
 
+function iifB(const Expr: Boolean; const TrueValue, FalseValue: RawByteString): RawByteString;
+begin
+  if Expr then
+    Result := TrueValue
+  else
+    Result := FalseValue;
+end;
+
 function iifW(const Expr: Boolean; const TrueValue, FalseValue: WideString): WideString;
 begin
   if Expr then
@@ -3493,6 +3552,16 @@ begin
 end;
 
 function CompareA(const I1, I2: AnsiString): TCompareResult;
+begin
+  if I1 = I2 then
+    Result := crEqual else
+  if I1 > I2 then
+    Result := crGreater
+  else
+    Result := crLess;
+end;
+
+function CompareB(const I1, I2: RawByteString): TCompareResult;
 begin
   if I1 = I2 then
     Result := crEqual else
@@ -3812,6 +3881,49 @@ begin
     end;
 end;
 
+function IntToStringB(const A: Int64): RawByteString;
+var T : Int64;
+    L, I : Integer;
+begin
+  // special cases
+  if A = 0 then
+    begin
+      Result := '0';
+      exit;
+    end;
+  if A = MinInt64 then
+    begin
+      Result := '-9223372036854775808';
+      exit;
+    end;
+  // calculate string length
+  if A < 0 then
+    L := 1
+  else
+    L := 0;
+  T := A;
+  while T <> 0 do
+    begin
+      T := T div 10;
+      Inc(L);
+    end;
+  // convert
+  SetLength(Result, L);
+  I := 0;
+  T := A;
+  if T < 0 then
+    begin
+      Result[1] := '-';
+      T := -T;
+    end;
+  while T > 0 do
+    begin
+      Result[L - I] := IntToAnsiChar(T mod 10);
+      T := T div 10;
+      Inc(I);
+    end;
+end;
+
 function IntToStringW(const A: Int64): WideString;
 var T : Int64;
     L, I : Integer;
@@ -3945,6 +4057,57 @@ function NativeUIntToBaseA(
          const Digits: Integer;
          const Base: Byte;
          const UpperCase: Boolean = True): AnsiString;
+var D : NativeUInt;
+    L : Integer;
+    V : Byte;
+begin
+  Assert((Base >= 2) and (Base <= 16));
+  if Value = 0 then // handle zero value
+    begin
+      if Digits = 0 then
+        L := 1
+      else
+        L := Digits;
+      SetLength(Result, L);
+      for V := 1 to L do
+        Result[V] := '0';
+      exit;
+    end;
+  // determine number of digits in result
+  L := 0;
+  D := Value;
+  while D > 0 do
+    begin
+      Inc(L);
+      D := D div Base;
+    end;
+  if L < Digits then
+    L := Digits;
+  // do conversion
+  SetLength(Result, L);
+  D := Value;
+  while D > 0 do
+    begin
+      V := D mod Base + 1;
+      if UpperCase then
+        Result[L] := AnsiChar(StrHexDigitsUpper[V])
+      else
+        Result[L] := AnsiChar(StrHexDigitsLower[V]);
+      Dec(L);
+      D := D div Base;
+    end;
+  while L > 0 do
+    begin
+      Result[L] := '0';
+      Dec(L);
+    end;
+end;
+
+function NativeUIntToBaseB(
+         const Value: NativeUInt;
+         const Digits: Integer;
+         const Base: Byte;
+         const UpperCase: Boolean = True): RawByteString;
 var D : NativeUInt;
     L : Integer;
     V : Byte;
@@ -4149,6 +4312,11 @@ begin
   Result := NativeUIntToBaseA(A, 0, 10);
 end;
 
+function UIntToStringB(const A: NativeUInt): RawByteString;
+begin
+  Result := NativeUIntToBaseB(A, 0, 10);
+end;
+
 function UIntToStringW(const A: NativeUInt): WideString;
 begin
   Result := NativeUIntToBaseW(A, 0, 10);
@@ -4167,6 +4335,11 @@ end;
 function LongWordToStrA(const A: LongWord; const Digits: Integer): AnsiString;
 begin
   Result := NativeUIntToBaseA(A, Digits, 10);
+end;
+
+function LongWordToStrB(const A: LongWord; const Digits: Integer): RawByteString;
+begin
+  Result := NativeUIntToBaseB(A, Digits, 10);
 end;
 
 function LongWordToStrW(const A: LongWord; const Digits: Integer): WideString;
@@ -4189,6 +4362,11 @@ begin
   Result := NativeUIntToBaseA(A, Digits, 16, UpperCase);
 end;
 
+function LongWordToHexB(const A: LongWord; const Digits: Integer; const UpperCase: Boolean): RawByteString;
+begin
+  Result := NativeUIntToBaseB(A, Digits, 16, UpperCase);
+end;
+
 function LongWordToHexW(const A: LongWord; const Digits: Integer; const UpperCase: Boolean): WideString;
 begin
   Result := NativeUIntToBaseW(A, Digits, 16, UpperCase);
@@ -4209,6 +4387,11 @@ begin
   Result := NativeUIntToBaseA(A, Digits, 8);
 end;
 
+function LongWordToOctB(const A: LongWord; const Digits: Integer): RawByteString;
+begin
+  Result := NativeUIntToBaseB(A, Digits, 8);
+end;
+
 function LongWordToOctW(const A: LongWord; const Digits: Integer): WideString;
 begin
   Result := NativeUIntToBaseW(A, Digits, 8);
@@ -4227,6 +4410,11 @@ end;
 function LongWordToBinA(const A: LongWord; const Digits: Integer): AnsiString;
 begin
   Result := NativeUIntToBaseA(A, Digits, 2);
+end;
+
+function LongWordToBinB(const A: LongWord; const Digits: Integer): RawByteString;
+begin
+  Result := NativeUIntToBaseB(A, Digits, 2);
 end;
 
 function LongWordToBinW(const A: LongWord; const Digits: Integer): WideString;
@@ -4515,6 +4703,16 @@ begin
       Result := False;
 end;
 
+function TryStringToInt64B(const S: RawByteString; out A: Int64): Boolean;
+var L, N : Integer;
+begin
+  L := Length(S);
+  Result := TryStringToInt64PA(PAnsiChar(S), L, A, N) = convertOK;
+  if Result then
+    if N < L then
+      Result := False;
+end;
+
 function TryStringToInt64W(const S: WideString; out A: Int64): Boolean;
 var L, N : Integer;
 begin
@@ -4551,6 +4749,12 @@ begin
     Result := Default;
 end;
 
+function StringToInt64DefB(const S: RawByteString; const Default: Int64): Int64;
+begin
+  if not TryStringToInt64B(S, Result) then
+    Result := Default;
+end;
+
 function StringToInt64DefW(const S: WideString; const Default: Int64): Int64;
 begin
   if not TryStringToInt64W(S, Result) then
@@ -4572,6 +4776,12 @@ end;
 function StringToInt64A(const S: AnsiString): Int64;
 begin
   if not TryStringToInt64A(S, Result) then
+    RaiseRangeCheckError;
+end;
+
+function StringToInt64B(const S: RawByteString): Int64;
+begin
+  if not TryStringToInt64B(S, Result) then
     RaiseRangeCheckError;
 end;
 
@@ -4597,6 +4807,25 @@ function TryStringToIntA(const S: AnsiString; out A: Integer): Boolean;
 var B : Int64;
 begin
   Result := TryStringToInt64A(S, B);
+  if not Result then
+    begin
+      A := 0;
+      exit;
+    end;
+  if (B < MinInteger) or (B > MaxInteger) then
+    begin
+      A := 0;
+      Result := False;
+      exit;
+    end;
+  A := Integer(B);
+  Result := True;
+end;
+
+function TryStringToIntB(const S: RawByteString; out A: Integer): Boolean;
+var B : Int64;
+begin
+  Result := TryStringToInt64B(S, B);
   if not Result then
     begin
       A := 0;
@@ -4675,6 +4904,12 @@ begin
     Result := Default;
 end;
 
+function StringToIntDefB(const S: RawByteString; const Default: Integer): Integer;
+begin
+  if not TryStringToIntB(S, Result) then
+    Result := Default;
+end;
+
 function StringToIntDefW(const S: WideString; const Default: Integer): Integer;
 begin
   if not TryStringToIntW(S, Result) then
@@ -4696,6 +4931,12 @@ end;
 function StringToIntA(const S: AnsiString): Integer;
 begin
   if not TryStringToIntA(S, Result) then
+    RaiseRangeCheckError;
+end;
+
+function StringToIntB(const S: RawByteString): Integer;
+begin
+  if not TryStringToIntB(S, Result) then
     RaiseRangeCheckError;
 end;
 
@@ -4721,6 +4962,25 @@ function TryStringToLongWordA(const S: AnsiString; out A: LongWord): Boolean;
 var B : Int64;
 begin
   Result := TryStringToInt64A(S, B);
+  if not Result then
+    begin
+      A := 0;
+      exit;
+    end;
+  if (B < MinLongWord) or (B > MaxLongWord) then
+    begin
+      A := 0;
+      Result := False;
+      exit;
+    end;
+  A := LongWord(B);
+  Result := True;
+end;
+
+function TryStringToLongWordB(const S: RawByteString; out A: LongWord): Boolean;
+var B : Int64;
+begin
+  Result := TryStringToInt64B(S, B);
   if not Result then
     begin
       A := 0;
@@ -4799,6 +5059,12 @@ begin
     RaiseRangeCheckError;
 end;
 
+function StringToLongWordB(const S: RawByteString): LongWord;
+begin
+  if not TryStringToLongWordB(S, Result) then
+    RaiseRangeCheckError;
+end;
+
 function StringToLongWordW(const S: WideString): LongWord;
 begin
   if not TryStringToLongWordW(S, Result) then
@@ -4818,6 +5084,49 @@ begin
 end;
 
 function BaseStrToNativeUIntA(const S: AnsiString; const BaseLog2: Byte;
+    var Valid: Boolean): NativeUInt;
+var N : Byte;
+    L : Integer;
+    M : Byte;
+    C : Byte;
+begin
+  Assert(BaseLog2 <= 4); // maximum base 16
+  L := Length(S);
+  if L = 0 then // empty string is invalid
+    begin
+      Valid := False;
+      Result := 0;
+      exit;
+    end;
+  M := (1 shl BaseLog2) - 1; // maximum digit value
+  N := 0;
+  Result := 0;
+  repeat
+    C := HexLookup[S[L]];
+    if C > M then // invalid digit
+      begin
+        Valid := False;
+        Result := 0;
+        exit;
+      end;
+    {$IFDEF FPC}
+    Result := Result + NativeUInt(C) shl N;
+    {$ELSE}
+    Inc(Result, NativeUInt(C) shl N);
+    {$ENDIF}
+    Inc(N, BaseLog2);
+    if N > BitsPerNativeWord then // overflow
+      begin
+        Valid := False;
+        Result := 0;
+        exit;
+      end;
+    Dec(L);
+  until L = 0;
+  Valid := True;
+end;
+
+function BaseStrToNativeUIntB(const S: RawByteString; const BaseLog2: Byte;
     var Valid: Boolean): NativeUInt;
 var N : Byte;
     L : Integer;
@@ -5016,6 +5325,14 @@ begin
     RaiseRangeCheckError;
 end;
 
+function HexToUIntB(const S: RawByteString): NativeUInt;
+var R : Boolean;
+begin
+  Result := BaseStrToNativeUIntB(S, 4, R);
+  if not R then
+    RaiseRangeCheckError;
+end;
+
 function HexToUIntW(const S: WideString): NativeUInt;
 var R : Boolean;
 begin
@@ -5045,6 +5362,11 @@ begin
   A := BaseStrToNativeUIntA(S, 4, Result);
 end;
 
+function TryHexToLongWordB(const S: RawByteString; out A: LongWord): Boolean;
+begin
+  A := BaseStrToNativeUIntB(S, 4, Result);
+end;
+
 function TryHexToLongWordW(const S: WideString; out A: LongWord): Boolean;
 begin
   A := BaseStrToNativeUIntW(S, 4, Result);
@@ -5064,6 +5386,14 @@ function HexToLongWordA(const S: AnsiString): LongWord;
 var R : Boolean;
 begin
   Result := BaseStrToNativeUIntA(S, 4, R);
+  if not R then
+    RaiseRangeCheckError;
+end;
+
+function HexToLongWordB(const S: RawByteString): LongWord;
+var R : Boolean;
+begin
+  Result := BaseStrToNativeUIntB(S, 4, R);
   if not R then
     RaiseRangeCheckError;
 end;
@@ -5097,6 +5427,11 @@ begin
   A := BaseStrToNativeUIntA(S, 3, Result);
 end;
 
+function TryOctToLongWordB(const S: RawByteString; out A: LongWord): Boolean;
+begin
+  A := BaseStrToNativeUIntB(S, 3, Result);
+end;
+
 function TryOctToLongWordW(const S: WideString; out A: LongWord): Boolean;
 begin
   A := BaseStrToNativeUIntW(S, 3, Result);
@@ -5116,6 +5451,14 @@ function OctToLongWordA(const S: AnsiString): LongWord;
 var R : Boolean;
 begin
   Result := BaseStrToNativeUIntA(S, 3, R);
+  if not R then
+    RaiseRangeCheckError;
+end;
+
+function OctToLongWordB(const S: RawByteString): LongWord;
+var R : Boolean;
+begin
+  Result := BaseStrToNativeUIntB(S, 3, R);
   if not R then
     RaiseRangeCheckError;
 end;
@@ -5149,6 +5492,11 @@ begin
   A := BaseStrToNativeUIntA(S, 1, Result);
 end;
 
+function TryBinToLongWordB(const S: RawByteString; out A: LongWord): Boolean;
+begin
+  A := BaseStrToNativeUIntB(S, 1, Result);
+end;
+
 function TryBinToLongWordW(const S: WideString; out A: LongWord): Boolean;
 begin
   A := BaseStrToNativeUIntW(S, 1, Result);
@@ -5168,6 +5516,14 @@ function BinToLongWordA(const S: AnsiString): LongWord;
 var R : Boolean;
 begin
   Result := BaseStrToNativeUIntA(S, 1, R);
+  if not R then
+    RaiseRangeCheckError;
+end;
+
+function BinToLongWordB(const S: RawByteString): LongWord;
+var R : Boolean;
+begin
+  Result := BaseStrToNativeUIntB(S, 1, R);
   if not R then
     RaiseRangeCheckError;
 end;
@@ -5271,6 +5627,11 @@ end;
 function FloatToStringA(const A: Extended): AnsiString;
 begin
   Result := AnsiString(FloatToStringS(A));
+end;
+
+function FloatToStringB(const A: Extended): RawByteString;
+begin
+  Result := RawByteString(FloatToStringS(A));
 end;
 
 function FloatToStringW(const A: Extended): WideString;
@@ -5742,6 +6103,16 @@ begin
       Result := False;
 end;
 
+function TryStringToFloatB(const A: RawByteString; out B: Extended): Boolean;
+var L, N : Integer;
+begin
+  L := Length(A);
+  Result := TryStringToFloatPA(PAnsiChar(A), L, B, N) = convertOK;
+  if Result then
+    if N < L then
+      Result := False;
+end;
+
 function TryStringToFloatW(const A: WideString; out B: Extended): Boolean;
 var L, N : Integer;
 begin
@@ -5778,6 +6149,12 @@ begin
     RaiseRangeCheckError;
 end;
 
+function StringToFloatB(const A: RawByteString): Extended;
+begin
+  if not TryStringToFloatB(A, Result) then
+    RaiseRangeCheckError;
+end;
+
 function StringToFloatW(const A: WideString): Extended;
 begin
   if not TryStringToFloatW(A, Result) then
@@ -5799,6 +6176,12 @@ end;
 function StringToFloatDefA(const A: AnsiString; const Default: Extended): Extended;
 begin
   if not TryStringToFloatA(A, Result) then
+    Result := Default;
+end;
+
+function StringToFloatDefB(const A: RawByteString; const Default: Extended): Extended;
+begin
+  if not TryStringToFloatB(A, Result) then
     Result := Default;
 end;
 
@@ -6276,6 +6659,11 @@ begin
   Result := NativeUIntToBaseA(NativeUInt(P), NativeWordSize * 2, 16, True);
 end;
 
+function PointerToStrB(const P: Pointer): RawByteString;
+begin
+  Result := NativeUIntToBaseB(NativeUInt(P), NativeWordSize * 2, 16, True);
+end;
+
 function PointerToStrW(const P: Pointer): WideString;
 begin
   Result := NativeUIntToBaseW(NativeUInt(P), NativeWordSize * 2, 16, True);
@@ -6290,6 +6678,12 @@ function StrToPointerA(const S: AnsiString): Pointer;
 var V : Boolean;
 begin
   Result := Pointer(BaseStrToNativeUIntA(S, 4, V));
+end;
+
+function StrToPointerB(const S: RawByteString): Pointer;
+var V : Boolean;
+begin
+  Result := Pointer(BaseStrToNativeUIntB(S, 4, V));
 end;
 
 function StrToPointerW(const S: WideString): Pointer;
@@ -6562,6 +6956,38 @@ begin
 end;
 
 function HashStrA(const S: AnsiString;
+         const Index: Integer; const Count: Integer;
+         const AsciiCaseSensitive: Boolean;
+         const Slots: LongWord): LongWord;
+var I, L, A, B : Integer;
+begin
+  if not HashTableInit then
+    InitHashTable;
+  A := Index;
+  if A < 1 then
+    A := 1;
+  L := Length(S);
+  B := Count;
+  if B < 0 then
+    B := L
+  else
+    begin
+      B := A + B - 1;
+      if B > L then
+        B := L;
+    end;
+  Result := $FFFFFFFF;
+  if AsciiCaseSensitive then
+    for I := A to B do
+      Result := HashCharA(Result, S[I])
+  else
+    for I := A to B do
+      Result := HashCharNoAsciiCaseA(Result, S[I]);
+  if Slots > 0 then
+    Result := Result mod Slots;
+end;
+
+function HashStrB(const S: RawByteString;
          const Index: Integer; const Count: Integer;
          const AsciiCaseSensitive: Boolean;
          const Slots: LongWord): LongWord;
@@ -7518,6 +7944,14 @@ begin
   Assert(CompareA('a', '') = crGreater,     'Compare');
   Assert(CompareA('aa', 'a') = crGreater,   'Compare');
 
+  Assert(CompareB('', '') = crEqual,        'Compare');
+  Assert(CompareB('a', 'a') = crEqual,      'Compare');
+  Assert(CompareB('a', 'b') = crLess,       'Compare');
+  Assert(CompareB('b', 'a') = crGreater,    'Compare');
+  Assert(CompareB('', 'a') = crLess,        'Compare');
+  Assert(CompareB('a', '') = crGreater,     'Compare');
+  Assert(CompareB('aa', 'a') = crGreater,   'Compare');
+
   Assert(CompareW('', '') = crEqual,        'Compare');
   Assert(CompareW('a', 'a') = crEqual,      'Compare');
   Assert(CompareW('a', 'b') = crLess,       'Compare');
@@ -7762,6 +8196,20 @@ begin
   Assert(IntToStringA(MinInt64) = '-9223372036854775808', 'IntToStringA');
   Assert(IntToStringA(MaxInt64) = '9223372036854775807',  'IntToStringA');
 
+  Assert(IntToStringB(0) = '0',                           'IntToStringB');
+  Assert(IntToStringB(1) = '1',                           'IntToStringB');
+  Assert(IntToStringB(-1) = '-1',                         'IntToStringB');
+  Assert(IntToStringB(10) = '10',                         'IntToStringB');
+  Assert(IntToStringB(-10) = '-10',                       'IntToStringB');
+  Assert(IntToStringB(123) = '123',                       'IntToStringB');
+  Assert(IntToStringB(-123) = '-123',                     'IntToStringB');
+  Assert(IntToStringB(MinLongInt) = '-2147483648',        'IntToStringB');
+  Assert(IntToStringB(-2147483649) = '-2147483649',       'IntToStringB');
+  Assert(IntToStringB(MaxLongInt) = '2147483647',         'IntToStringB');
+  Assert(IntToStringB(2147483648) = '2147483648',         'IntToStringB');
+  Assert(IntToStringB(MinInt64) = '-9223372036854775808', 'IntToStringB');
+  Assert(IntToStringB(MaxInt64) = '9223372036854775807',  'IntToStringB');
+
   Assert(IntToStringW(0) = '0',                     'IntToWideString');
   Assert(IntToStringW(1) = '1',                     'IntToWideString');
   Assert(IntToStringW(-1) = '-1',                   'IntToWideString');
@@ -7791,6 +8239,8 @@ begin
 
   Assert(LongWordToStrA(0, 8) = '00000000',           'LongWordToStr');
   Assert(LongWordToStrA($FFFFFFFF, 0) = '4294967295', 'LongWordToStr');
+  Assert(LongWordToStrB(0, 8) = '00000000',           'LongWordToStr');
+  Assert(LongWordToStrB($FFFFFFFF, 0) = '4294967295', 'LongWordToStr');
   Assert(LongWordToStrW(0, 8) = '00000000',           'LongWordToStr');
   Assert(LongWordToStrW($FFFFFFFF, 0) = '4294967295', 'LongWordToStr');
   Assert(LongWordToStrU(0, 8) = '00000000',           'LongWordToStr');
@@ -7840,6 +8290,9 @@ begin
   Assert(StringToIntA('-01') = -1,    'StringToInt');
   Assert(StringToIntA('123') = 123,   'StringToInt');
   Assert(StringToIntA('-123') = -123, 'StringToInt');
+
+  Assert(StringToIntB('321') = 321,   'StringToInt');
+  Assert(StringToIntB('-321') = -321, 'StringToInt');
 
   Assert(StringToIntW('321') = 321,   'StringToInt');
   Assert(StringToIntW('-321') = -321, 'StringToInt');
@@ -7961,6 +8414,13 @@ begin
   Assert(not TryHexToLongWordA('', W),           'HexToLongWord');
   Assert(not TryHexToLongWordA('x', W),          'HexToLongWord');
 
+  Assert(HexToLongWordB('FFFFFFFF') = $FFFFFFFF, 'HexToLongWord');
+  Assert(HexToLongWordB('0') = 0,                'HexToLongWord');
+  Assert(HexToLongWordB('ABC') = $ABC,           'HexToLongWord');
+  Assert(HexToLongWordB('abc') = $ABC,           'HexToLongWord');
+  Assert(not TryHexToLongWordB('', W),           'HexToLongWord');
+  Assert(not TryHexToLongWordB('x', W),          'HexToLongWord');
+
   Assert(HexToLongWordW('FFFFFFFF') = $FFFFFFFF, 'HexToLongWord');
   Assert(HexToLongWordW('0') = 0,                'HexToLongWord');
   Assert(HexToLongWordW('123456') = $123456,     'HexToLongWord');
@@ -7981,6 +8441,9 @@ begin
   Assert(StringToLongWordA('123') = 123,              'StringToLongWord');
   Assert(StringToLongWordA('4294967295') = $FFFFFFFF, 'StringToLongWord');
   Assert(StringToLongWordA('999999999') = 999999999,  'StringToLongWord');
+
+  Assert(StringToLongWordB('0') = 0,                  'StringToLongWord');
+  Assert(StringToLongWordB('4294967295') = $FFFFFFFF, 'StringToLongWord');
 
   Assert(StringToLongWordW('0') = 0,                  'StringToLongWord');
   Assert(StringToLongWordW('4294967295') = $FFFFFFFF, 'StringToLongWord');
@@ -8026,6 +8489,11 @@ begin
   Assert(FloatToStringA(1.234e+1000) = '1.234E+1000');
   Assert(FloatToStringA(-1e-4000) = '0');
   {$ENDIF}
+
+  Assert(FloatToStringB(0.0) = '0');
+  Assert(FloatToStringB(-1.5) = '-1.5');
+  Assert(FloatToStringB(1.5) = '1.5');
+  Assert(FloatToStringB(1.1) = '1.1');
 
   Assert(FloatToStringW(0.0) = '0');
   Assert(FloatToStringW(-1.5) = '-1.5');
@@ -8190,6 +8658,11 @@ begin
   Assert(HashStrA('0') = $B2420DE,             'HashStr');
   Assert(HashStrA('Fundamentals', 1, -1, False) = HashStrA('FUNdamentals', 1, -1, False), 'HashStr');
   Assert(HashStrA('Fundamentals', 1, -1, True) <> HashStrA('FUNdamentals', 1, -1, True),  'HashStr');
+
+  Assert(HashStrB('Fundamentals') = $3FB7796E, 'HashStr');
+  Assert(HashStrB('0') = $B2420DE,             'HashStr');
+  Assert(HashStrB('Fundamentals', 1, -1, False) = HashStrB('FUNdamentals', 1, -1, False), 'HashStr');
+  Assert(HashStrB('Fundamentals', 1, -1, True) <> HashStrB('FUNdamentals', 1, -1, True),  'HashStr');
 
   Assert(HashStrW('Fundamentals') = $FD6ED837, 'HashStr');
   Assert(HashStrW('0') = $6160DBF3,            'HashStr');

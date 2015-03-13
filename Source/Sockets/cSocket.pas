@@ -47,7 +47,8 @@
 {                                                                              }
 { Supported compilers:                                                         }
 {                                                                              }
-{   Borland Delphi XE2 Win32 i386      4.07  2014/04/23                        }
+{   Delphi XE2 Win32                   4.07  2014/04/23                        }
+{   Delphi XE7 Win64                   4.15  2015/03/13                        }
 {   FreePascal 2.6.2 Linux i386        4.07  2014/04/23                        }
 {   FreePascal 2.6.2 Win32 i386        4.07  2014/04/23                        }
 {                                                                              }
@@ -59,7 +60,7 @@
 {$IFDEF SELFTEST}
   {$DEFINE SOCKET_SELFTEST}
   {$DEFINE SOCKET_SELFTEST_IP4}
-  {$DEFINE SOCKET_SELFTEST_IP4_INTERNET}
+  {.DEFINE SOCKET_SELFTEST_IP4_INTERNET}
 {$ENDIF}
 {$ENDIF}
 

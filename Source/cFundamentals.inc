@@ -631,7 +631,7 @@
 {$IFDEF CONDITIONALEXPRESSIONS}
   {$IF CompilerVersion > 21.0}
     {$DEFINE DELPHI_Future}
-  {$ENDIF}
+  {$IFEND}
 {$ENDIF}
 
 {$IFDEF DELPHI_Future}

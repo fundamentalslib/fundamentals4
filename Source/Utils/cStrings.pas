@@ -2,10 +2,10 @@
 {                                                                              }
 {   Library:          Fundamentals 4.00                                        }
 {   File name:        cStrings.pas                                             }
-{   File version:     4.59                                                     }
+{   File version:     4.60                                                     }
 {   Description:      String utility functions                                 }
 {                                                                              }
-{   Copyright:        Copyright (c) 1999-2014, David J Butler                  }
+{   Copyright:        Copyright (c) 1999-2015, David J Butler                  }
 {                     All rights reserved.                                     }
 {                     Redistribution and use in source and binary forms, with  }
 {                     or without modification, are permitted provided that     }
@@ -103,23 +103,25 @@
 {   2012/08/29  4.57  Improve pattern matcher functions.                       }
 {   2013/05/12  4.58  Move string type definitions to Utils unit.              }
 {   2014/08/26  4.59  StringBuilder unit tests.                                }
+{   2015/03/13  4.60  RawByteString functions.                                 }
 {                                                                              }
 { Supported compilers:                                                         }
 {                                                                              }
-{   Delphi 5 Win32 i386                 4.48  2011/03/17                       }
-{   Delphi 6 Win32 i386                                                        }
-{   Delphi 7 Win32 i386                 4.57  2012/08/30                       }
-{   Delphi 2005 Win32 i386                                                     }
-{   Delphi 2006 Win32 i386                                                     }
-{   Delphi 2007 Win32 i386              4.57  2012/08/29                       }
-{   Delphi 2009 Win32 i386              4.50  2011/09/27                       }
+{   Delphi 5 Win32                      4.48  2011/03/17                       }
+{   Delphi 6 Win32                                                             }
+{   Delphi 7 Win32                      4.57  2012/08/30                       }
+{   Delphi 2005 Win32                                                          }
+{   Delphi 2006 Win32                                                          }
+{   Delphi 2007 Win32                   4.57  2012/08/29                       }
+{   Delphi 2009 Win32                   4.50  2011/09/27                       }
 {   Delphi 2009 .NET                    4.46  2009/10/09                       }
 {   Delphi XE                           4.57  2012/08/29                       }
-{   Delphi XE3 x86-64                   4.57  2013/01/29                       }
-{   Delphi XE6 x86-32                   4.59  2014/08/26                       }
+{   Delphi XE3 Win64                    4.57  2013/01/29                       }
+{   Delphi XE6 Win32                    4.59  2014/08/26                       }
+{   Delphi XE7 Win64                    4.60  2015/03/13                       }
 {   FreePascal 2.0.4 Linux i386         4.45  2009/06/06                       }
 {   FreePascal 2.4.0 OSX x86-64         4.47  2010/06/27                       }
-{   FreePascal 2.6.0 Win32 i386         4.57  2012/08/30                       }
+{   FreePascal 2.6.0 Win32              4.57  2012/08/30                       }
 {                                                                              }
 { Notes:                                                                       }
 {   Unicode functions in this unit work from data in source code form.         }
@@ -523,6 +525,7 @@ function  UnicodeLowerCaseFoldingU(const S: UnicodeString): UnicodeString;
 { String functions                                                             }
 {                                                                              }
 procedure SetLengthAndZeroA(var S: AnsiString; const NewLength: Integer);
+procedure SetLengthAndZeroB(var S: RawByteString; const NewLength: Integer);
 procedure SetLengthAndZeroW(var S: WideString; const NewLength: Integer);
 procedure SetLengthAndZeroU(var S: UnicodeString; const NewLength: Integer);
 
@@ -532,6 +535,7 @@ function  StrPasP(const Buf; const BufSize: Integer): AnsiString;
 
 function  StrLenA(const A: PAnsiChar): Integer;
 function  StrPasA(const A: PAnsiChar): AnsiString;
+function  StrPasB(const A: PAnsiChar): RawByteString;
 
 function  StrLenW(const A: PWideChar): Integer;
 function  StrPasW(const A: PWideChar): WideString;
@@ -544,10 +548,12 @@ function  ToStringChA(const A: AnsiChar): String;
 function  ToStringChW(const A: WideChar): String;
 
 function  ToStringA(const A: AnsiString): String; {$IFDEF UseInline}inline;{$ENDIF}
+function  ToStringB(const A: RawByteString): String; {$IFDEF UseInline}inline;{$ENDIF}
 function  ToStringW(const A: WideString): String; {$IFDEF UseInline}inline;{$ENDIF}
 function  ToStringU(const A: UnicodeString): String; {$IFDEF UseInline}inline;{$ENDIF}
 
 function  ToAnsiString(const A: String): AnsiString; {$IFDEF UseInline}inline;{$ENDIF}
+function  ToRawByteString(const A: String): RawByteString; {$IFDEF UseInline}inline;{$ENDIF}
 function  ToWideString(const A: String): WideString; {$IFDEF UseInline}inline;{$ENDIF}
 function  ToUnicodeString(const A: String): UnicodeString; {$IFDEF UseInline}inline;{$ENDIF}
 
@@ -557,6 +563,7 @@ function  StrZLenW(const S: PWideChar): Integer;
 function  StrZLen(const S: PChar): Integer;
 
 function  StrPToStrA(const P: PAnsiChar; const L: Integer): AnsiString;
+function  StrPToStrB(const P: PAnsiChar; const L: Integer): RawByteString;
 function  StrPToStrW(const P: PWideChar; const L: Integer): WideString;
 function  StrPToStrU(const P: PWideChar; const L: Integer): UnicodeString;
 function  StrPToStr(const P: PChar; const L: Integer): String;
@@ -576,30 +583,36 @@ function  AsciiUpCaseW(const C: WideChar): WideChar;
 function  AsciiUpCase(const C: Char): Char;
 
 procedure AsciiConvertUpperA(var S: AnsiString);
+procedure AsciiConvertUpperB(var S: RawByteString);
 procedure AsciiConvertUpperW(var S: WideString);
 procedure AsciiConvertUpperU(var S: UnicodeString);
 procedure AsciiConvertUpper(var S: String);
 
 procedure AsciiConvertLowerA(var S: AnsiString);
+procedure AsciiConvertLowerB(var S: RawByteString);
 procedure AsciiConvertLowerW(var S: WideString);
 procedure AsciiConvertLowerU(var S: UnicodeString);
 procedure AsciiConvertLower(var S: String);
 
 function  AsciiUpperCaseA(const A: AnsiString): AnsiString;
+function  AsciiUpperCaseB(const A: RawByteString): RawByteString;
 function  AsciiUpperCaseW(const A: WideString): WideString;
 function  AsciiUpperCaseU(const A: UnicodeString): UnicodeString;
 function  AsciiUpperCase(const A: String): String;
 
 function  AsciiLowerCaseA(const A: AnsiString): AnsiString;
+function  AsciiLowerCaseB(const A: RawByteString): RawByteString;
 function  AsciiLowerCaseW(const A: WideString): WideString;
 function  AsciiLowerCaseU(const A: UnicodeString): UnicodeString;
 function  AsciiLowerCase(const A: String): String;
 
 procedure AsciiConvertFirstUpA(var S: AnsiString);
+procedure AsciiConvertFirstUpB(var S: RawByteString);
 procedure AsciiConvertFirstUpW(var S: WideString);
 procedure AsciiConvertFirstUp(var S: String);
 
 function  AsciiFirstUpA(const S: AnsiString): AnsiString;
+function  AsciiFirstUpB(const S: RawByteString): RawByteString;
 function  AsciiFirstUpW(const S: WideString): WideString;
 function  AsciiFirstUp(const S: String): String;
 
@@ -616,6 +629,7 @@ function  IsAsciiCharW(const C: WideChar): Boolean; {$IFDEF UseInline}inline;{$E
 function  IsAsciiChar(const C: Char): Boolean;      {$IFDEF UseInline}inline;{$ENDIF}
 
 function  IsAsciiStringA(const S: AnsiString): Boolean;
+function  IsAsciiStringB(const S: RawByteString): Boolean;
 function  IsAsciiStringW(const S: WideString): Boolean;
 function  IsAsciiStringU(const S: UnicodeString): Boolean;
 function  IsAsciiString(const S: String): Boolean;
@@ -642,6 +656,7 @@ function  AsciiOctalCharValueW(const C: WideChar): Integer;
 
 function  AsciiIsOctalChar(const C: AnsiChar): Boolean;
 function  AsciiIsOctalCharW(const C: WideChar): Boolean;
+
 
 
 {                                                                              }
@@ -680,18 +695,22 @@ function  StrPCompareNoAsciiCase(const A, B: PChar; const Len: Integer): Integer
 function  StrPCompareNoUnicodeCaseW(const A, B: PWideChar; const Len: Integer): Integer;
 {$ENDIF}
 
+{$IFNDEF CLR}
 function  StrCompareA(const A, B: AnsiString): Integer;
+function  StrCompareB(const A, B: RawByteString): Integer;
 function  StrCompareW(const A, B: WideString): Integer;
 function  StrCompareU(const A, B: UnicodeString): Integer;
 function  StrCompare(const A, B: String): Integer;
 
 function  StrCompareNoAsciiCaseA(const A, B: AnsiString): Integer;
+function  StrCompareNoAsciiCaseB(const A, B: RawByteString): Integer;
 function  StrCompareNoAsciiCaseW(const A, B: WideString): Integer;
 function  StrCompareNoAsciiCaseU(const A, B: UnicodeString): Integer;
 function  StrCompareNoAsciiCase(const A, B: String): Integer;
 
 function  StrCompareNoUnicodeCaseW(const A, B: WideString): Integer;
 function  StrCompareNoUnicodeCaseU(const A, B: UnicodeString): Integer;
+{$ENDIF}
 
 
 
@@ -732,6 +751,7 @@ function  StrPMatch(const S, M: PChar; const LenS, LenM: Integer): Boolean; over
 function  StrPMatchStrPA(const S: PChar; const M: PAnsiChar; const LenS, LenM: Integer): Boolean;
 
 function  StrPMatchStrA(const S: PAnsiChar; const Len: Integer; const M: AnsiString): Boolean;
+function  StrPMatchStrB(const S: PAnsiChar; const Len: Integer; const M: RawByteString): Boolean;
 function  StrPMatchStrW(const S: PWideChar; const Len: Integer; const M: WideString): Boolean;
 function  StrPMatchStrAW(const S: PWideChar; const Len: Integer; const M: AnsiString): Boolean;
 function  StrPMatchStrAS(const S: PChar; const Len: Integer; const M: AnsiString): Boolean;
@@ -765,12 +785,14 @@ function  StrZMatchLenW(const P: PWideChar; const M: CharSet; const MaxLen: Inte
 function  StrZMatchLenW(const P: PWideChar; const M: TWideCharMatchFunction; const MaxLen: Integer = -1): Integer; overload;
 
 function  StrZMatchStrA(const P: PAnsiChar; const M: AnsiString): Boolean;
+function  StrZMatchStrB(const P: PAnsiChar; const M: RawByteString): Boolean;
 function  StrZMatchStrW(const P: PWideChar; const M: WideString): Boolean;
 function  StrZMatchStrAW(const P: PWideChar; const M: AnsiString): Boolean;
 function  StrZMatchStrU(const P: PWideChar; const M: UnicodeString): Boolean;
 function  StrZMatchStr(const P: PChar; const M: String): Boolean;
 
 function  StrZMatchStrNoAsciiCaseA(const P: PAnsiChar; const M: AnsiString): Boolean;
+function  StrZMatchStrNoAsciiCaseB(const P: PAnsiChar; const M: RawByteString): Boolean;
 function  StrZMatchStrNoAsciiCaseW(const P: PWideChar; const M: WideString): Boolean;
 function  StrZMatchStrNoAsciiCaseAW(const P: PWideChar; const M: AnsiString): Boolean;
 function  StrZMatchStrNoAsciiCaseU(const P: PWideChar; const M: UnicodeString): Boolean;
@@ -780,6 +802,7 @@ function  StrZMatchStrNoUnicodeCaseW(const P: PWideChar; const M: WideString): B
 function  StrZMatchStrNoUnicodeCaseU(const P: PWideChar; const M: UnicodeString): Boolean;
 
 function  StrZMatchStrAsciiA(const P: PAnsiChar; const M: AnsiString; const AsciiCaseSensitive: Boolean): Boolean;
+function  StrZMatchStrAsciiB(const P: PAnsiChar; const M: RawByteString; const AsciiCaseSensitive: Boolean): Boolean;
 function  StrZMatchStrAsciiW(const P: PWideChar; const M: WideString; const AsciiCaseSensitive: Boolean): Boolean;
 function  StrZMatchStrAsciiAW(const P: PWideChar; const M: AnsiString; const AsciiCaseSensitive: Boolean): Boolean;
 function  StrZMatchStrAsciiU(const P: PWideChar; const M: UnicodeString; const AsciiCaseSensitive: Boolean): Boolean;
@@ -790,6 +813,7 @@ function  StrZMatchStrUnicodeU(const P: PWideChar; const M: UnicodeString; const
 {$ENDIF}
 
 function  StrMatchA(const S, M: AnsiString; const Index: Integer = 1): Boolean;
+function  StrMatchB(const S, M: RawByteString; const Index: Integer = 1): Boolean;
 function  StrMatchW(const S, M: WideString; const Index: Integer = 1): Boolean;
 function  StrMatchAW(const S: WideString; const M: AnsiString; const Index: Integer = 1): Boolean;
 function  StrMatchU(const S, M: UnicodeString; const Index: Integer = 1): Boolean;
@@ -798,6 +822,7 @@ function  StrMatchAS(const S: String; const M: AnsiString; const Index: Integer 
 function  StrMatch(const S, M: String; const Index: Integer = 1): Boolean;
 
 function  StrMatchNoAsciiCaseA(const S, M: AnsiString; const Index: Integer = 1): Boolean;
+function  StrMatchNoAsciiCaseB(const S, M: RawByteString; const Index: Integer = 1): Boolean;
 function  StrMatchNoAsciiCaseW(const S, M: WideString; const Index: Integer = 1): Boolean;
 function  StrMatchNoAsciiCaseAW(const S: WideString; const M: AnsiString; const Index: Integer = 1): Boolean;
 function  StrMatchNoAsciiCaseU(const S, M: UnicodeString; const Index: Integer = 1): Boolean;
@@ -809,6 +834,7 @@ function  StrMatchNoUnicodeCaseW(const S, M: WideString; const Index: Integer = 
 function  StrMatchNoUnicodeCaseU(const S, M: UnicodeString; const Index: Integer = 1): Boolean;
 
 function  StrMatchLeftA(const S, M: AnsiString; const AsciiCaseSensitive: Boolean = True): Boolean;
+function  StrMatchLeftB(const S, M: RawByteString; const AsciiCaseSensitive: Boolean = True): Boolean;
 function  StrMatchLeftW(const S, M: WideString; const AsciiCaseSensitive: Boolean = True): Boolean;
 function  StrMatchLeftAW(const S: WideString; const M: AnsiString; const AsciiCaseSensitive: Boolean = True): Boolean;
 function  StrMatchLeftU(const S, M: UnicodeString; const AsciiCaseSensitive: Boolean = True): Boolean;
@@ -816,6 +842,7 @@ function  StrMatchLeftAU(const S: UnicodeString; const M: AnsiString; const Asci
 function  StrMatchLeft(const S, M: String; const AsciiCaseSensitive: Boolean = True): Boolean;
 
 function  StrMatchRightA(const S, M: AnsiString; const AsciiCaseSensitive: Boolean = True): Boolean;
+function  StrMatchRightB(const S, M: RawByteString; const AsciiCaseSensitive: Boolean = True): Boolean;
 function  StrMatchRightW(const S, M: WideString; const AsciiCaseSensitive: Boolean = True): Boolean;
 function  StrMatchRightAW(const S: WideString; const M: AnsiString; const AsciiCaseSensitive: Boolean = True): Boolean;
 function  StrMatchRightU(const S, M: UnicodeString; const AsciiCaseSensitive: Boolean = True): Boolean;
@@ -823,6 +850,7 @@ function  StrMatchRightAU(const S: UnicodeString; const M: AnsiString; const Asc
 function  StrMatchRight(const S, M: String; const AsciiCaseSensitive: Boolean = True): Boolean;
 
 function  StrMatchLenA(const S: AnsiString; const M: CharSet; const Index: Integer = 1): Integer;
+function  StrMatchLenB(const S: RawByteString; const M: CharSet; const Index: Integer = 1): Integer;
 function  StrMatchLenW(const S: WideString; const M: CharSet; const Index: Integer = 1): Integer; overload;
 function  StrMatchLenW(const S: WideString; const M: TWideCharMatchFunction; const Index: Integer = 1): Integer; overload;
 function  StrMatchLenU(const S: UnicodeString; const M: CharSet; const Index: Integer = 1): Integer; overload;
@@ -830,6 +858,7 @@ function  StrMatchLenU(const S: UnicodeString; const M: TWideCharMatchFunction; 
 function  StrMatchLen(const S: String; const M: CharSet; const Index: Integer = 1): Integer;
 
 function  StrMatchCharA(const S: AnsiString; const M: CharSet): Boolean;
+function  StrMatchCharB(const S: RawByteString; const M: CharSet): Boolean;
 function  StrMatchCharW(const S: WideString; const M: CharSet): Boolean; overload;
 function  StrMatchCharW(const S: WideString; const M: TWideCharMatchFunction): Boolean; overload;
 function  StrMatchCharU(const S: UnicodeString; const M: CharSet): Boolean; overload;
@@ -890,6 +919,7 @@ function  StrPEqualStr(const P: PAnsiChar; const Len: Integer; const S: AnsiStri
 {$ENDIF}
 
 function  StrEqualA(const A, B: AnsiString; const AsciiCaseSensitive: Boolean = True): Boolean;
+function  StrEqualB(const A, B: RawByteString; const AsciiCaseSensitive: Boolean = True): Boolean;
 function  StrEqualW(const A, B: WideString; const AsciiCaseSensitive: Boolean = True): Boolean;
 function  StrEqualAW(const A: WideString; const B: AnsiString; const AsciiCaseSensitive: Boolean = True): Boolean;
 function  StrEqualU(const A, B: UnicodeString; const AsciiCaseSensitive: Boolean = True): Boolean;
@@ -897,6 +927,7 @@ function  StrEqualAU(const A: UnicodeString; const B: AnsiString; const AsciiCas
 function  StrEqual(const A, B: String; const AsciiCaseSensitive: Boolean = True): Boolean;
 
 function  StrEqualNoAsciiCaseA(const A, B: AnsiString): Boolean;
+function  StrEqualNoAsciiCaseB(const A, B: RawByteString): Boolean;
 function  StrEqualNoAsciiCaseW(const A, B: WideString): Boolean;
 function  StrEqualNoAsciiCaseAW(const A: WideString; const B: AnsiString): Boolean;
 function  StrEqualNoAsciiCaseU(const A, B: UnicodeString): Boolean;
@@ -912,22 +943,27 @@ function  StrEqualNoUnicodeCaseU(const A, B: UnicodeString): Boolean;
 { Validation                                                                   }
 {                                                                              }
 function  StrIsNumericA(const S: AnsiString): Boolean;
+function  StrIsNumericB(const S: RawByteString): Boolean;
 function  StrIsNumericW(const S: WideString): Boolean;
 function  StrIsNumeric(const S: String): Boolean;
 
 function  StrIsHexA(const S: AnsiString): Boolean;
+function  StrIsHexB(const S: RawByteString): Boolean;
 function  StrIsHexW(const S: WideString): Boolean;
 function  StrIsHex(const S: String): Boolean;
 
 function  StrIsAlphaA(const S: AnsiString): Boolean;
+function  StrIsAlphaB(const S: RawByteString): Boolean;
 function  StrIsAlphaW(const S: WideString): Boolean;
 function  StrIsAlpha(const S: String): Boolean;
 
 function  StrIsAlphaNumericA(const S: AnsiString): Boolean;
+function  StrIsAlphaNumericB(const S: RawByteString): Boolean;
 function  StrIsAlphaNumericW(const S: WideString): Boolean;
 function  StrIsAlphaNumeric(const S: String): Boolean;
 
 function  StrIsIntegerA(const S: AnsiString): Boolean;
+function  StrIsIntegerB(const S: RawByteString): Boolean;
 function  StrIsIntegerW(const S: WideString): Boolean;
 function  StrIsInteger(const S: String): Boolean;
 
@@ -957,16 +993,19 @@ function  StrZPosNotCharSetW(const F: TWideCharMatchFunction; const S: PWideChar
 function  StrZPosNotCharSet(const F: CharSet; const S: PChar): Integer;
 
 function  StrZPosA(const F: AnsiString; const S: PAnsiChar): Integer;
+function  StrZPosB(const F: RawByteString; const S: PAnsiChar): Integer;
 function  StrZPosW(const F: WideString; const S: PWideChar): Integer;
 function  StrZPosAW(const F: AnsiString; const S: PWideChar): Integer;
 {$ENDIF}
 
 function  PosCharA(const F: AnsiChar; const S: AnsiString; const Index: Integer = 1): Integer;
-function  PosCharW(const F: WideChar; const S: WideString; const Index: Integer = 1): Integer; 
+function  PosCharB(const F: AnsiChar; const S: RawByteString; const Index: Integer = 1): Integer;
+function  PosCharW(const F: WideChar; const S: WideString; const Index: Integer = 1): Integer;
 function  PosCharU(const F: WideChar; const S: UnicodeString; const Index: Integer = 1): Integer;
 function  PosChar(const F: Char; const S: String; const Index: Integer = 1): Integer;
 
 function  PosCharSetA(const F: CharSet; const S: AnsiString; const Index: Integer = 1): Integer;
+function  PosCharSetB(const F: CharSet; const S: RawByteString; const Index: Integer = 1): Integer;
 function  PosCharSetW(const F: CharSet; const S: WideString; const Index: Integer = 1): Integer; overload;
 function  PosCharSetW(const F: TWideCharMatchFunction; const S: WideString; const Index: Integer = 1): Integer; overload;
 function  PosCharSetU(const F: CharSet; const S: UnicodeString; const Index: Integer = 1): Integer; overload;
@@ -974,11 +1013,13 @@ function  PosCharSetU(const F: TWideCharMatchFunction; const S: UnicodeString; c
 function  PosCharSet(const F: CharSet; const S: String; const Index: Integer = 1): Integer;
 
 function  PosNotCharA(const F: AnsiChar; const S: AnsiString; const Index: Integer = 1): Integer; 
+function  PosNotCharB(const F: AnsiChar; const S: RawByteString; const Index: Integer = 1): Integer;
 function  PosNotCharW(const F: WideChar; const S: WideString; const Index: Integer = 1): Integer;
 function  PosNotCharU(const F: WideChar; const S: UnicodeString; const Index: Integer = 1): Integer;
 function  PosNotChar(const F: Char; const S: String; const Index: Integer = 1): Integer;
 
 function  PosNotCharSetA(const F: CharSet; const S: AnsiString; const Index: Integer = 1): Integer;
+function  PosNotCharSetB(const F: CharSet; const S: RawByteString; const Index: Integer = 1): Integer;
 function  PosNotCharSetW(const F: CharSet; const S: WideString; const Index: Integer = 1): Integer; overload;
 function  PosNotCharSetW(const F: TWideCharMatchFunction; const S: WideString; const Index: Integer = 1): Integer; overload;
 function  PosNotCharSetU(const F: CharSet; const S: UnicodeString; const Index: Integer = 1): Integer; overload;
@@ -986,11 +1027,13 @@ function  PosNotCharSetU(const F: TWideCharMatchFunction; const S: UnicodeString
 function  PosNotCharSet(const F: CharSet; const S: String; const Index: Integer = 1): Integer;
 
 function  PosCharRevA(const F: AnsiChar; const S: AnsiString; const Index: Integer = 1): Integer;
+function  PosCharRevB(const F: AnsiChar; const S: RawByteString; const Index: Integer = 1): Integer;
 function  PosCharRevW(const F: WideChar; const S: WideString; const Index: Integer = 1): Integer;
 function  PosCharRevU(const F: WideChar; const S: UnicodeString; const Index: Integer = 1): Integer;
 function  PosCharRev(const F: Char; const S: String; const Index: Integer = 1): Integer;
 
 function  PosCharSetRevA(const F: CharSet; const S: AnsiString; const Index: Integer = 1): Integer;
+function  PosCharSetRevB(const F: CharSet; const S: RawByteString; const Index: Integer = 1): Integer;
 function  PosCharSetRevW(const F: CharSet; const S: WideString; const Index: Integer = 1): Integer; overload;
 function  PosCharSetRevW(const F: TWideCharMatchFunction; const S: WideString; const Index: Integer = 1): Integer; overload;
 function  PosCharSetRevU(const F: CharSet; const S: UnicodeString; const Index: Integer = 1): Integer; overload;
@@ -998,6 +1041,7 @@ function  PosCharSetRevU(const F: TWideCharMatchFunction; const S: UnicodeString
 function  PosCharSetRev(const F: CharSet; const S: String; const Index: Integer = 1): Integer;
 
 function  PosStrA(const F, S: AnsiString; const Index: Integer = 1; const AsciiCaseSensitive: Boolean = True): Integer;
+function  PosStrB(const F, S: RawByteString; const Index: Integer = 1; const AsciiCaseSensitive: Boolean = True): Integer;
 function  PosStrW(const F, S: WideString; const Index: Integer = 1; const AsciiCaseSensitive: Boolean = True): Integer;
 function  PosStrAW(const F: AnsiString; const S: WideString; const Index: Integer = 1; const AsciiCaseSensitive: Boolean = True): Integer;
 function  PosStrU(const F, S: UnicodeString; const Index: Integer = 1; const AsciiCaseSensitive: Boolean = True): Integer;
@@ -1005,16 +1049,19 @@ function  PosStrAU(const F: AnsiString; const S: UnicodeString; const Index: Int
 function  PosStr(const F, S: String; const Index: Integer = 1; const AsciiCaseSensitive: Boolean = True): Integer;
 
 function  PosStrRevA(const F, S: AnsiString; const Index: Integer = 1; const AsciiCaseSensitive: Boolean = True): Integer;
+function  PosStrRevB(const F, S: RawByteString; const Index: Integer = 1; const AsciiCaseSensitive: Boolean = True): Integer;
 function  PosStrRevW(const F, S: WideString; const Index: Integer = 1; const AsciiCaseSensitive: Boolean = True): Integer;
 function  PosStrRevU(const F, S: UnicodeString; const Index: Integer = 1; const AsciiCaseSensitive: Boolean = True): Integer;
 function  PosStrRev(const F, S: String; const Index: Integer = 1; const AsciiCaseSensitive: Boolean = True): Integer;
 
 function  PosStrRevIdxA(const F, S: AnsiString; const Index: Integer = 1; const AsciiCaseSensitive: Boolean = True): Integer;
+function  PosStrRevIdxB(const F, S: RawByteString; const Index: Integer = 1; const AsciiCaseSensitive: Boolean = True): Integer;
 function  PosStrRevIdxW(const F, S: WideString; const Index: Integer = 1; const AsciiCaseSensitive: Boolean = True): Integer;
 function  PosStrRevIdxU(const F, S: UnicodeString; const Index: Integer = 1; const AsciiCaseSensitive: Boolean = True): Integer;
 function  PosStrRevIdx(const F, S: String; const Index: Integer = 1; const AsciiCaseSensitive: Boolean = True): Integer;
 
 function  PosNStrA(const F, S: AnsiString; const N: Integer; const Index: Integer = 1; const AsciiCaseSensitive: Boolean = True): Integer;
+function  PosNStrB(const F, S: RawByteString; const N: Integer; const Index: Integer = 1; const AsciiCaseSensitive: Boolean = True): Integer;
 function  PosNStrW(const F, S: WideString; const N: Integer; const Index: Integer = 1; const AsciiCaseSensitive: Boolean = True): Integer;
 function  PosNStrU(const F, S: UnicodeString; const N: Integer; const Index: Integer = 1; const AsciiCaseSensitive: Boolean = True): Integer;
 function  PosNStr(const F, S: String; const N: Integer; const Index: Integer = 1; const AsciiCaseSensitive: Boolean = True): Integer;
@@ -1053,6 +1100,7 @@ function  StrZSkipToCharW(var P: PWideChar; const C: TWideCharMatchFunction): In
 function  StrZSkipToChar(var P: PChar; const C: CharSet): Integer;
 
 function  StrZSkipToStrA(var P: PAnsiChar; const S: AnsiString; const AsciiCaseSensitive: Boolean = True): Integer;
+function  StrZSkipToStrB(var P: PAnsiChar; const S: RawByteString; const AsciiCaseSensitive: Boolean = True): Integer;
 function  StrZSkipToStrW(var P: PWideChar; const S: WideString; const AsciiCaseSensitive: Boolean = True): Integer;
 function  StrZSkipToStrAW(var P: PWideChar; const S: AnsiString; const AsciiCaseSensitive: Boolean = True): Integer;
 function  StrZSkipToStr(var P: PChar; const S: String; const AsciiCaseSensitive: Boolean = True): Integer;
@@ -1061,6 +1109,7 @@ function  StrZSkip2CharSeq(var P: PAnsiChar; const S1, S2: CharSet): Boolean;
 function  StrZSkip3CharSeq(var P: PAnsiChar; const S1, S2, S3: CharSet): Boolean;
 
 function  StrZSkipStrA(var P: PAnsiChar; const S: AnsiString; const AsciiCaseSensitive: Boolean = True): Boolean;
+function  StrZSkipStrB(var P: PAnsiChar; const S: RawByteString; const AsciiCaseSensitive: Boolean = True): Boolean;
 function  StrZSkipStrW(var P: PWideChar; const S: WideString; const AsciiCaseSensitive: Boolean = True): Boolean;
 function  StrZSkipStrAW(var P: PWideChar; const S: AnsiString; const AsciiCaseSensitive: Boolean = True): Boolean;
 function  StrZSkipStr(var P: PChar; const S: String; const AsciiCaseSensitive: Boolean = True): Boolean;
@@ -1097,6 +1146,7 @@ function  StrZExtractToU(var P: PWideChar; const C: TWideCharMatchFunction): Uni
 function  StrZExtractTo(var P: PChar; const C: CharSet): String;
 
 function  StrZExtractToStrA(var P: PAnsiChar; const S: AnsiString; const CaseSensitive: Boolean = True): AnsiString;
+function  StrZExtractToStrB(var P: PAnsiChar; const S: RawByteString; const CaseSensitive: Boolean = True): RawByteString;
 function  StrZExtractToStrW(var P: PWideChar; const S: WideString; const CaseSensitive: Boolean = True): WideString;
 function  StrZExtractToStrAW(var P: PWideChar; const S: AnsiString; const CaseSensitive: Boolean = True): WideString;
 function  StrZExtractToStrU(var P: PWideChar; const S: UnicodeString; const CaseSensitive: Boolean = True): UnicodeString;
@@ -1104,6 +1154,7 @@ function  StrZExtractToStrAU(var P: PWideChar; const S: AnsiString; const CaseSe
 function  StrZExtractToStr(var P: PChar; const S: String; const CaseSensitive: Boolean = True): String;
 
 function  StrZExtractQuotedA(var P: PAnsiChar; var S: AnsiString; const Quote: CharSet = ['''', '"']): Boolean;
+function  StrZExtractQuotedB(var P: PAnsiChar; var S: RawByteString; const Quote: CharSet = ['''', '"']): Boolean;
 function  StrZExtractQuotedW(var P: PWideChar; var S: WideString; const Quote: CharSet = ['''', '"']): Boolean;
 function  StrZExtractQuotedU(var P: PWideChar; var S: UnicodeString; const Quote: CharSet = ['''', '"']): Boolean;
 function  StrZExtractQuoted(var P: PChar; var S: String; const Quote: CharSet = ['''', '"']): Boolean;
@@ -1118,21 +1169,25 @@ function  StrZExtractQuoted(var P: PChar; var S: String; const Quote: CharSet = 
 {   These variants return a reference to the existing string if possible.      }
 {                                                                              }
 function  CopyRangeA(const S: AnsiString; const StartIndex, StopIndex: Integer): AnsiString;
+function  CopyRangeB(const S: RawByteString; const StartIndex, StopIndex: Integer): RawByteString;
 function  CopyRangeW(const S: WideString; const StartIndex, StopIndex: Integer): WideString;
 function  CopyRangeU(const S: UnicodeString; const StartIndex, StopIndex: Integer): UnicodeString;
 function  CopyRange(const S: String; const StartIndex, StopIndex: Integer): String;
 
 function  CopyFromA(const S: AnsiString; const Index: Integer): AnsiString;
+function  CopyFromB(const S: RawByteString; const Index: Integer): RawByteString;
 function  CopyFromW(const S: WideString; const Index: Integer): WideString;
 function  CopyFromU(const S: UnicodeString; const Index: Integer): UnicodeString;
 function  CopyFrom(const S: String; const Index: Integer): String;
 
 function  CopyLeftA(const S: AnsiString; const Count: Integer): AnsiString;
+function  CopyLeftB(const S: RawByteString; const Count: Integer): RawByteString;
 function  CopyLeftW(const S: WideString; const Count: Integer): WideString;
 function  CopyLeftU(const S: UnicodeString; const Count: Integer): UnicodeString;
 function  CopyLeft(const S: String; const Count: Integer): String;
 
 function  CopyRightA(const S: AnsiString; const Count: Integer): AnsiString;
+function  CopyRightB(const S: RawByteString; const Count: Integer): RawByteString;
 function  CopyRightW(const S: WideString; const Count: Integer): WideString;
 function  CopyRightU(const S: UnicodeString; const Count: Integer): UnicodeString;
 function  CopyRight(const S: String; const Count: Integer): String;
@@ -1149,16 +1204,19 @@ function  CopyLeftEllipsedA(const S: AnsiString; const Count: Integer): AnsiStri
 {   character in the string.                                                   }
 {                                                                              }
 function  CopyExA(const S: AnsiString; const Start, Count: Integer): AnsiString;
+function  CopyExB(const S: RawByteString; const Start, Count: Integer): RawByteString;
 function  CopyExW(const S: String; const Start, Count: Integer): String;
 function  CopyExU(const S: UnicodeString; const Start, Count: Integer): UnicodeString;
 function  CopyEx(const S: String; const Start, Count: Integer): String;
 
 function  CopyRangeExA(const S: AnsiString; const Start, Stop: Integer): AnsiString;
+function  CopyRangeExB(const S: RawByteString; const Start, Stop: Integer): RawByteString;
 function  CopyRangeExW(const S: WideString; const Start, Stop: Integer): WideString;
 function  CopyRangeExU(const S: UnicodeString; const Start, Stop: Integer): UnicodeString;
 function  CopyRangeEx(const S: String; const Start, Stop: Integer): String;
 
 function  CopyFromExA(const S: AnsiString; const Start: Integer): AnsiString;
+function  CopyFromExB(const S: RawByteString; const Start: Integer): RawByteString;
 function  CopyFromExW(const S: WideString; const Start: Integer): WideString;
 function  CopyFromExU(const S: UnicodeString; const Start: Integer): UnicodeString;
 function  CopyFromEx(const S: String; const Start: Integer): String;
@@ -1169,6 +1227,7 @@ function  CopyFromEx(const S: String; const Start: Integer): String;
 { Trim                                                                         }
 {                                                                              }
 function  StrTrimLeftA(const S: AnsiString;    const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}): AnsiString;
+function  StrTrimLeftB(const S: RawByteString; const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}): RawByteString;
 function  StrTrimLeftW(const S: WideString;    const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}): WideString; overload;
 function  StrTrimLeftW(const S: WideString;    const C: TWideCharMatchFunction): WideString; overload;
 function  StrTrimLeftU(const S: UnicodeString; const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}): UnicodeString; overload;
@@ -1176,6 +1235,7 @@ function  StrTrimLeftU(const S: UnicodeString; const C: TWideCharMatchFunction):
 function  StrTrimLeft(const S: String;         const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}): String;
 
 procedure StrTrimLeftInPlaceA(var S: AnsiString;    const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF});
+procedure StrTrimLeftInPlaceB(var S: RawByteString; const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF});
 procedure StrTrimLeftInPlaceW(var S: WideString;    const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}); overload;
 procedure StrTrimLeftInPlaceW(var S: WideString;    const C: TWideCharMatchFunction); overload;
 procedure StrTrimLeftInPlaceU(var S: UnicodeString; const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}); overload;
@@ -1183,11 +1243,13 @@ procedure StrTrimLeftInPlaceU(var S: UnicodeString; const C: TWideCharMatchFunct
 procedure StrTrimLeftInPlace(var S: String;         const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF});
 
 function  StrTrimLeftStrNoCaseA(const S: AnsiString; const TrimStr: AnsiString): AnsiString;
+function  StrTrimLeftStrNoCaseB(const S: RawByteString; const TrimStr: RawByteString): RawByteString;
 function  StrTrimLeftStrNoCaseW(const S: WideString; const TrimStr: WideString): WideString;
 function  StrTrimLeftStrNoCaseU(const S: UnicodeString; const TrimStr: WideString): UnicodeString;
 function  StrTrimLeftStrNoCase(const S: String; const TrimStr: String): String;
 
 function  StrTrimRightA(const S: AnsiString;    const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}): AnsiString;
+function  StrTrimRightB(const S: RawByteString; const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}): RawByteString;
 function  StrTrimRightW(const S: WideString;    const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}): WideString; overload;
 function  StrTrimRightW(const S: WideString;    const C: TWideCharMatchFunction): WideString; overload;
 function  StrTrimRightU(const S: UnicodeString; const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}): UnicodeString; overload;
@@ -1195,6 +1257,7 @@ function  StrTrimRightU(const S: UnicodeString; const C: TWideCharMatchFunction)
 function  StrTrimRight(const S: String;         const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}): String;
 
 procedure StrTrimRightInPlaceA(var S: AnsiString;    const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF});
+procedure StrTrimRightInPlaceB(var S: RawByteString; const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF});
 procedure StrTrimRightInPlaceW(var S: WideString;    const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}); overload;
 procedure StrTrimRightInPlaceW(var S: WideString;    const C: TWideCharMatchFunction); overload;
 procedure StrTrimRightInPlaceU(var S: UnicodeString; const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}); overload;
@@ -1202,11 +1265,13 @@ procedure StrTrimRightInPlaceU(var S: UnicodeString; const C: TWideCharMatchFunc
 procedure StrTrimRightInPlace(var S: String;         const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF});
 
 function  StrTrimRightStrNoCaseA(const S: AnsiString; const TrimStr: AnsiString): AnsiString;
+function  StrTrimRightStrNoCaseB(const S: RawByteString; const TrimStr: RawByteString): RawByteString;
 function  StrTrimRightStrNoCaseW(const S: WideString; const TrimStr: WideString): WideString;
 function  StrTrimRightStrNoCaseU(const S: UnicodeString; const TrimStr: UnicodeString): UnicodeString;
 function  StrTrimRightStrNoCase(const S: String; const TrimStr: String): String;
 
-function  StrTrimA(const S: AnsiString; const C: CharSet): AnsiString;
+function  StrTrimA(const S: AnsiString; const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}): AnsiString;
+function  StrTrimB(const S: RawByteString; const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}): RawByteString;
 function  StrTrimW(const S: WideString; const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}): WideString; overload;
 function  StrTrimW(const S: WideString; const C: TWideCharMatchFunction): WideString; overload;
 function  StrTrimU(const S: UnicodeString; const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}): UnicodeString; overload;
@@ -1214,6 +1279,7 @@ function  StrTrimU(const S: UnicodeString; const C: TWideCharMatchFunction): Uni
 function  StrTrim(const S: String; const C: CharSet): String; overload;
 
 procedure StrTrimInPlaceA(var S: AnsiString;    const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF});
+procedure StrTrimInPlaceB(var S: RawByteString; const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF});
 procedure StrTrimInPlaceW(var S: WideString;    const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}); overload;
 procedure StrTrimInPlaceW(var S: WideString;    const C: TWideCharMatchFunction); overload;
 procedure StrTrimInPlaceU(var S: UnicodeString; const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}); overload;
@@ -1221,6 +1287,7 @@ procedure StrTrimInPlaceU(var S: UnicodeString; const C: TWideCharMatchFunction)
 procedure StrTrimInPlace(var S: String;         const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF});
 
 procedure TrimStringsA(var S: AnsiStringArray; const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}); overload;
+procedure TrimStringsB(var S: RawByteStringArray; const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}); overload;
 procedure TrimStringsW(var S: WideStringArray; const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}); overload;
 
 
@@ -1230,27 +1297,32 @@ procedure TrimStringsW(var S: WideStringArray; const C: CharSet{$IFNDEF CLR} = c
 {                                                                              }
 {$IFNDEF ManagedCode}
 function  BufToStrA(const Buf; const BufSize: Integer): AnsiString;
+function  BufToStrB(const Buf; const BufSize: Integer): RawByteString;
 function  BufToStrW(const Buf; const BufSize: Integer): WideString;
 function  BufToStrU(const Buf; const BufSize: Integer): UnicodeString;
 function  BufToStr(const Buf; const BufSize: Integer): String;
 
 function  DupBufA(const Buf; const BufSize: Integer; const Count: Integer): AnsiString;
+function  DupBufB(const Buf; const BufSize: Integer; const Count: Integer): RawByteString;
 function  DupBufW(const Buf; const BufSize: Integer; const Count: Integer): WideString;
 function  DupBufU(const Buf; const BufSize: Integer; const Count: Integer): UnicodeString;
 function  DupBuf(const Buf; const BufSize: Integer; const Count: Integer): String;
 {$ENDIF}
 
 function  DupStrA(const S: AnsiString; const Count: Integer): AnsiString;
+function  DupStrB(const S: RawByteString; const Count: Integer): RawByteString;
 function  DupStrW(const S: WideString; const Count: Integer): WideString;
 function  DupStrU(const S: UnicodeString; const Count: Integer): UnicodeString;
 function  DupStr(const S: String; const Count: Integer): String;
 
 function  DupCharA(const Ch: AnsiChar; const Count: Integer): AnsiString;
+function  DupCharB(const Ch: AnsiChar; const Count: Integer): RawByteString;
 function  DupCharW(const Ch: WideChar; const Count: Integer): WideString;
 function  DupCharU(const Ch: WideChar; const Count: Integer): UnicodeString;
 function  DupChar(const Ch: Char; const Count: Integer): String;
 
 function  DupSpaceA(const Count: Integer): AnsiString;
+function  DupSpaceB(const Count: Integer): RawByteString;
 function  DupSpaceW(const Count: Integer): WideString;
 function  DupSpaceU(const Count: Integer): UnicodeString;
 function  DupSpace(const Count: Integer): String;
@@ -1262,6 +1334,8 @@ function  DupSpace(const Count: Integer): String;
 {                                                                              }
 function  StrPadA(const S: AnsiString; const PadChar: AnsiChar; const Len: Integer;
           const Cut: Boolean = False): AnsiString;
+function  StrPadB(const S: RawByteString; const PadChar: AnsiChar; const Len: Integer;
+          const Cut: Boolean = False): RawByteString;
 function  StrPadW(const S: WideString; const PadChar: WideChar; const Len: Integer;
           const Cut: Boolean = False): WideString;
 function  StrPadU(const S: UnicodeString; const PadChar: WideChar; const Len: Integer;
@@ -1271,6 +1345,8 @@ function  StrPad(const S: String; const PadChar: Char; const Len: Integer;
 
 function  StrPadLeftA(const S: AnsiString; const PadChar: AnsiChar;
           const Len: Integer; const Cut: Boolean = False): AnsiString;
+function  StrPadLeftB(const S: RawByteString; const PadChar: AnsiChar;
+          const Len: Integer; const Cut: Boolean = False): RawByteString;
 function  StrPadLeftW(const S: WideString; const PadChar: WideChar;
           const Len: Integer; const Cut: Boolean = False): WideString;
 function  StrPadLeftU(const S: UnicodeString; const PadChar: WideChar;
@@ -1280,6 +1356,8 @@ function  StrPadLeft(const S: String; const PadChar: Char;
 
 function  StrPadRightA(const S: AnsiString; const PadChar: AnsiChar;
           const Len: Integer; const Cut: Boolean = False): AnsiString;
+function  StrPadRightB(const S: RawByteString; const PadChar: AnsiChar;
+          const Len: Integer; const Cut: Boolean = False): RawByteString;
 function  StrPadRightW(const S: WideString; const PadChar: WideChar;
           const Len: Integer; const Cut: Boolean = False): WideString;
 function  StrPadRightU(const S: UnicodeString; const PadChar: WideChar;
@@ -1300,6 +1378,15 @@ function  StrBetweenCharA(const S: AnsiString;
           const FirstDelim, SecondDelim: CharSet;
           const FirstOptional: Boolean = False;
           const SecondOptional: Boolean = False): AnsiString; overload;
+
+function  StrBetweenCharB(const S: RawByteString;
+          const FirstDelim, SecondDelim: AnsiChar;
+          const FirstOptional: Boolean = False;
+          const SecondOptional: Boolean = False): RawByteString; overload;
+function  StrBetweenCharB(const S: RawByteString;
+          const FirstDelim, SecondDelim: CharSet;
+          const FirstOptional: Boolean = False;
+          const SecondOptional: Boolean = False): RawByteString; overload;
 
 function  StrBetweenCharW(const S: WideString;
           const FirstDelim, SecondDelim: WideChar;
@@ -1330,6 +1417,18 @@ function  StrBetweenA(const S: AnsiString;
           const SecondOptional: Boolean = False;
           const FirstDelimAsciiCaseSensitive: Boolean = True;
           const SecondDelimAsciiCaseSensitive: Boolean = True): AnsiString; overload;
+
+function  StrBetweenB(const S: RawByteString;
+          const FirstDelim: RawByteString; const SecondDelim: CharSet;
+          const FirstOptional: Boolean = False;
+          const SecondOptional: Boolean = False;
+          const FirstDelimAsciiCaseSensitive: Boolean = True): RawByteString; overload;
+function  StrBetweenB(const S: RawByteString;
+          const FirstDelim, SecondDelim: RawByteString;
+          const FirstOptional: Boolean = False;
+          const SecondOptional: Boolean = False;
+          const FirstDelimAsciiCaseSensitive: Boolean = True;
+          const SecondDelimAsciiCaseSensitive: Boolean = True): RawByteString; overload;
 
 function  StrBetweenW(const S: WideString;
           const FirstDelim: WideString; const SecondDelim: CharSet;
@@ -1362,6 +1461,13 @@ function  StrBeforeRevA(const S, D: AnsiString;
           const Optional: Boolean = True;
           const AsciiCaseSensitive: Boolean = True): AnsiString;
 
+function  StrBeforeB(const S, D: RawByteString;
+          const Optional: Boolean = True;
+          const AsciiCaseSensitive: Boolean = True): RawByteString;
+function  StrBeforeRevB(const S, D: RawByteString;
+          const Optional: Boolean = True;
+          const AsciiCaseSensitive: Boolean = True): RawByteString;
+
 function  StrBeforeW(const S, D: WideString;
           const Optional: Boolean = True;
           const AsciiCaseSensitive: Boolean = True): WideString;
@@ -1380,6 +1486,10 @@ function  StrBeforeCharA(const S: AnsiString; const D: AnsiChar; const Optional:
 function  StrBeforeCharA(const S: AnsiString; const D: CharSet; const Optional: Boolean = True): AnsiString; overload;
 function  StrBeforeCharRevA(const S: AnsiString; const D: CharSet; const Optional: Boolean = True): AnsiString;
 
+function  StrBeforeCharB(const S: RawByteString; const D: AnsiChar; const Optional: Boolean = True): RawByteString; overload;
+function  StrBeforeCharB(const S: RawByteString; const D: CharSet; const Optional: Boolean = True): RawByteString; overload;
+function  StrBeforeCharRevB(const S: RawByteString; const D: CharSet; const Optional: Boolean = True): RawByteString;
+
 function  StrBeforeCharW(const S: WideString; const D: WideChar; const Optional: Boolean = True): WideString; overload;
 function  StrBeforeCharW(const S: WideString; const D: CharSet; const Optional: Boolean = True): WideString; overload;
 function  StrBeforeCharRevW(const S: WideString; const D: CharSet; const Optional: Boolean = True): WideString;
@@ -1391,6 +1501,9 @@ function  StrBeforeCharRev(const S: String; const D: CharSet; const Optional: Bo
 function  StrAfterA(const S, D: AnsiString; const Optional: Boolean = False): AnsiString;
 function  StrAfterRevA(const S, D: AnsiString; const Optional: Boolean = False): AnsiString;
 
+function  StrAfterB(const S, D: RawByteString; const Optional: Boolean = False): RawByteString;
+function  StrAfterRevB(const S, D: RawByteString; const Optional: Boolean = False): RawByteString;
+
 function  StrAfterW(const S, D: WideString; const Optional: Boolean = False): WideString;
 function  StrAfterRevW(const S, D: WideString; const Optional: Boolean = False): WideString;
 
@@ -1399,6 +1512,9 @@ function  StrAfterRev(const S, D: String; const Optional: Boolean = False): Stri
 
 function  StrAfterCharA(const S: AnsiString; const D: CharSet): AnsiString; overload;
 function  StrAfterCharA(const S: AnsiString; const D: AnsiChar): AnsiString; overload;
+
+function  StrAfterCharB(const S: RawByteString; const D: CharSet): RawByteString; overload;
+function  StrAfterCharB(const S: RawByteString; const D: AnsiChar): RawByteString; overload;
 
 function  StrAfterCharW(const S: WideString; const D: CharSet): WideString; overload;
 function  StrAfterCharW(const S: WideString; const D: WideChar): WideString; overload;
@@ -1410,7 +1526,12 @@ function  StrCopyToCharA(const S: AnsiString; const D: CharSet;
           const Optional: Boolean = True): AnsiString; overload;
 function  StrCopyToCharA(const S: AnsiString; const D: AnsiChar;
           const Optional: Boolean = True): AnsiString; overload;
-          
+
+function  StrCopyToCharB(const S: RawByteString; const D: CharSet;
+          const Optional: Boolean = True): RawByteString; overload;
+function  StrCopyToCharB(const S: RawByteString; const D: AnsiChar;
+          const Optional: Boolean = True): RawByteString; overload;
+
 function  StrCopyToCharW(const S: WideString; const D: CharSet;
           const Optional: Boolean = True): WideString; overload;
 function  StrCopyToCharW(const S: WideString; const D: WideChar;
@@ -1424,6 +1545,9 @@ function  StrCopyToChar(const S: String; const D: Char;
 function  StrCopyFromCharA(const S: AnsiString; const D: CharSet): AnsiString; overload;
 function  StrCopyFromCharA(const S: AnsiString; const D: AnsiChar): AnsiString; overload;
 
+function  StrCopyFromCharB(const S: RawByteString; const D: CharSet): RawByteString; overload;
+function  StrCopyFromCharB(const S: RawByteString; const D: AnsiChar): RawByteString; overload;
+
 function  StrCopyFromCharW(const S: WideString; const D: CharSet): WideString; overload;
 function  StrCopyFromCharW(const S: WideString; const D: WideChar): WideString; overload;
 
@@ -1432,6 +1556,8 @@ function  StrCopyFromChar(const S: String; const D: Char): String; overload;
 
 function  StrRemoveCharDelimitedA(var S: AnsiString;
           const FirstDelim, SecondDelim: AnsiChar): AnsiString;
+function  StrRemoveCharDelimitedB(var S: RawByteString;
+          const FirstDelim, SecondDelim: AnsiChar): RawByteString;
 function  StrRemoveCharDelimitedW(var S: WideString;
           const FirstDelim, SecondDelim: WideChar): WideString;
 function  StrRemoveCharDelimited(var S: String;
@@ -1443,11 +1569,13 @@ function  StrRemoveCharDelimited(var S: String;
 { Count                                                                        }
 {                                                                              }
 function  StrCountCharA(const S: AnsiString; const C: AnsiChar): Integer; overload;
+function  StrCountCharB(const S: RawByteString; const C: AnsiChar): Integer; overload;
 function  StrCountCharW(const S: WideString; const C: WideChar): Integer; overload;
 function  StrCountCharU(const S: UnicodeString; const C: WideChar): Integer; overload;
 function  StrCountChar(const S: String; const C: Char): Integer; overload;
 
 function  StrCountCharA(const S: AnsiString; const C: CharSet): Integer; overload;
+function  StrCountCharB(const S: RawByteString; const C: CharSet): Integer; overload;
 function  StrCountCharW(const S: WideString; const C: CharSet): Integer; overload;
 function  StrCountCharU(const S: UnicodeString; const C: CharSet): Integer; overload;
 function  StrCountChar(const S: String; const C: CharSet): Integer; overload;
@@ -1458,22 +1586,26 @@ function  StrCountChar(const S: String; const C: CharSet): Integer; overload;
 { Replace                                                                      }
 {                                                                              }
 function  StrReplaceCharA(const Find, Replace: AnsiChar; const S: AnsiString): AnsiString; overload;
+function  StrReplaceCharB(const Find, Replace: AnsiChar; const S: RawByteString): RawByteString; overload;
 function  StrReplaceCharW(const Find, Replace: WideChar; const S: WideString): WideString; overload;
 function  StrReplaceCharU(const Find, Replace: WideChar; const S: UnicodeString): UnicodeString; overload;
 function  StrReplaceChar(const Find, Replace: Char; const S: String): String; overload;
 
 function  StrReplaceCharA(const Find: CharSet; const Replace: AnsiChar; const S: AnsiString): AnsiString; overload;
+function  StrReplaceCharB(const Find: CharSet; const Replace: AnsiChar; const S: RawByteString): RawByteString; overload;
 function  StrReplaceCharW(const Find: CharSet; const Replace: WideChar; const S: WideString): WideString; overload;
 function  StrReplaceCharU(const Find: CharSet; const Replace: WideChar; const S: UnicodeString): UnicodeString; overload;
 function  StrReplaceChar(const Find: CharSet; const Replace: Char; const S: String): String; overload;
 
 function  StrReplaceA(const Find, Replace, S: AnsiString; const AsciiCaseSensitive: Boolean = True): AnsiString; overload;
+function  StrReplaceB(const Find, Replace, S: RawByteString; const AsciiCaseSensitive: Boolean = True): RawByteString; overload;
 function  StrReplaceW(const Find, Replace, S: WideString; const AsciiCaseSensitive: Boolean = True): WideString; overload;
 function  StrReplaceU(const Find, Replace, S: UnicodeString; const AsciiCaseSensitive: Boolean = True): UnicodeString; overload;
 function  StrReplace(const Find, Replace, S: String; const AsciiCaseSensitive: Boolean = True): String; overload;
 
 {$IFNDEF CLR}
 function  StrReplaceA(const Find: CharSet; const Replace, S: AnsiString): AnsiString; overload;
+function  StrReplaceB(const Find: CharSet; const Replace, S: RawByteString): RawByteString; overload;
 function  StrReplaceW(const Find: CharSet; const Replace, S: WideString): WideString; overload;
 function  StrReplaceU(const Find: CharSet; const Replace, S: UnicodeString): UnicodeString; overload;
 function  StrReplace(const Find: CharSet; const Replace, S: String): String; overload;
@@ -1495,6 +1627,7 @@ function  StrRemoveChar(const S: String; const C: Char): String;
 
 {$IFNDEF CLR}
 function  StrRemoveCharSetA(const S: AnsiString; const C: CharSet): AnsiString;
+function  StrRemoveCharSetB(const S: RawByteString; const C: CharSet): RawByteString;
 function  StrRemoveCharSetW(const S: WideString; const C: CharSet): WideString;
 function  StrRemoveCharSetU(const S: UnicodeString; const C: CharSet): UnicodeString;
 function  StrRemoveCharSet(const S: String; const C: CharSet): String;
@@ -1507,6 +1640,10 @@ function  StrRemoveCharSet(const S: String; const C: CharSet): String;
 {                                                                              }
 function  StrSplitAtA(const S: AnsiString; const C: AnsiString;
           var Left, Right: AnsiString;
+          const AsciiCaseSensitive: Boolean = True;
+          const Optional: Boolean = True): Boolean;
+function  StrSplitAtB(const S: RawByteString; const C: RawByteString;
+          var Left, Right: RawByteString;
           const AsciiCaseSensitive: Boolean = True;
           const Optional: Boolean = True): Boolean;
 function  StrSplitAtW(const S: WideString; const C: WideString;
@@ -1525,6 +1662,9 @@ function  StrSplitAt(const S: String; const C: String;
 function  StrSplitAtCharA(const S: AnsiString; const C: AnsiChar;
           var Left, Right: AnsiString;
           const Optional: Boolean = True): Boolean;
+function  StrSplitAtCharB(const S: RawByteString; const C: AnsiChar;
+          var Left, Right: RawByteString;
+          const Optional: Boolean = True): Boolean;
 function  StrSplitAtCharW(const S: WideString; const C: WideChar;
           var Left, Right: WideString;
           const Optional: Boolean = True): Boolean;
@@ -1540,16 +1680,19 @@ function  StrSplitAtCharSetA(const S: AnsiString; const C: CharSet;
           const Optional: Boolean = True): Boolean;
 
 function  StrSplitA(const S, D: AnsiString): AnsiStringArray;
+function  StrSplitB(const S, D: RawByteString): RawByteStringArray;
 function  StrSplitW(const S, D: WideString): WideStringArray;
 function  StrSplitU(const S, D: UnicodeString): UnicodeStringArray;
 function  StrSplit(const S, D: String): StringArray;
 
 function  StrSplitCharA(const S: AnsiString; const D: AnsiChar): AnsiStringArray;
+function  StrSplitCharB(const S: RawByteString; const D: AnsiChar): RawByteStringArray;
 function  StrSplitCharW(const S: WideString; const D: WideChar): WideStringArray;
 function  StrSplitCharU(const S: UnicodeString; const D: WideChar): UnicodeStringArray;
 function  StrSplitChar(const S: String; const D: Char): StringArray;
 
 function  StrSplitCharSetA(const S: AnsiString; const D: CharSet): AnsiStringArray;
+function  StrSplitCharSetB(const S: RawByteString; const D: CharSet): RawByteStringArray;
 function  StrSplitCharSetW(const S: WideString; const D: CharSet): WideStringArray;
 function  StrSplitCharSetU(const S: UnicodeString; const D: CharSet): UnicodeStringArray;
 function  StrSplitCharSet(const S: String; const D: CharSet): StringArray;
@@ -1559,11 +1702,13 @@ function  StrSplitWords(const S: AnsiString; const C: CharSet): AnsiStringArray;
 {$ENDIF}
 
 function  StrJoinA(const S: array of AnsiString; const D: AnsiString): AnsiString;
+function  StrJoinB(const S: array of RawByteString; const D: RawByteString): RawByteString;
 function  StrJoinW(const S: array of WideString; const D: WideString): WideString;
 function  StrJoinU(const S: array of UnicodeString; const D: UnicodeString): UnicodeString;
 function  StrJoin(const S: array of String; const D: String): String;
 
 function  StrJoinCharA(const S: array of AnsiString; const D: AnsiChar): AnsiString;
+function  StrJoinCharB(const S: array of RawByteString; const D: AnsiChar): RawByteString;
 function  StrJoinCharW(const S: array of WideString; const D: WideChar): WideString;
 function  StrJoinCharU(const S: array of UnicodeString; const D: WideChar): UnicodeString;
 function  StrJoinChar(const S: array of String; const D: Char): String;
@@ -1584,6 +1729,8 @@ function  StrJoinChar(const S: array of String; const D: Char): String;
 {                                                                              }
 function  StrHasSurroundingQuotesA(const S: AnsiString;
           const Quotes: CharSet{$IFNDEF CLR} = csQuotes{$ENDIF}): Boolean;
+function  StrHasSurroundingQuotesB(const S: RawByteString;
+          const Quotes: CharSet{$IFNDEF CLR} = csQuotes{$ENDIF}): Boolean;
 function  StrHasSurroundingQuotesW(const S: WideString;
           const Quotes: CharSet{$IFNDEF CLR} = csQuotes{$ENDIF}): Boolean;
 function  StrHasSurroundingQuotesU(const S: UnicodeString;
@@ -1593,6 +1740,8 @@ function  StrHasSurroundingQuotes(const S: String;
 
 function  StrRemoveSurroundingQuotesA(const S: AnsiString;
           const Quotes: CharSet{$IFNDEF CLR} = csQuotes{$ENDIF}): AnsiString;
+function  StrRemoveSurroundingQuotesB(const S: RawByteString;
+          const Quotes: CharSet{$IFNDEF CLR} = csQuotes{$ENDIF}): RawByteString;
 function  StrRemoveSurroundingQuotesW(const S: WideString;
           const Quotes: CharSet{$IFNDEF CLR} = csQuotes{$ENDIF}): WideString;
 function  StrRemoveSurroundingQuotesU(const S: UnicodeString;
@@ -1601,11 +1750,13 @@ function  StrRemoveSurroundingQuotes(const S: String;
           const Quotes: CharSet{$IFNDEF CLR} = csQuotes{$ENDIF}): String;
 
 function  StrQuoteA(const S: AnsiString; const Quote: AnsiChar = '"'): AnsiString;
+function  StrQuoteB(const S: RawByteString; const Quote: AnsiChar = '"'): RawByteString;
 function  StrQuoteW(const S: WideString; const Quote: WideChar = '"'): WideString;
 function  StrQuoteU(const S: UnicodeString; const Quote: WideChar = '"'): UnicodeString;
 function  StrQuote(const S: String; const Quote: Char = '"'): String;
 
 function  StrUnquoteA(const S: AnsiString): AnsiString;
+function  StrUnquoteB(const S: RawByteString): RawByteString;
 function  StrUnquoteW(const S: WideString): WideString;
 function  StrUnquoteU(const S: UnicodeString): UnicodeString;
 function  StrUnquote(const S: String): String;
@@ -1657,41 +1808,49 @@ function  StrCStyleUnescapeA(const S: AnsiString): AnsiString;
 { Prefix and Suffix                                                            }
 {                                                                              }
 function  StrInclPrefixA(const S: AnsiString; const Prefix: AnsiString; const AsciiCaseSensitive: Boolean = True): AnsiString;
+function  StrInclPrefixB(const S: RawByteString; const Prefix: RawByteString; const AsciiCaseSensitive: Boolean = True): RawByteString;
 function  StrInclPrefixW(const S: WideString; const Prefix: WideString; const AsciiCaseSensitive: Boolean = True): WideString;
 function  StrInclPrefixU(const S: UnicodeString; const Prefix: UnicodeString; const AsciiCaseSensitive: Boolean = True): UnicodeString;
 function  StrInclPrefix(const S: String; const Prefix: String; const AsciiCaseSensitive: Boolean = True): String;
 
 function  StrInclSuffixA(const S: AnsiString; const Suffix: AnsiString; const AsciiCaseSensitive: Boolean = True): AnsiString;
+function  StrInclSuffixB(const S: RawByteString; const Suffix: RawByteString; const AsciiCaseSensitive: Boolean = True): RawByteString;
 function  StrInclSuffixW(const S: WideString; const Suffix: WideString; const AsciiCaseSensitive: Boolean = True): WideString;
 function  StrInclSuffixU(const S: UnicodeString; const Suffix: UnicodeString; const AsciiCaseSensitive: Boolean = True): UnicodeString;
 function  StrInclSuffix(const S: String; const Suffix: String; const AsciiCaseSensitive: Boolean = True): String;
 
 function  StrExclPrefixA(const S: AnsiString; const Prefix: AnsiString; const AsciiCaseSensitive: Boolean = True): AnsiString;
+function  StrExclPrefixB(const S: RawByteString; const Prefix: RawByteString; const AsciiCaseSensitive: Boolean = True): RawByteString;
 function  StrExclPrefixW(const S: WideString; const Prefix: WideString; const AsciiCaseSensitive: Boolean = True): WideString;
 function  StrExclPrefixU(const S: UnicodeString; const Prefix: UnicodeString; const AsciiCaseSensitive: Boolean = True): UnicodeString;
 function  StrExclPrefix(const S: String; const Prefix: String; const AsciiCaseSensitive: Boolean = True): String;
 
 function  StrExclSuffixA(const S: AnsiString; const Suffix: AnsiString; const AsciiCaseSensitive: Boolean = True): AnsiString;
+function  StrExclSuffixB(const S: RawByteString; const Suffix: RawByteString; const AsciiCaseSensitive: Boolean = True): RawByteString;
 function  StrExclSuffixW(const S: WideString; const Suffix: WideString; const AsciiCaseSensitive: Boolean = True): WideString;
 function  StrExclSuffixU(const S: UnicodeString; const Suffix: UnicodeString; const AsciiCaseSensitive: Boolean = True): UnicodeString;
 function  StrExclSuffix(const S: String; const Suffix: String; const AsciiCaseSensitive: Boolean = True): String;
 
 procedure StrEnsurePrefixA(var S: AnsiString; const Prefix: AnsiString; const AsciiCaseSensitive: Boolean = True);
+procedure StrEnsurePrefixB(var S: RawByteString; const Prefix: RawByteString; const AsciiCaseSensitive: Boolean = True);
 procedure StrEnsurePrefixW(var S: WideString; const Prefix: WideString; const AsciiCaseSensitive: Boolean = True);
 procedure StrEnsurePrefixU(var S: UnicodeString; const Prefix: UnicodeString; const AsciiCaseSensitive: Boolean = True);
 procedure StrEnsurePrefix(var S: String; const Prefix: String; const AsciiCaseSensitive: Boolean = True);
 
 procedure StrEnsureSuffixA(var S: AnsiString; const Suffix: AnsiString; const AsciiCaseSensitive: Boolean = True);
+procedure StrEnsureSuffixB(var S: RawByteString; const Suffix: RawByteString; const AsciiCaseSensitive: Boolean = True);
 procedure StrEnsureSuffixW(var S: WideString; const Suffix: WideString; const AsciiCaseSensitive: Boolean = True);
 procedure StrEnsureSuffixU(var S: UnicodeString; const Suffix: UnicodeString; const AsciiCaseSensitive: Boolean = True);
 procedure StrEnsureSuffix(var S: String; const Suffix: String; const AsciiCaseSensitive: Boolean = True);
 
 procedure StrEnsureNoPrefixA(var S: AnsiString; const Prefix: AnsiString; const AsciiCaseSensitive: Boolean = True);
+procedure StrEnsureNoPrefixB(var S: RawByteString; const Prefix: RawByteString; const AsciiCaseSensitive: Boolean = True);
 procedure StrEnsureNoPrefixW(var S: WideString; const Prefix: WideString; const AsciiCaseSensitive: Boolean = True);
 procedure StrEnsureNoPrefixU(var S: UnicodeString; const Prefix: UnicodeString; const AsciiCaseSensitive: Boolean = True);
 procedure StrEnsureNoPrefix(var S: String; const Prefix: String; const AsciiCaseSensitive: Boolean = True);
 
 procedure StrEnsureNoSuffixA(var S: AnsiString; const Suffix: AnsiString; const AsciiCaseSensitive: Boolean = True);
+procedure StrEnsureNoSuffixB(var S: RawByteString; const Suffix: RawByteString; const AsciiCaseSensitive: Boolean = True);
 procedure StrEnsureNoSuffixW(var S: WideString; const Suffix: WideString; const AsciiCaseSensitive: Boolean = True);
 procedure StrEnsureNoSuffixU(var S: UnicodeString; const Suffix: UnicodeString; const AsciiCaseSensitive: Boolean = True);
 procedure StrEnsureNoSuffix(var S: String; const Suffix: String; const AsciiCaseSensitive: Boolean = True);
@@ -1702,6 +1861,7 @@ procedure StrEnsureNoSuffix(var S: String; const Suffix: String; const AsciiCase
 { Reverse                                                                      }
 {                                                                              }
 function  StrReverseA(const S: AnsiString): AnsiString;
+function  StrReverseB(const S: RawByteString): RawByteString;
 function  StrReverseW(const S: WideString): WideString;
 function  StrReverseU(const S: UnicodeString): UnicodeString;
 function  StrReverse(const S: String): String;
@@ -1726,11 +1886,13 @@ function  HexToLongWordDef(const S: AnsiString; const Default: LongWord): LongWo
 function  StrToFloatDef(const S: String; const Default: Extended): Extended;
 
 function  BooleanToStrA(const B: Boolean): AnsiString;
+function  BooleanToStrB(const B: Boolean): RawByteString;
 function  BooleanToStrW(const B: Boolean): WideString;
 function  BooleanToStrU(const B: Boolean): UnicodeString;
 function  BooleanToStr(const B: Boolean): String;
 
 function  StrToBooleanA(const S: AnsiString): Boolean;
+function  StrToBooleanB(const S: RawByteString): Boolean;
 function  StrToBooleanW(const S: WideString): Boolean;
 function  StrToBooleanU(const S: UnicodeString): Boolean;
 function  StrToBoolean(const S: String): Boolean;
@@ -1805,6 +1967,7 @@ function  CharClassStrToCharSet(const S: AnsiString): CharSet;
 { Dynamic array functions                                                      }
 {                                                                              }
 function  StringsTotalLengthA(const S: array of AnsiString): Integer;
+function  StringsTotalLengthB(const S: array of RawByteString): Integer;
 function  StringsTotalLengthW(const S: array of WideString): Integer;
 function  StringsTotalLengthU(const S: array of UnicodeString): Integer;
 function  StringsTotalLength(const S: array of String): Integer;
@@ -1864,6 +2027,40 @@ type
     procedure AppendCh(const C: AnsiChar; const Count: Integer); overload;
     procedure Append(const BufPtr: Pointer; const Size: Integer); overload;
     procedure Append(const S: TAnsiStringBuilder); overload;
+
+    procedure Pack;
+  end;
+
+  TRawByteStringBuilder = class
+  protected
+    FString : RawByteString;
+    FLength : Integer;
+
+    procedure EnsureCapacity(const L: Integer);
+
+    function  GetAsRawByteString: RawByteString;
+    procedure SetAsRawByteString(const S: RawByteString);
+    function  GetAsString: String;
+
+  public
+    constructor Create(const S: RawByteString = ''); overload;
+    constructor Create(const Capacity: Integer); overload;
+
+    property  Length: Integer read FLength;
+    property  AsRawByteString: RawByteString read GetAsRawByteString write SetAsRawByteString;
+    property  AsString: String read GetAsString;
+
+    procedure Clear;
+    procedure Assign(const S: TRawByteStringBuilder);
+
+    procedure Append(const S: RawByteString); overload;
+    procedure AppendCRLF;
+    procedure AppendLn(const S: RawByteString = '');
+    procedure Append(const S: RawByteString; const Count: Integer); overload;
+    procedure AppendCh(const C: AnsiChar); overload;
+    procedure AppendCh(const C: AnsiChar; const Count: Integer); overload;
+    procedure Append(const BufPtr: Pointer; const Size: Integer); overload;
+    procedure Append(const S: TRawByteStringBuilder); overload;
 
     procedure Pack;
   end;
@@ -10384,6 +10581,36 @@ begin
 end;
 {$ENDIF}
 
+{$IFDEF ManagedCode}
+procedure SetLengthAndZeroB(var S: RawByteString; const NewLength: Integer);
+var L, I : Integer;
+begin
+  L := Length(S);
+  if L = NewLength then
+    exit;
+  SetLength(S, NewLength);
+  if L > NewLength then
+    exit;
+  for I := L + 1 to NewLength do
+    S[I] := AnsiChar(#0);
+end;
+{$ELSE}
+procedure SetLengthAndZeroB(var S: RawByteString; const NewLength: Integer);
+var L : Integer;
+    P : PAnsiChar;
+begin
+  L := Length(S);
+  if L = NewLength then
+    exit;
+  SetLength(S, NewLength);
+  if L > NewLength then
+    exit;
+  P := Pointer(S);
+  Inc(P, L);
+  ZeroMem(P^, NewLength - L);
+end;
+{$ENDIF}
+
 procedure SetLengthAndZeroW(var S: WideString; const NewLength: Integer);
 var L : Integer;
     P : PWideChar;
@@ -10442,6 +10669,21 @@ begin
 end;
 
 function StrPasA(const A: PAnsiChar): AnsiString;
+var I, L : Integer;
+begin
+  L := StrLenA(A);
+  SetLength(Result, L);
+  if L = 0 then
+    exit;
+  I := 0;
+  while I < L do
+    begin
+      Result[I + 1] := A[I];
+      Inc(I);
+    end;
+end;
+
+function StrPasB(const A: PAnsiChar): RawByteString;
 var I, L : Integer;
 begin
   L := StrLenA(A);
@@ -10559,6 +10801,15 @@ begin
   {$ENDIF}
 end;
 
+function ToStringB(const A: RawByteString): String;
+begin
+  {$IFDEF StringIsUnicode}
+  Result := String(A);
+  {$ELSE}
+  Result := A;
+  {$ENDIF}
+end;
+
 function ToStringW(const A: WideString): String;
 begin
   {$IFDEF StringIsUnicode}
@@ -10581,6 +10832,15 @@ function ToAnsiString(const A: String): AnsiString;
 begin
   {$IFDEF StringIsUnicode}
   Result := AnsiString(A);
+  {$ELSE}
+  Result := A;
+  {$ENDIF}
+end;
+
+function ToRawByteString(const A: String): RawByteString;
+begin
+  {$IFDEF StringIsUnicode}
+  Result := RawByteString(A);
   {$ELSE}
   Result := A;
   {$ENDIF}
@@ -10649,6 +10909,14 @@ begin
 end;
 
 function StrPToStrA(const P: PAnsiChar; const L: Integer): AnsiString;
+begin
+  Assert(L >= 0);
+  SetLength(Result, L);
+  if L > 0 then
+    MoveMem(P^, Pointer(Result)^, L);
+end;
+
+function StrPToStrB(const P: PAnsiChar; const L: Integer): RawByteString;
 begin
   Assert(L >= 0);
   SetLength(Result, L);
@@ -10819,6 +11087,14 @@ begin
 end;
 {$ENDIF}
 
+procedure AsciiConvertUpperB(var S: RawByteString);
+var F : Integer;
+begin
+  for F := 1 to Length(S) do
+    if S[F] in [AsciiLowerA..AsciiLowerZ] then
+      S[F] := AnsiChar(Ord(S[F]) - AsciiCaseDiff);
+end;
+
 procedure AsciiConvertUpperW(var S: WideString);
 var F : Integer;
     C : WideChar;
@@ -10914,6 +11190,14 @@ begin
 end;
 {$ENDIF}
 
+procedure AsciiConvertLowerB(var S: RawByteString);
+var F : Integer;
+begin
+  for F := 1 to Length(S) do
+    if S[F] in [AsciiUpperA..AsciiUpperZ] then
+      S[F] := AnsiChar(Ord(S[F]) + AsciiCaseDiff);
+end;
+
 procedure AsciiConvertLowerW(var S: WideString);
 var F : Integer;
     C : WideChar;
@@ -10961,6 +11245,12 @@ begin
   AsciiConvertUpperA(Result);
 end;
 
+function AsciiUpperCaseB(const A: RawByteString): RawByteString;
+begin
+  Result := A;
+  AsciiConvertUpperB(Result);
+end;
+
 function AsciiUpperCaseW(const A: WideString): WideString;
 begin
   Result := A;
@@ -10985,6 +11275,12 @@ begin
   AsciiConvertLowerA(Result);
 end;
 
+function AsciiLowerCaseB(const A: RawByteString): RawByteString;
+begin
+  Result := A;
+  AsciiConvertLowerB(Result);
+end;
+
 function AsciiLowerCaseW(const A: WideString): WideString;
 begin
   Result := A;
@@ -11004,6 +11300,17 @@ begin
 end;
 
 procedure AsciiConvertFirstUpA(var S: AnsiString);
+var C : AnsiChar;
+begin
+  if S <> '' then
+    begin
+      C := S[1];
+      if C in [AsciiLowerA..AsciiLowerZ] then
+        S[1] := AsciiUpCaseA(C);
+    end;
+end;
+
+procedure AsciiConvertFirstUpB(var S: RawByteString);
 var C : AnsiChar;
 begin
   if S <> '' then
@@ -11040,6 +11347,12 @@ function AsciiFirstUpA(const S: AnsiString): AnsiString;
 begin
   Result := S;
   AsciiConvertFirstUpA(Result);
+end;
+
+function AsciiFirstUpB(const S: RawByteString): RawByteString;
+begin
+  Result := S;
+  AsciiConvertFirstUpB(Result);
 end;
 
 function AsciiFirstUpW(const S: WideString): WideString;
@@ -11089,6 +11402,18 @@ begin
 end;
 
 function IsAsciiStringA(const S: AnsiString): Boolean;
+var I : Integer;
+begin
+  for I := 1 to Length(S) do
+    if not IsAsciiCharA(S[I]) then
+      begin
+        Result := False;
+        exit;
+      end;
+  Result := True;
+end;
+
+function IsAsciiStringB(const S: RawByteString): Boolean;
 var I : Integer;
 begin
   for I := 1 to Length(S) do
@@ -11603,8 +11928,30 @@ begin
   else
     Result := 1;
 end;
-{$ELSE}
+{$ENDIF}
+
+{$IFNDEF CLR}
 function StrCompareA(const A, B: AnsiString): Integer;
+var L, M, I: Integer;
+begin
+  L := Length(A);
+  M := Length(B);
+  if L < M then
+    I := L
+  else
+    I := M;
+  Result := StrPCompareA(Pointer(A), Pointer(B), I);
+  if Result <> 0 then
+    exit;
+  if L = M then
+    Result := 0 else
+  if L < M then
+    Result := -1
+  else
+    Result := 1;
+end;
+
+function StrCompareB(const A, B: RawByteString): Integer;
 var L, M, I: Integer;
 begin
   L := Length(A);
@@ -11685,6 +12032,26 @@ begin
 end;
 
 function StrCompareNoAsciiCaseA(const A, B: AnsiString): Integer;
+var L, M, I: Integer;
+begin
+  L := Length(A);
+  M := Length(B);
+  if L < M then
+    I := L
+  else
+    I := M;
+  Result := StrPCompareNoAsciiCaseA(Pointer(A), Pointer(B), I);
+  if Result <> 0 then
+    exit;
+  if L = M then
+    Result := 0 else
+  if L < M then
+    Result := -1
+  else
+    Result := 1;
+end;
+
+function StrCompareNoAsciiCaseB(const A, B: RawByteString): Integer;
 var L, M, I: Integer;
 begin
   L := Length(A);
@@ -12286,6 +12653,11 @@ begin
   Result := StrPMatchA(S, Pointer(M), Len, Length(M));
 end;
 
+function StrPMatchStrB(const S: PAnsiChar; const Len: Integer; const M: RawByteString): Boolean;
+begin
+  Result := StrPMatchA(S, Pointer(M), Len, Length(M));
+end;
+
 function StrPMatchStrW(const S: PWideChar; const Len: Integer; const M: WideString): Boolean;
 begin
   Result := StrPMatchW(S, Pointer(M), Len, Length(M));
@@ -12310,26 +12682,7 @@ function StrPMatchStr(const S: PChar; const Len: Integer; const M: String): Bool
 begin
   Result := StrPMatch(S, Pointer(M), Len, Length(M));
 end;
-{$ENDIF}
 
-{$IFDEF CLR}
-function StrPMatchNoAsciiCaseA(const A, B: AnsiString; const Len: Integer): Boolean;
-var C, D : Integer;
-    I    : Integer;
-begin
-  for I := 1 to Len do
-    begin
-      C := Integer(AsciiLowCaseLookup[A[I]]);
-      D := Integer(AsciiLowCaseLookup[B[I]]);
-      if C <> D then
-        begin
-          Result := False;
-          exit;
-        end;
-    end;
-  Result := True;
-end;
-{$ELSE}
 function StrPMatchNoAsciiCaseA(const A, B: PAnsiChar; const Len: Integer): Boolean;
 var P, Q : PAnsiChar;
     C, D : Integer;
@@ -12667,6 +13020,22 @@ begin
 end;
 {$ENDIF}
 
+function StrMatchB(const S, M: RawByteString; const Index: Integer): Boolean;
+var N, T : Integer;
+    Q    : PAnsiChar;
+begin
+  N := Length(M);
+  T := Length(S);
+  if (N = 0) or (T = 0) or (Index < 1) or (Index + N - 1 > T) then
+    begin
+      Result := False;
+      exit;
+    end;
+  Q := Pointer(S);
+  Inc(Q, Index - 1);
+  Result := StrPMatchA(Pointer(M), Q, N);
+end;
+
 function StrMatchW(const S, M: WideString; const Index: Integer): Boolean;
 var N, T, I : Integer;
 begin
@@ -12802,6 +13171,22 @@ begin
 end;
 {$ELSE}
 function StrMatchNoAsciiCaseA(const S, M: AnsiString; const Index: Integer): Boolean;
+var N, T : Integer;
+    Q    : PAnsiChar;
+begin
+  N := Length(M);
+  T := Length(S);
+  if (N = 0) or (T = 0) or (Index < 1) or (Index + N - 1 > T) then
+    begin
+      Result := False;
+      exit;
+    end;
+  Q := Pointer(S);
+  Inc(Q, Index - 1);
+  Result := StrPMatchNoAsciiCaseA(Pointer(M), Q, N);
+end;
+
+function StrMatchNoAsciiCaseB(const S, M: RawByteString; const Index: Integer): Boolean;
 var N, T : Integer;
     Q    : PAnsiChar;
 begin
@@ -12954,6 +13339,14 @@ begin
     Result := StrMatchNoAsciiCaseA(S, M, 1);
 end;
 
+function StrMatchLeftB(const S, M: RawByteString; const AsciiCaseSensitive: Boolean): Boolean;
+begin
+  if AsciiCaseSensitive then
+    Result := StrMatchB(S, M, 1)
+  else
+    Result := StrMatchNoAsciiCaseB(S, M, 1);
+end;
+
 function StrMatchLeftW(const S, M: WideString; const AsciiCaseSensitive: Boolean): Boolean;
 begin
   if AsciiCaseSensitive then
@@ -13002,6 +13395,16 @@ begin
     Result := StrMatchA(S, M, I)
   else
     Result := StrMatchNoAsciiCaseA(S, M, I);
+end;
+
+function StrMatchRightB(const S, M: RawByteString; const AsciiCaseSensitive: Boolean): Boolean;
+var I: Integer;
+begin
+  I := Length(S) - Length(M) + 1;
+  if AsciiCaseSensitive then
+    Result := StrMatchB(S, M, I)
+  else
+    Result := StrMatchNoAsciiCaseB(S, M, I);
 end;
 
 function StrMatchRightW(const S, M: WideString; const AsciiCaseSensitive: Boolean): Boolean;
@@ -13078,6 +13481,25 @@ begin
 end;
 {$ELSE}
 function StrMatchLenA(const S: AnsiString; const M: CharSet; const Index: Integer): Integer;
+var P    : PAnsiChar;
+    L, I : Integer;
+begin
+  I := Index;
+  if I <= 0 then
+    I := 1;
+  L := Length(S);
+  if I > L then
+    Result := 0
+  else
+    begin
+      P := Pointer(S);
+      Dec(I);
+      Inc(P, I);
+      Result := StrPMatchLenA(P, L - I, M);
+    end;
+end;
+
+function StrMatchLenB(const S: RawByteString; const M: CharSet; const Index: Integer): Integer;
 var P    : PAnsiChar;
     L, I : Integer;
 begin
@@ -13201,6 +13623,13 @@ begin
 end;
 {$ELSE}
 function StrMatchCharA(const S: AnsiString; const M: CharSet): Boolean;
+var L: Integer;
+begin
+  L := Length(S);
+  Result := (L > 0) and (StrPMatchLenA(Pointer(S), L, M) = L);
+end;
+
+function StrMatchCharB(const S: RawByteString; const M: CharSet): Boolean;
 var L: Integer;
 begin
   L := Length(S);
@@ -13354,6 +13783,35 @@ begin
   Result := True;
 end;
 
+function StrZMatchStrB(const P: PAnsiChar; const M: RawByteString): Boolean;
+var T, Q : PAnsiChar;
+    I, L : Integer;
+    C    : AnsiChar;
+begin
+  L := Length(M);
+  if L = 0 then
+    begin
+      Result := False;
+      exit;
+    end;
+  T := P;
+  Q := Pointer(M);
+  for I := 1 to L do
+    begin
+      C := T^;
+      if (C = #0) or (C <> Q^) then
+        begin
+          Result := False;
+          exit;
+        end else
+        begin
+          Inc(T);
+          Inc(Q);
+        end;
+    end;
+  Result := True;
+end;
+
 function StrZMatchStrW(const P: PWideChar; const M: WideString): Boolean;
 var T, Q : PWideChar;
     I, L : Integer;
@@ -13472,6 +13930,44 @@ begin
 end;
 
 function StrZMatchStrNoAsciiCaseA(const P: PAnsiChar; const M: AnsiString): Boolean;
+var T, Q : PAnsiChar;
+    I, L : Integer;
+    C, D : AnsiChar;
+begin
+  L := Length(M);
+  if L = 0 then
+    begin
+      Result := False;
+      exit;
+    end;
+  T := P;
+  Q := Pointer(M);
+  for I := 1 to L do
+    begin
+      C := T^;
+      if C = #0 then
+        begin
+          Result := False;
+          exit;
+        end;
+      D := Q^;
+      if C <> D then
+        begin
+          C := AsciiLowCaseLookup[C];
+          D := AsciiLowCaseLookup[D];
+          if C <> D then
+            begin
+              Result := False;
+              exit;
+            end;
+        end;
+      Inc(T);
+      Inc(Q);
+    end;
+  Result := True;
+end;
+
+function StrZMatchStrNoAsciiCaseB(const P: PAnsiChar; const M: RawByteString): Boolean;
 var T, Q : PAnsiChar;
     I, L : Integer;
     C, D : AnsiChar;
@@ -13762,6 +14258,15 @@ begin
     Result := StrZMatchStrA(P, M)
   else
     Result := StrZMatchStrNoAsciiCaseA(P, M);
+end;
+
+function StrZMatchStrAsciiB(const P: PAnsiChar; const M: RawByteString;
+    const AsciiCaseSensitive: Boolean): Boolean;
+begin
+  if AsciiCaseSensitive then
+    Result := StrZMatchStrB(P, M)
+  else
+    Result := StrZMatchStrNoAsciiCaseB(P, M);
 end;
 
 function StrZMatchStrAsciiW(const P: PWideChar; const M: WideString;
@@ -14593,6 +15098,20 @@ begin
     Result := StrPMatchNoAsciiCaseA(Pointer(A), Pointer(B), L1);
 end;
 
+function StrEqualB(const A, B: RawByteString; const AsciiCaseSensitive: Boolean): Boolean;
+var L1, L2 : Integer;
+begin
+  L1 := Length(A);
+  L2 := Length(B);
+  Result := L1 = L2;
+  if not Result or (L1 = 0) then
+    exit;
+  if AsciiCaseSensitive then
+    Result := StrPMatchA(Pointer(A), Pointer(B), L1)
+  else
+    Result := StrPMatchNoAsciiCaseA(Pointer(A), Pointer(B), L1);
+end;
+
 function StrEqualW(const A, B: WideString; const AsciiCaseSensitive: Boolean): Boolean;
 var L1, L2 : Integer;
 begin
@@ -14676,6 +15195,17 @@ begin
 end;
 {$ELSE}
 function StrEqualNoAsciiCaseA(const A, B: AnsiString): Boolean;
+var L, M : Integer;
+begin
+  L := Length(A);
+  M := Length(B);
+  Result := L = M;
+  if not Result or (L = 0) then
+    exit;
+  Result := StrPMatchNoAsciiCaseA(Pointer(A), Pointer(B), L);
+end;
+
+function StrEqualNoAsciiCaseB(const A, B: RawByteString): Boolean;
 var L, M : Integer;
 begin
   L := Length(A);
@@ -14774,6 +15304,11 @@ begin
   Result := StrMatchCharA(S, csNumeric);
 end;
 
+function StrIsNumericB(const S: RawByteString): Boolean;
+begin
+  Result := StrMatchCharB(S, csNumeric);
+end;
+
 function StrIsNumericW(const S: WideString): Boolean;
 begin
   Result := StrMatchCharW(S, csNumeric);
@@ -14787,6 +15322,11 @@ end;
 function StrIsHexA(const S: AnsiString): Boolean;
 begin
   Result := StrMatchCharA(S, csHexDigit);
+end;
+
+function StrIsHexB(const S: RawByteString): Boolean;
+begin
+  Result := StrMatchCharB(S, csHexDigit);
 end;
 
 function StrIsHexW(const S: WideString): Boolean;
@@ -14804,6 +15344,11 @@ begin
   Result := StrMatchCharA(S, csAlpha);
 end;
 
+function StrIsAlphaB(const S: RawByteString): Boolean;
+begin
+  Result := StrMatchCharB(S, csAlpha);
+end;
+
 function StrIsAlphaW(const S: WideString): Boolean;
 begin
   Result := StrMatchCharW(S, csAlpha);
@@ -14817,6 +15362,11 @@ end;
 function StrIsAlphaNumericA(const S: AnsiString): Boolean;
 begin
   Result := StrMatchCharA(S, csAlphaNumeric);
+end;
+
+function StrIsAlphaNumericB(const S: RawByteString): Boolean;
+begin
+  Result := StrMatchCharB(S, csAlphaNumeric);
 end;
 
 function StrIsAlphaNumericW(const S: WideString): Boolean;
@@ -14848,6 +15398,23 @@ begin
 end;
 {$ELSE}
 function StrIsIntegerA(const S: AnsiString): Boolean;
+var L: Integer;
+    P: PAnsiChar;
+begin
+  L := Length(S);
+  Result := L > 0;
+  if not Result then
+    exit;
+  P := Pointer(S);
+  if P^ in csSign then
+    begin
+      Inc(P);
+      Dec(L);
+    end;
+  Result := (L > 0) and (StrPMatchLenA(P, L, csNumeric) = L);
+end;
+
+function StrIsIntegerB(const S: RawByteString): Boolean;
 var L: Integer;
     P: PAnsiChar;
 begin
@@ -15297,6 +15864,31 @@ begin
     end;
 end;
 
+function StrZPosB(const F: RawByteString; const S: PAnsiChar): Integer;
+var C : AnsiChar;
+    P : PAnsiChar;
+begin
+  if not Assigned(S) or (F = '') then
+    Result := -1
+  else
+    begin
+      Result := 0;
+      P := S;
+      repeat
+        C := P^;
+        if C = #0 then
+          begin
+            Result := -1;
+            exit;
+          end;
+        if StrZMatchStrB(P, F) then
+          break;
+        Inc(Result);
+        Inc(P);
+      until False;
+    end;
+end;
+
 function StrZPosW(const F: WideString; const S: PWideChar): Integer;
 var C : WideChar;
     P : PWideChar;
@@ -15403,6 +15995,35 @@ begin
 end;
 {$ENDIF}
 
+function PosCharB(const F: AnsiChar; const S: RawByteString; const Index: Integer): Integer;
+var P    : PAnsiChar;
+    L, I : Integer;
+begin
+  L := Length(S);
+  if (L = 0) or (Index > L) then
+    begin
+      Result := 0;
+      exit;
+    end;
+  if Index < 1 then
+    I := 1
+  else
+    I := Index;
+  P := Pointer(S);
+  Inc(P, I - 1);
+  while I <= L do
+    if P^ = F then
+      begin
+        Result := I;
+        exit;
+      end else
+      begin
+        Inc(P);
+        Inc(I);
+      end;
+  Result := 0;
+end;
+
 function PosCharW(const F: WideChar; const S: WideString; const Index: Integer): Integer;
 var L, I : Integer;
 begin
@@ -15501,6 +16122,35 @@ begin
 end;
 {$ELSE}
 function PosCharSetA(const F: CharSet; const S: AnsiString; const Index: Integer): Integer;
+var P    : PAnsiChar;
+    L, I : Integer;
+begin
+  L := Length(S);
+  if (L = 0) or (Index > L) then
+    begin
+      Result := 0;
+      exit;
+    end;
+  if Index < 1 then
+    I := 1
+  else
+    I := Index;
+  P := Pointer(S);
+  Inc(P, I - 1);
+  while I <= L do
+    if P^ in F then
+      begin
+        Result := I;
+        exit;
+      end else
+      begin
+        Inc(P);
+        Inc(I);
+      end;
+  Result := 0;
+end;
+
+function PosCharSetB(const F: CharSet; const S: RawByteString; const Index: Integer): Integer;
 var P    : PAnsiChar;
     L, I : Integer;
 begin
@@ -15762,6 +16412,36 @@ begin
 end;
 {$ENDIF}
 
+function PosNotCharB(const F: AnsiChar; const S: RawByteString;
+    const Index: Integer): Integer;
+var P    : PAnsiChar;
+    L, I : Integer;
+begin
+  L := Length(S);
+  if (L = 0) or (Index > L) then
+    begin
+      Result := 0;
+      exit;
+    end;
+  if Index < 1 then
+    I := 1
+  else
+    I := Index;
+  P := Pointer(S);
+  Inc(P, I - 1);
+  while I <= L do
+    if P^ <> F then
+      begin
+        Result := I;
+        exit;
+      end else
+      begin
+        Inc(P);
+        Inc(I);
+      end;
+  Result := 0;
+end;
+
 function PosNotCharW(const F: WideChar; const S: WideString; const Index: Integer): Integer;
 var L, I : Integer;
 begin
@@ -15861,6 +16541,36 @@ begin
 end;
 {$ELSE}
 function PosNotCharSetA(const F: CharSet; const S: AnsiString;
+    const Index: Integer): Integer;
+var P    : PAnsiChar;
+    L, I : Integer;
+begin
+  L := Length(S);
+  if (L = 0) or (Index > L) then
+    begin
+      Result := 0;
+      exit;
+    end;
+  if Index < 1 then
+    I := 1
+  else
+    I := Index;
+  P := Pointer(S);
+  Inc(P, I - 1);
+  while I <= L do
+    if not (P^ in F) then
+      begin
+        Result := I;
+        exit;
+      end else
+      begin
+        Inc(P);
+        Inc(I);
+      end;
+  Result := 0;
+end;
+
+function PosNotCharSetB(const F: CharSet; const S: RawByteString;
     const Index: Integer): Integer;
 var P    : PAnsiChar;
     L, I : Integer;
@@ -16138,6 +16848,37 @@ begin
 end;
 {$ENDIF}
 
+function PosCharRevB(const F: AnsiChar; const S: RawByteString;
+    const Index: Integer): Integer;
+var P       : PAnsiChar;
+    L, I, J : Integer;
+begin
+  L := Length(S);
+  if (L = 0) or (Index > L) then
+    begin
+      Result := 0;
+      exit;
+    end;
+  if Index < 1 then
+    I := 1
+  else
+    I := Index;
+  P := Pointer(S);
+  J := L;
+  Inc(P, J - 1);
+  while J >= I do
+    if P^ = F then
+      begin
+        Result := J;
+        exit;
+      end else
+      begin
+        Dec(P);
+        Dec(J);
+      end;
+  Result := 0;
+end;
+
 function PosCharRevW(const F: WideChar; const S: WideString; const Index: Integer): Integer;
 var L, I, J : Integer;
 begin
@@ -16241,6 +16982,37 @@ begin
 end;
 {$ELSE}
 function PosCharSetRevA(const F: CharSet; const S: AnsiString; const Index: Integer): Integer;
+var P       : PAnsiChar;
+    L, I, J : Integer;
+begin
+  L := Length(S);
+  if (L = 0) or (Index > L) then
+    begin
+      Result := 0;
+      exit;
+    end;
+  if Index < 1 then
+    I := 1
+  else
+    I := Index;
+  P := Pointer(S);
+  J := L;
+  Inc(P, J - 1);
+  while J >= I do
+    if P^ in F then
+      begin
+        Result := J;
+        exit;
+      end
+    else
+      begin
+        Dec(P);
+        Dec(J);
+      end;
+  Result := 0;
+end;
+
+function PosCharSetRevB(const F: CharSet; const S: RawByteString; const Index: Integer): Integer;
 var P       : PAnsiChar;
     L, I, J : Integer;
 begin
@@ -16491,6 +17263,51 @@ begin
 end;
 {$ELSE}
 function PosStrA(const F, S: AnsiString; const Index: Integer;
+    const AsciiCaseSensitive: Boolean): Integer;
+var P, Q    : PAnsiChar;
+    L, M, I : Integer;
+begin
+  L := Length(S);
+  M := Length(F);
+  if (L = 0) or (Index > L) or (M = 0) or (M > L) then
+    begin
+      Result := 0;
+      exit;
+    end;
+  Q := Pointer(F);
+  if Index < 1 then
+    I := 1
+  else
+    I := Index;
+  P := Pointer(S);
+  Inc(P, I - 1);
+  Dec(L, M - 1);
+  if AsciiCaseSensitive then
+    while I <= L do
+      if StrPMatchA(P, Q, M) then
+        begin
+          Result := I;
+          exit;
+        end else
+        begin
+          Inc(P);
+          Inc(I);
+        end
+  else
+    while I <= L do
+      if StrPMatchNoAsciiCaseA(P, Q, M) then
+        begin
+          Result := I;
+          exit;
+        end else
+        begin
+          Inc(P);
+          Inc(I);
+        end;
+  Result := 0;
+end;
+
+function PosStrB(const F, S: RawByteString; const Index: Integer;
     const AsciiCaseSensitive: Boolean): Integer;
 var P, Q    : PAnsiChar;
     L, M, I : Integer;
@@ -16848,6 +17665,52 @@ begin
   Result := 0;
 end;
 
+function PosStrRevB(const F, S: RawByteString; const Index: Integer;
+    const AsciiCaseSensitive: Boolean): Integer;
+var P, Q       : PAnsiChar;
+    L, M, I, J : Integer;
+begin
+  L := Length(S);
+  M := Length(F);
+  if (L = 0) or (Index > L) or (M = 0) or (M > L) then
+    begin
+      Result := 0;
+      exit;
+    end;
+  Q := Pointer(F);
+  if Index < 1 then
+    I := 1
+  else
+    I := Index;
+  P := Pointer(S);
+  Dec(L, M - 1);
+  Inc(P, L - 1);
+  J := L;
+  if AsciiCaseSensitive then
+    while J >= I do
+      if StrPMatchA(P, Q, M) then
+        begin
+          Result := J;
+          exit;
+        end else
+        begin
+          Dec(P);
+          Dec(J);
+        end
+  else
+    while J >= I do
+      if StrPMatchNoAsciiCaseA(P, Q, M) then
+        begin
+          Result := J;
+          exit;
+        end else
+        begin
+          Dec(P);
+          Dec(J);
+        end;
+  Result := 0;
+end;
+
 function PosStrRevW(const F, S: WideString; const Index: Integer;
     const AsciiCaseSensitive: Boolean): Integer;
 var P, Q       : PWideChar;
@@ -17070,6 +17933,51 @@ begin
   Result := 0;
 end;
 
+function PosStrRevIdxB(const F, S: RawByteString; const Index: Integer;
+    const AsciiCaseSensitive: Boolean): Integer;
+var P, Q       : PAnsiChar;
+    L, M, I, J : Integer;
+begin
+  L := Length(S);
+  M := Length(F);
+  if (L = 0) or (Index > L) or (M = 0) or (M > L) then
+    begin
+      Result := 0;
+      exit;
+    end;
+  Q := Pointer(F);
+  if Index < 1 then
+    I := L
+  else
+    I := Index;
+  P := Pointer(S);
+  Inc(P, I - 1);
+  J := I;
+  if AsciiCaseSensitive then
+    while J >= 1 do
+      if StrPMatchA(P, Q, M) then
+        begin
+          Result := J;
+          exit;
+        end else
+        begin
+          Dec(P);
+          Dec(J);
+        end
+  else
+    while J >= 1 do
+      if StrPMatchNoAsciiCaseA(P, Q, M) then
+        begin
+          Result := J;
+          exit;
+        end else
+        begin
+          Dec(P);
+          Dec(J);
+        end;
+  Result := 0;
+end;
+
 function PosStrRevIdxW(const F, S: WideString; const Index: Integer;
     const AsciiCaseSensitive: Boolean): Integer;
 var P, Q       : PWideChar;
@@ -17226,6 +18134,26 @@ begin
     end;
 end;
 
+function PosNStrB(const F, S: RawByteString; const N: Integer;
+    const Index: Integer; const AsciiCaseSensitive: Boolean): Integer;
+var I, J, M: Integer;
+begin
+  Result := 0;
+  if N <= 0 then
+    exit;
+  M := Length(F);
+  if M = 0 then
+    exit;
+  J := Index;
+  for I := 1 to N do
+    begin
+      Result := PosStrB(F, S, J, AsciiCaseSensitive);
+      if Result = 0 then
+        exit;
+      J := Result + M;
+    end;
+end;
+
 function PosNStrW(const F, S: WideString; const N: Integer;
     const Index: Integer; const AsciiCaseSensitive: Boolean): Integer;
 var I, J, M: Integer;
@@ -17292,6 +18220,28 @@ end;
 { Copy variations                                                              }
 {                                                                              }
 function CopyRangeA(const S: AnsiString; const StartIndex, StopIndex: Integer): AnsiString;
+var L, I : Integer;
+begin
+  L := Length(S);
+  if (StartIndex > StopIndex) or (StopIndex < 1) or (StartIndex > L) or (L = 0) then
+    Result := ''
+  else
+    begin
+      if StartIndex <= 1 then
+        if StopIndex >= L then
+          begin
+            Result := S;
+            exit;
+          end
+        else
+          I := 1
+      else
+        I := StartIndex;
+      Result := Copy(S, I, StopIndex - I + 1);
+    end;
+end;
+
+function CopyRangeB(const S: RawByteString; const StartIndex, StopIndex: Integer): RawByteString;
 var L, I : Integer;
 begin
   L := Length(S);
@@ -17394,6 +18344,21 @@ begin
     end;
 end;
 
+function CopyFromB(const S: RawByteString; const Index: Integer): RawByteString;
+var L : Integer;
+begin
+  if Index <= 1 then
+    Result := S
+  else
+    begin
+      L := Length(S);
+      if (L = 0) or (Index > L) then
+        Result := ''
+      else
+        Result := Copy(S, Index, L - Index + 1);
+    end;
+end;
+
 function CopyFromW(const S: WideString; const Index: Integer): WideString;
 var L : Integer;
 begin
@@ -17451,6 +18416,18 @@ begin
       Result := Copy(S, 1, Count);
 end;
 
+function CopyLeftB(const S: RawByteString; const Count: Integer): RawByteString;
+var L : Integer;
+begin
+  L := Length(S);
+  if (L = 0) or (Count <= 0) then
+    Result := '' else
+    if Count >= L then
+      Result := S
+    else
+      Result := Copy(S, 1, Count);
+end;
+
 function CopyLeftW(const S: WideString; const Count: Integer): WideString;
 var L : Integer;
 begin
@@ -17488,6 +18465,18 @@ begin
 end;
 
 function CopyRightA(const S: AnsiString; const Count: Integer): AnsiString;
+var L : Integer;
+begin
+  L := Length(S);
+  if (L = 0) or (Count <= 0) then
+    Result := '' else
+    if Count >= L then
+      Result := S
+    else
+      Result := Copy(S, L - Count + 1, Count);
+end;
+
+function CopyRightB(const S: RawByteString; const Count: Integer): RawByteString;
 var L : Integer;
 begin
   L := Length(S);
@@ -17628,6 +18617,18 @@ begin
       Result := Copy(S, I, Count);
 end;
 
+function CopyExB(const S: RawByteString; const Start, Count: Integer): RawByteString;
+var I, L : Integer;
+begin
+  L := Length(S);
+  if (Count < 0) or not TranslateStart(L, Start, I) then
+    Result := '' else
+    if (I = 1) and (Count >= L) then
+      Result := S
+    else
+      Result := Copy(S, I, Count);
+end;
+
 function CopyExW(const S: String; const Start, Count: Integer): String;
 var I, L : Integer;
 begin
@@ -17676,6 +18677,18 @@ begin
       Result := Copy(S, I, J - I + 1);
 end;
 
+function CopyRangeExB(const S: RawByteString; const Start, Stop: Integer): RawByteString;
+var I, J, L : Integer;
+begin
+  L := Length(S);
+  if not TranslateStartStop(L, Start, Stop, I, J) then
+    Result := '' else
+    if (I = 1) and (J = L) then
+      Result := S
+    else
+      Result := Copy(S, I, J - I + 1);
+end;
+
 function CopyRangeExW(const S: WideString; const Start, Stop: Integer): WideString;
 var I, J, L : Integer;
 begin
@@ -17713,6 +18726,18 @@ begin
 end;
 
 function CopyFromExA(const S: AnsiString; const Start: Integer): AnsiString;
+var I, L : Integer;
+begin
+  L := Length(S);
+  if not TranslateStart(L, Start, I) then
+    Result := '' else
+    if I <= 1 then
+      Result := S
+    else
+      Result := Copy(S, I, L - I + 1);
+end;
+
+function CopyFromExB(const S: RawByteString; const Start: Integer): RawByteString;
 var I, L : Integer;
 begin
   L := Length(S);
@@ -17773,6 +18798,16 @@ begin
   while (F <= L) and (S[F] in C) do
     Inc(F);
   Result := CopyFromA(S, F);
+end;
+
+function StrTrimLeftB(const S: RawByteString; const C: CharSet): RawByteString;
+var F, L : Integer;
+begin
+  L := Length(S);
+  F := 1;
+  while (F <= L) and (S[F] in C) do
+    Inc(F);
+  Result := CopyFromB(S, F);
 end;
 
 function StrTrimLeftW(const S: WideString; const C: CharSet): WideString;
@@ -17846,6 +18881,29 @@ begin
 end;
 {$ELSE}
 procedure StrTrimLeftInPlaceA(var S: AnsiString; const C: CharSet);
+var F, L : Integer;
+    P    : PAnsiChar;
+begin
+  L := Length(S);
+  F := 1;
+  while (F <= L) and (S[F] in C) do
+    Inc(F);
+  if F > L then
+    S := '' else
+    if F > 1 then
+      begin
+        L := L - F + 1;
+        if L > 0 then
+          begin
+            P := Pointer(S);
+            Inc(P, F - 1);
+            MoveMem(P^, Pointer(S)^, L);
+          end;
+        SetLength(S, L);
+      end;
+end;
+
+procedure StrTrimLeftInPlaceB(var S: RawByteString; const C: CharSet);
 var F, L : Integer;
     P    : PAnsiChar;
 begin
@@ -17995,6 +19053,17 @@ begin
   Result := CopyFromA(S, F);
 end;
 
+function StrTrimLeftStrNoCaseB(const S: RawByteString; const TrimStr: RawByteString): RawByteString;
+var F, L, M : Integer;
+begin
+  L := Length(TrimStr);
+  M := Length(S);
+  F := 1;
+  while (F <= M) and StrMatchNoAsciiCaseB(S, TrimStr, F) do
+    Inc(F, L);
+  Result := CopyFromB(S, F);
+end;
+
 function StrTrimLeftStrNoCaseW(const S: WideString; const TrimStr: WideString): WideString;
 var F, L, M : Integer;
 begin
@@ -18035,6 +19104,15 @@ begin
   while (F >= 1) and (S[F] in C) do
     Dec(F);
   Result := CopyLeftA(S, F);
+end;
+
+function StrTrimRightB(const S: RawByteString; const C: CharSet): RawByteString;
+var F : Integer;
+begin
+  F := Length(S);
+  while (F >= 1) and (S[F] in C) do
+    Dec(F);
+  Result := CopyLeftB(S, F);
 end;
 
 function StrTrimRightW(const S: WideString; const C: CharSet): WideString;
@@ -18083,6 +19161,18 @@ begin
 end;
 
 procedure StrTrimRightInPlaceA(var S: AnsiString; const C: CharSet);
+var F : Integer;
+begin
+  F := Length(S);
+  while (F >= 1) and (S[F] in C) do
+    Dec(F);
+  if F = 0 then
+    S := ''
+  else
+    SetLength(S, F);
+end;
+
+procedure StrTrimRightInPlaceB(var S: RawByteString; const C: CharSet);
 var F : Integer;
 begin
   F := Length(S);
@@ -18164,6 +19254,16 @@ begin
   Result := CopyLeftA(S, F + L - 1);
 end;
 
+function StrTrimRightStrNoCaseB(const S: RawByteString; const TrimStr: RawByteString): RawByteString;
+var F, L : Integer;
+begin
+  L := Length(TrimStr);
+  F := Length(S) - L  + 1;
+  while (F >= 1) and StrMatchNoAsciiCaseB(S, TrimStr, F) do
+    Dec(F, L);
+  Result := CopyLeftA(S, F + L - 1);
+end;
+
 function StrTrimRightStrNoCaseW(const S: WideString; const TrimStr: WideString): WideString;
 var F, L : Integer;
 begin
@@ -18205,6 +19305,19 @@ begin
   while (G >= F) and (S[G] in C) do
     Dec(G);
   Result := CopyRangeA(S, F, G);
+end;
+
+function StrTrimB(const S: RawByteString; const C: CharSet): RawByteString;
+var F, G, L : Integer;
+begin
+  L := Length(S);
+  F := 1;
+  while (F <= L) and (S[F] in C) do
+    Inc(F);
+  G := L;
+  while (G >= F) and (S[G] in C) do
+    Dec(G);
+  Result := CopyRangeB(S, F, G);
 end;
 
 function StrTrimW(const S: WideString; const C: CharSet): WideString;
@@ -18268,13 +19381,19 @@ begin
   {$ENDIF}
 end;
 
-procedure StrTrimInPlaceA(var S : AnsiString; const C: CharSet);
+procedure StrTrimInPlaceA(var S: AnsiString; const C: CharSet);
 begin
   StrTrimLeftInPlaceA(S, C);
   StrTrimRightInPlaceA(S, C);
 end;
 
-procedure StrTrimInPlaceW(var S : WideString; const C: CharSet);
+procedure StrTrimInPlaceB(var S: RawByteString; const C: CharSet);
+begin
+  StrTrimLeftInPlaceB(S, C);
+  StrTrimRightInPlaceB(S, C);
+end;
+
+procedure StrTrimInPlaceW(var S: WideString; const C: CharSet);
 begin
   StrTrimLeftInPlaceW(S, C);
   StrTrimRightInPlaceW(S, C);
@@ -18311,6 +19430,13 @@ begin
     StrTrimInPlaceA(S[I], C);
 end;
 
+procedure TrimStringsB(var S : RawByteStringArray; const C: CharSet);
+var I : Integer;
+begin
+  for I := 0 to Length(S) - 1 do
+    StrTrimInPlaceB(S[I], C);
+end;
+
 procedure TrimStringsW(var S : WideStringArray; const C: CharSet);
 var I : Integer;
 begin
@@ -18325,6 +19451,17 @@ end;
 {                                                                              }
 {$IFNDEF ManagedCode}
 function BufToStrA(const Buf; const BufSize: Integer): AnsiString;
+begin
+  if BufSize <= 0 then
+    Result := ''
+  else
+    begin
+      SetLength(Result, BufSize);
+      MoveMem(Buf, Pointer(Result)^, BufSize);
+    end;
+end;
+
+function BufToStrB(const Buf; const BufSize: Integer): RawByteString;
 begin
   if BufSize <= 0 then
     Result := ''
@@ -18379,6 +19516,24 @@ begin
 end;
 
 function DupBufA(const Buf; const BufSize: Integer; const Count: Integer): AnsiString;
+var P : PAnsiChar;
+    I : Integer;
+begin
+  if (Count <= 0) or (BufSize <= 0) then
+    Result := ''
+  else
+    begin
+      SetLength(Result, Count * BufSize);
+      P := Pointer(Result);
+      for I := 1 to Count do
+        begin
+          MoveMem(Buf, P^, BufSize);
+          Inc(P, BufSize);
+        end;
+    end;
+end;
+
+function DupBufB(const Buf; const BufSize: Integer; const Count: Integer): RawByteString;
 var P : PAnsiChar;
     I : Integer;
 begin
@@ -18487,6 +19642,16 @@ begin
     Result := DupBufA(Pointer(S)^, L, Count);
 end;
 
+function DupStrB(const S: RawByteString; const Count: Integer): RawByteString;
+var L : Integer;
+begin
+  L := Length(S);
+  if L = 0 then
+    Result := ''
+  else
+    Result := DupBufB(Pointer(S)^, L, Count);
+end;
+
 function DupStrW(const S: WideString; const Count: Integer): WideString;
 var L : Integer;
 begin
@@ -18544,6 +19709,17 @@ begin
 end;
 {$ENDIF}
 
+function DupCharB(const Ch: AnsiChar; const Count: Integer): RawByteString;
+begin
+  if Count <= 0 then
+    begin
+      Result := '';
+      exit;
+    end;
+  SetLength(Result, Count);
+  FillMem(Pointer(Result)^, Count, Ord(Ch));
+end;
+
 function DupCharW(const Ch: WideChar; const Count: Integer): WideString;
 var I : Integer;
 begin
@@ -18586,6 +19762,11 @@ end;
 function DupSpaceA(const Count: Integer): AnsiString;
 begin
   Result := DupCharA(AsciiSP, Count);
+end;
+
+function DupSpaceB(const Count: Integer): RawByteString;
+begin
+  Result := DupCharB(AsciiSP, Count);
 end;
 
 function DupSpaceW(const Count: Integer): WideString;
@@ -18644,6 +19825,49 @@ end;
 {$ELSE}
 function StrPadLeftA(const S: AnsiString; const PadChar: AnsiChar;
     const Len: Integer; const Cut: Boolean): AnsiString;
+var F, L, P, M : Integer;
+    I, J       : PAnsiChar;
+begin
+  if Len = 0 then
+    begin
+      if Cut then
+        Result := ''
+      else
+        Result := S;
+      exit;
+    end;
+  M := Length(S);
+  if Len = M then
+    begin
+      Result := S;
+      exit;
+    end;
+  if Cut then
+    L := Len
+  else
+    L := MaxI(Len, M);
+  P := L - M;
+  if P < 0 then
+    P := 0;
+  SetLength(Result, L);
+  if P > 0 then
+    FillMem(Pointer(Result)^, P, Ord(PadChar));
+  if L > P then
+    begin
+      I := Pointer(Result);
+      J := Pointer(S);
+      Inc(I, P);
+      for F := 1 to L - P do
+        begin
+          I^ := J^;
+          Inc(I);
+          Inc(J);
+        end;
+    end;
+end;
+
+function StrPadLeftB(const S: RawByteString; const PadChar: AnsiChar;
+    const Len: Integer; const Cut: Boolean): RawByteString;
 var F, L, P, M : Integer;
     I, J       : PAnsiChar;
 begin
@@ -18892,6 +20116,48 @@ begin
     FillMem(Result[L - P + 1], P, Ord(PadChar));
 end;
 
+function StrPadRightB(const S: RawByteString; const PadChar: AnsiChar;
+    const Len: Integer; const Cut: Boolean): RawByteString;
+var F, L, P, M : Integer;
+    I, J       : PAnsiChar;
+begin
+  if Len = 0 then
+    begin
+      if Cut then
+        Result := ''
+      else
+        Result := S;
+      exit;
+    end;
+  M := Length(S);
+  if Len = M then
+    begin
+      Result := S;
+      exit;
+    end;
+  if Cut then
+    L := Len
+  else
+    L := MaxI(Len, M);
+  P := L - M;
+  if P < 0 then
+    P := 0;
+  SetLength(Result, L);
+  if L > P then
+    begin
+      I := Pointer(Result);
+      J := Pointer(S);
+      for F := 1 to L - P do
+        begin
+          I^ := J^;
+          Inc(I);
+          Inc(J);
+        end;
+    end;
+  if P > 0 then
+    FillMem(Result[L - P + 1], P, Ord(PadChar));
+end;
+
 function StrPadRightW(const S: WideString; const PadChar: WideChar;
     const Len: Integer; const Cut: Boolean): WideString;
 var F, L, P, M : Integer;
@@ -19029,6 +20295,16 @@ begin
     SetLength(Result, Len);
 end;
 
+function StrPadB(const S: RawByteString; const PadChar: AnsiChar; const Len: Integer;
+    const Cut: Boolean): RawByteString;
+var I : Integer;
+begin
+  I := Len - Length(S);
+  Result := DupCharB(PadChar, I div 2) + S + DupCharB(PadChar, (I + 1) div 2);
+  if Cut then
+    SetLength(Result, Len);
+end;
+
 function StrPadW(const S: WideString; const PadChar: WideChar; const Len: Integer;
     const Cut: Boolean): WideString;
 var I : Integer;
@@ -19098,6 +20374,42 @@ begin
     else
       J := Length(S) + 1;
   Result := CopyRangeA(S, I + 1, J - 1);
+end;
+
+function StrBetweenCharB(const S: RawByteString;
+    const FirstDelim, SecondDelim: AnsiChar;
+    const FirstOptional: Boolean; const SecondOptional: Boolean): RawByteString;
+var I, J : Integer;
+begin
+  Result := '';
+  I := PosCharB(FirstDelim, S);
+  if (I = 0) and not FirstOptional then
+    exit;
+  J := PosCharB(SecondDelim, S, I + 1);
+  if J = 0 then
+    if not SecondOptional then
+      exit
+    else
+      J := Length(S) + 1;
+  Result := CopyRangeB(S, I + 1, J - 1);
+end;
+
+function StrBetweenCharB(const S: RawByteString;
+    const FirstDelim, SecondDelim: CharSet;
+    const FirstOptional: Boolean; const SecondOptional: Boolean): RawByteString;
+var I, J : Integer;
+begin
+  Result := '';
+  I := PosCharSetB(FirstDelim, S);
+  if (I = 0) and not FirstOptional then
+    exit;
+  J := PosCharSetB(SecondDelim, S, I + 1);
+  if J = 0 then
+    if not SecondOptional then
+      exit
+    else
+      J := Length(S) + 1;
+  Result := CopyRangeB(S, I + 1, J - 1);
 end;
 
 function StrBetweenCharW(const S: WideString;
@@ -19212,6 +20524,46 @@ begin
   Result := CopyRangeA(S, I, J - 1);
 end;
 
+function StrBetweenB(const S: RawByteString; const FirstDelim: RawByteString;
+    const SecondDelim: CharSet; const FirstOptional: Boolean;
+    const SecondOptional: Boolean;
+    const FirstDelimAsciiCaseSensitive: Boolean): RawByteString;
+var I, J : Integer;
+begin
+  Result := '';
+  I := PosStrB(FirstDelim, S, 1, FirstDelimAsciiCaseSensitive);
+  if (I = 0) and not FirstOptional then
+    exit;
+  Inc(I, Length(FirstDelim));
+  J := PosCharSetB(SecondDelim, S, I);
+  if J = 0 then
+    if not SecondOptional then
+      exit
+    else
+      J := Length(S) + 1;
+  Result := CopyRangeB(S, I, J - 1);
+end;
+
+function StrBetweenB(const S: RawByteString;
+    const FirstDelim, SecondDelim: RawByteString; const FirstOptional: Boolean;
+    const SecondOptional: Boolean ; const FirstDelimAsciiCaseSensitive: Boolean;
+    const SecondDelimAsciiCaseSensitive: Boolean): RawByteString;
+var I, J : Integer;
+begin
+  Result := '';
+  I := PosStrB(FirstDelim, S, 1, FirstDelimAsciiCaseSensitive);
+  if (I = 0) and not FirstOptional then
+    exit;
+  Inc(I, Length(FirstDelim));
+  J := PosStrB(SecondDelim, S, I, SecondDelimAsciiCaseSensitive);
+  if J = 0 then
+    if not SecondOptional then
+      exit
+    else
+      J := Length(S) + 1;
+  Result := CopyRangeB(S, I, J - 1);
+end;
+
 function StrBetweenW(const S: WideString; const FirstDelim: WideString;
     const SecondDelim: CharSet; const FirstOptional: Boolean;
     const SecondOptional: Boolean;
@@ -19320,6 +20672,34 @@ begin
     Result := CopyLeftA(S, I - 1);
 end;
 
+function StrBeforeB(const S, D: RawByteString; const Optional: Boolean;
+    const AsciiCaseSensitive: Boolean): RawByteString;
+var I : Integer;
+begin
+  I := PosStrB(D, S, 1, AsciiCaseSensitive);
+  if I = 0 then
+    if Optional then
+      Result := S
+    else
+      Result := ''
+  else
+    Result := CopyLeftB(S, I - 1);
+end;
+
+function StrBeforeRevB(const S, D: RawByteString; const Optional: Boolean;
+    const AsciiCaseSensitive: Boolean): RawByteString;
+var I : Integer;
+begin
+  I := PosStrRevB(D, S, 1, AsciiCaseSensitive);
+  if I = 0 then
+    if Optional then
+      Result := S
+    else
+      Result := ''
+  else
+    Result := CopyLeftB(S, I - 1);
+end;
+
 function StrBeforeW(const S, D: WideString; const Optional: Boolean;
     const AsciiCaseSensitive: Boolean): WideString;
 var I : Integer;
@@ -19416,6 +20796,48 @@ begin
       Result := ''
   else
     Result := CopyLeftA(S, I - 1);
+end;
+
+function StrBeforeCharB(const S: RawByteString; const D: CharSet;
+    const Optional: Boolean): RawByteString;
+var I : Integer;
+begin
+  I := PosCharSetA(D, S);
+  if I = 0 then
+    if Optional then
+      Result := S
+    else
+      Result := ''
+  else
+    Result := CopyLeftB(S, I - 1);
+end;
+
+function StrBeforeCharB(const S: RawByteString; const D: AnsiChar;
+    const Optional: Boolean): RawByteString;
+var I : Integer;
+begin
+  I := PosCharB(D, S);
+  if I = 0 then
+    if Optional then
+      Result := S
+    else
+      Result := ''
+  else
+    Result := CopyLeftB(S, I - 1);
+end;
+
+function StrBeforeCharRevB(const S: RawByteString; const D: CharSet;
+    const Optional: Boolean): RawByteString;
+var I : Integer;
+begin
+  I := PosCharSetRevB(D, S);
+  if I = 0 then
+    if Optional then
+      Result := S
+    else
+      Result := ''
+  else
+    Result := CopyLeftB(S, I - 1);
 end;
 
 function StrBeforeCharW(const S: WideString; const D: CharSet;
@@ -19528,6 +20950,32 @@ begin
     Result := CopyFromA(S, I + Length(D));
 end;
 
+function StrAfterB(const S, D: RawByteString; const Optional: Boolean): RawByteString;
+var I : Integer;
+begin
+  I := PosStrB(D, S);
+  if I = 0 then
+    if Optional then
+      Result := S
+    else
+      Result := ''
+  else
+    Result := CopyFromB(S, I + Length(D));
+end;
+
+function StrAfterRevB(const S, D: RawByteString; const Optional: Boolean): RawByteString;
+var I : Integer;
+begin
+  I := PosStrRevB(D, S);
+  if I = 0 then
+    if Optional then
+      Result := S
+    else
+      Result := ''
+  else
+    Result := CopyFromB(S, I + Length(D));
+end;
+
 function StrAfterW(const S, D: WideString; const Optional: Boolean): WideString;
 var I : Integer;
 begin
@@ -19600,6 +21048,26 @@ begin
     Result := CopyFromA(S, I + 1);
 end;
 
+function StrAfterCharB(const S: RawByteString; const D: CharSet): RawByteString;
+var I : Integer;
+begin
+  I := PosCharSetB(D, S);
+  if I = 0 then
+    Result := ''
+  else
+    Result := CopyFromB(S, I + 1);
+end;
+
+function StrAfterCharB(const S: RawByteString; const D: AnsiChar): RawByteString;
+var I : Integer;
+begin
+  I := PosCharB(D, S);
+  if I = 0 then
+    Result := ''
+  else
+    Result := CopyFromB(S, I + 1);
+end;
+
 function StrAfterCharW(const S: WideString; const D: CharSet): WideString;
 var I : Integer;
 begin
@@ -19666,6 +21134,34 @@ begin
       Result := ''
   else
     Result := CopyLeftA(S, I);
+end;
+
+function StrCopyToCharB(const S: RawByteString; const D: CharSet;
+    const Optional: Boolean): RawByteString;
+var I : Integer;
+begin
+  I := PosCharSetB(D, S);
+  if I = 0 then
+    if Optional then
+      Result := S
+    else
+      Result := ''
+  else
+    Result := CopyLeftB(S, I);
+end;
+
+function StrCopyToCharB(const S: RawByteString; const D: AnsiChar;
+    const Optional: Boolean): RawByteString;
+var I : Integer;
+begin
+  I := PosCharB(D, S);
+  if I = 0 then
+    if Optional then
+      Result := S
+    else
+      Result := ''
+  else
+    Result := CopyLeftB(S, I);
 end;
 
 function StrCopyToCharW(const S: WideString; const D: CharSet;
@@ -19737,6 +21233,26 @@ end;
 function StrCopyFromCharA(const S: AnsiString; const D: AnsiChar): AnsiString;
 var I : Integer;
 begin
+  I := PosCharB(D, S);
+  if I = 0 then
+    Result := ''
+  else
+    Result := CopyFromB(S, I);
+end;
+
+function StrCopyFromCharB(const S: RawByteString; const D: CharSet): RawByteString;
+var I : Integer;
+begin
+  I := PosCharSetB(D, S);
+  if I = 0 then
+    Result := ''
+  else
+    Result := CopyFromB(S, I);
+end;
+
+function StrCopyFromCharB(const S: RawByteString; const D: AnsiChar): RawByteString;
+var I : Integer;
+begin
   I := PosCharA(D, S);
   if I = 0 then
     Result := ''
@@ -19799,6 +21315,21 @@ begin
   Delete(S, I, J - I + 1);
 end;
 
+function StrRemoveCharDelimitedB(var S: RawByteString;
+    const FirstDelim, SecondDelim: AnsiChar): RawByteString;
+var I, J : Integer;
+begin
+  Result := '';
+  I := PosCharB(FirstDelim, S);
+  if I = 0 then
+    exit;
+  J := PosCharB(SecondDelim, S, I + 1);
+  if J = 0 then
+    exit;
+  Result := CopyRangeB(S, I + 1, J - 1);
+  Delete(S, I, J - I + 1);
+end;
+
 function StrRemoveCharDelimitedW(var S: WideString;
     const FirstDelim, SecondDelim: WideChar): WideString;
 var I, J : Integer;
@@ -19845,6 +21376,20 @@ begin
 end;
 {$ELSE}
 function StrCountCharA(const S: AnsiString; const C: AnsiChar): Integer;
+var P : PAnsiChar;
+    I : Integer;
+begin
+  Result := 0;
+  P := Pointer(S);
+  for I := 1 to Length(S) do
+    begin
+      if P^ = C then
+        Inc(Result);
+      Inc(P);
+    end;
+end;
+
+function StrCountCharB(const S: RawByteString; const C: AnsiChar): Integer;
 var P : PAnsiChar;
     I : Integer;
 begin
@@ -19912,6 +21457,20 @@ begin
 end;
 {$ELSE}
 function StrCountCharA(const S: AnsiString; const C: CharSet): Integer;
+var P : PAnsiChar;
+    I : Integer;
+begin
+  Result := 0;
+  P := Pointer(S);
+  for I := 1 to Length(S) do
+    begin
+      if P^ in C then
+        Inc(Result);
+      Inc(P);
+    end;
+end;
+
+function StrCountCharB(const S: RawByteString; const C: CharSet): Integer;
 var P : PAnsiChar;
     I : Integer;
 begin
@@ -20019,6 +21578,18 @@ begin
 end;
 {$ENDIF}
 
+function StrReplaceCharB(const Find, Replace: AnsiChar; const S: RawByteString): RawByteString;
+var I, J : Integer;
+begin
+  Result := S;
+  I := PosCharB(Find, S);
+  if I = 0 then
+    exit;
+  for J := I to Length(S) do
+    if S[J] = Find then
+      Result[J] := Replace;
+end;
+
 function StrReplaceCharW(const Find, Replace: WideChar; const S: WideString): WideString;
 var I, J : Integer;
 begin
@@ -20061,7 +21632,7 @@ function StrReplaceChar(const Find: CharSet; const Replace: AnsiChar;
 var I, J : Integer;
 begin
   Result := S;
-  I := PosCharA(Find, S);
+  I := PosCharSetA(Find, S);
   if I = 0 then
     exit;
   for J := I to Length(S) do
@@ -20090,6 +21661,19 @@ begin
       Inc(P);
       Inc(Q);
     end;
+end;
+
+function StrReplaceCharB(const Find: CharSet; const Replace: AnsiChar;
+    const S: RawByteString): RawByteString;
+var I, J : Integer;
+begin
+  Result := S;
+  I := PosCharSetB(Find, S);
+  if I = 0 then
+    exit;
+  for J := I to Length(S) do
+    if S[J] in Find then
+      Result[J] := Replace;
 end;
 
 function StrReplaceCharW(const Find: CharSet; const Replace: WideChar;
@@ -20187,6 +21771,53 @@ function StrReplaceBlockA( // used by StrReplaceA
     const StartIndex, StopIndex: Integer;
     const MatchCount: Integer;
     const Matches: StrReplaceMatchArray): AnsiString;
+var StrLen     : Integer;
+    ReplaceLen : Integer;
+    NewLen     : Integer;
+    I, J, F, G : Integer;
+    P, Q       : PAnsiChar;
+begin
+  ReplaceLen := Length(Replace);
+  StrLen := StopIndex - StartIndex + 1;
+  NewLen := StrLen + (ReplaceLen - FindLen) * MatchCount;
+  if NewLen = 0 then
+    begin
+      Result := '';
+      exit;
+    end;
+  SetString(Result, nil, NewLen);
+  P := Pointer(Result);
+  Q := Pointer(S);
+  F := StartIndex;
+  Inc(Q, F - 1);
+  for I := 0 to MatchCount - 1 do
+    begin
+      G := Matches[I];
+      J := G - F;
+      if J > 0 then
+        begin
+          MoveMem(Q^, P^, J);
+          Inc(P, J);
+          Inc(Q, J);
+          Inc(F, J);
+        end;
+      Inc(Q, FindLen);
+      Inc(F, FindLen);
+      if ReplaceLen > 0 then
+        begin
+          MoveMem(Pointer(Replace)^, P^, ReplaceLen);
+          Inc(P, ReplaceLen);
+        end;
+    end;
+  if F <= StopIndex then
+    MoveMem(Q^, P^, StopIndex - F + 1);
+end;
+
+function StrReplaceBlockB( // used by StrReplaceA
+    const FindLen: Integer; const Replace, S: RawByteString;
+    const StartIndex, StopIndex: Integer;
+    const MatchCount: Integer;
+    const Matches: StrReplaceMatchArray): RawByteString;
 var StrLen     : Integer;
     ReplaceLen : Integer;
     NewLen     : Integer;
@@ -20414,6 +22045,42 @@ begin
   until I = 0;
 end;
 
+function StrReplaceB(const Find, Replace, S: RawByteString; const AsciiCaseSensitive: Boolean): RawByteString;
+var FindLen    : Integer;
+    Matches    : StrReplaceMatchArray;
+    C, I, J, K : Integer;
+begin
+  FindLen := Length(Find);
+  if FindLen = 0 then // nothing to find
+    begin
+      Result := S;
+      exit;
+    end;
+  I := PosStrB(Find, S, 1, AsciiCaseSensitive);
+  if I = 0 then // not found
+    begin
+      Result := S;
+      exit;
+    end;
+  J := 1;
+  Result := '';
+  repeat
+    C := 0;
+    repeat
+      Matches[C] := I;
+      Inc(C);
+      Inc(I, FindLen);
+      I := PosStrB(Find, S, I, AsciiCaseSensitive);
+    until (I = 0) or (C = 4096);
+    if I = 0 then
+      K := Length(S)
+    else
+      K := I - 1;
+    Result := Result + StrReplaceBlockB(FindLen, Replace, S, J, K, C, Matches);
+    J := K + 1;
+  until I = 0;
+end;
+
 function StrReplaceW(const Find, Replace, S: WideString; const AsciiCaseSensitive: Boolean): WideString;
 var FindLen    : Integer;
     Matches    : StrReplaceMatchArray;
@@ -20549,6 +22216,35 @@ begin
     else
       K := I - 1;
     Result := Result + StrReplaceBlockA(1, Replace, S, J, K, C, Matches);
+    J := K + 1;
+  until I = 0;
+end;
+
+function StrReplaceB(const Find: CharSet; const Replace, S: RawByteString): RawByteString;
+var Matches    : StrReplaceMatchArray;
+    C, I, J, K : Integer;
+begin
+  I := PosCharSetB(Find, S, 1);
+  if I = 0 then // not found
+    begin
+      Result := S;
+      exit;
+    end;
+  J := 1;
+  Result := '';
+  repeat
+    C := 0;
+    repeat
+      Matches[C] := I;
+      Inc(C);
+      Inc(I);
+      I := PosCharSetB(Find, S, I);
+    until (I = 0) or (C = 4096);
+    if I = 0 then
+      K := Length(S)
+    else
+      K := I - 1;
+    Result := Result + StrReplaceBlockB(1, Replace, S, J, K, C, Matches);
     J := K + 1;
   until I = 0;
 end;
@@ -21162,6 +22858,43 @@ begin
     end;
 end;
 
+function StrRemoveCharSetB(const S: RawByteString; const C: CharSet): RawByteString;
+var P, Q    : PAnsiChar;
+    I, L, M : Integer;
+begin
+  L := Length(S);
+  if L = 0 then
+    begin
+      Result := '';
+      exit;
+    end;
+  M := 0;
+  P := Pointer(S);
+  for I := 1 to L do
+    begin
+      if P^ in C then
+        Inc(M);
+      Inc(P);
+    end;
+  if M = 0 then
+    begin
+      Result := S;
+      exit;
+    end;
+  SetLength(Result, L - M);
+  Q := Pointer(Result);
+  P := Pointer(S);
+  for I := 1 to L do
+    begin
+      if not (P^ in C) then
+        begin
+          Q^ := P^;
+          Inc(Q);
+        end;
+      Inc(P);
+    end;
+end;
+
 function StrRemoveCharSetW(const S: WideString; const C: CharSet): WideString;
 var P, Q    : PWideChar;
     D       : WideChar;
@@ -21331,6 +23064,30 @@ begin
     end;
 end;
 
+function StrSplitAtB(const S: RawByteString; const C: RawByteString;
+         var Left, Right: RawByteString; const AsciiCaseSensitive: Boolean;
+         const Optional: Boolean): Boolean;
+var I : Integer;
+    T : RawByteString;
+begin
+  I := PosStrB(C, S, 1, AsciiCaseSensitive);
+  Result := I > 0;
+  if Result then
+    begin
+      T := S;
+      Left := Copy(T, 1, I - 1);
+      Right := CopyFromB(T, I + Length(C));
+    end
+  else
+    begin
+      if Optional then
+        Left := S
+      else
+        Left := '';
+      Right := '';
+    end;
+end;
+
 function StrSplitAtW(const S: WideString; const C: WideString;
          var Left, Right: WideString; const AsciiCaseSensitive: Boolean;
          const Optional: Boolean): Boolean;
@@ -21415,6 +23172,29 @@ begin
       T := S; // add reference to S (in case it is also Left or Right)
       Left := Copy(T, 1, I - 1);
       Right := CopyFromA(T, I + 1);
+    end
+  else
+    begin
+      if Optional then
+        Left := S
+      else
+        Left := '';
+      Right := '';
+    end;
+end;
+
+function StrSplitAtCharB(const S: RawByteString; const C: AnsiChar;
+         var Left, Right: RawByteString; const Optional: Boolean): Boolean;
+var I : Integer;
+    T : RawByteString;
+begin
+  I := PosCharB(C, S);
+  Result := I > 0;
+  if Result then
+    begin
+      T := S; // add reference to S (in case it is also Left or Right)
+      Left := Copy(T, 1, I - 1);
+      Right := CopyFromB(T, I + 1);
     end
   else
     begin
@@ -21561,6 +23341,55 @@ begin
         break;
       end;
     Result[L] := CopyRangeA(S, I, J - 1);
+    Inc(L);
+    I := J + M;
+  until False;
+end;
+
+function StrSplitB(const S, D: RawByteString): RawByteStringArray;
+var I, J, L, M : Integer;
+begin
+  // Check valid parameters
+  if S = '' then
+    begin
+      Result := nil;
+      exit;
+    end;
+  M := Length(D);
+  if M = 0 then
+    begin
+      SetLength(Result, 1);
+      Result[0] := S;
+      exit;
+    end;
+  // Count
+  L := 0;
+  I := 1;
+  repeat
+    I := PosStrB(D, S, I, True);
+    if I = 0 then
+      break;
+    Inc(L);
+    Inc(I, M);
+  until False;
+  SetLength(Result, L + 1);
+  if L = 0 then
+    begin
+      // No split
+      Result[0] := S;
+      exit;
+    end;
+  // Split
+  L := 0;
+  I := 1;
+  repeat
+    J := PosStrB(D, S, I, True);
+    if J = 0 then
+      begin
+        Result[L] := CopyFromB(S, I);
+        break;
+      end;
+    Result[L] := CopyRangeB(S, I, J - 1);
     Inc(L);
     I := J + M;
   until False;
@@ -21755,6 +23584,48 @@ begin
   until False;
 end;
 
+function StrSplitCharB(const S: RawByteString; const D: AnsiChar): RawByteStringArray;
+var I, J, L : Integer;
+begin
+  // Check valid parameters
+  if S = '' then
+    begin
+      Result := nil;
+      exit;
+    end;
+  // Count
+  L := 0;
+  I := 1;
+  repeat
+    I := PosCharB(D, S, I);
+    if I = 0 then
+      break;
+    Inc(L);
+    Inc(I);
+  until False;
+  SetLength(Result, L + 1);
+  if L = 0 then
+    begin
+      // No split
+      Result[0] := S;
+      exit;
+    end;
+  // Split
+  L := 0;
+  I := 1;
+  repeat
+    J := PosCharB(D, S, I);
+    if J = 0 then
+      begin
+        Result[L] := CopyFromB(S, I);
+        break;
+      end;
+    Result[L] := CopyRangeB(S, I, J - 1);
+    Inc(L);
+    I := J + 1;
+  until False;
+end;
+
 function StrSplitCharW(const S: WideString; const D: WideChar): WideStringArray;
 var I, J, L : Integer;
 begin
@@ -21918,6 +23789,48 @@ begin
         break;
       end;
     Result[L] := CopyRangeA(S, I, J - 1);
+    Inc(L);
+    I := J + 1;
+  until False;
+end;
+
+function StrSplitCharSetB(const S: RawByteString; const D: CharSet): RawByteStringArray;
+var I, J, L : Integer;
+begin
+  // Check valid parameters
+  if S = '' then
+    begin
+      Result := nil;
+      exit;
+    end;
+  // Count
+  L := 0;
+  I := 1;
+  repeat
+    I := PosCharSetB(D, S, I);
+    if I = 0 then
+      break;
+    Inc(L);
+    Inc(I);
+  until False;
+  SetLength(Result, L + 1);
+  if L = 0 then
+    begin
+      // No split
+      Result[0] := S;
+      exit;
+    end;
+  // Split
+  L := 0;
+  I := 1;
+  repeat
+    J := PosCharSetB(D, S, I);
+    if J = 0 then
+      begin
+        Result[L] := CopyFromB(S, I);
+        break;
+      end;
+    Result[L] := CopyRangeB(S, I, J - 1);
     Inc(L);
     I := J + 1;
   until False;
@@ -22140,6 +24053,37 @@ begin
     end;
 end;
 
+function StrJoinB(const S: array of RawByteString; const D: RawByteString): RawByteString;
+var I, L, M, C : Integer;
+    P : PAnsiChar;
+    T : RawByteString;
+begin
+  L := Length(S);
+  if L = 0 then
+    begin
+      Result := '';
+      exit;
+    end;
+  M := Length(D);
+  SetLength(Result, StringsTotalLengthB(S) + (L - 1) * M);
+  P := Pointer(Result);
+  for I := 0 to L - 1 do
+    begin
+      if (I > 0) and (M > 0) then
+        begin
+          MoveMem(Pointer(D)^, P^, M);
+          Inc(P, M);
+        end;
+      T := S[I];
+      C := Length(T);
+      if C > 0 then
+        begin
+          MoveMem(Pointer(T)^, P^, C);
+          Inc(P, C);
+        end;
+    end;
+end;
+
 function StrJoinW(const S: array of WideString; const D: WideString): WideString;
 var I, L, M, C : Integer;
     P : PWideChar;
@@ -22262,6 +24206,36 @@ begin
       exit;
     end;
   SetLength(Result, StringsTotalLengthA(S) + L - 1);
+  P := Pointer(Result);
+  for I := 0 to L - 1 do
+    begin
+      if I > 0 then
+        begin
+          P^ := D;
+          Inc(P);
+        end;
+      T := S[I];
+      C := Length(T);
+      if C > 0 then
+        begin
+          MoveMem(Pointer(T)^, P^, C);
+          Inc(P, C);
+        end;
+    end;
+end;
+
+function StrJoinCharB(const S: array of RawByteString; const D: AnsiChar): RawByteString;
+var I, L, C : Integer;
+    P : PAnsiChar;
+    T : RawByteString;
+begin
+  L := Length(S);
+  if L = 0 then
+    begin
+      Result := '';
+      exit;
+    end;
+  SetLength(Result, StringsTotalLengthB(S) + L - 1);
   P := Pointer(Result);
   for I := 0 to L - 1 do
     begin
@@ -22412,6 +24386,26 @@ begin
     end;
 end;
 
+function StrHasSurroundingQuotesB(const S: RawByteString; const Quotes: CharSet): Boolean;
+var P : PAnsiChar;
+    Q : AnsiChar;
+    L : Integer;
+begin
+  Result := False;
+  L := Length(S);
+  if L >= 2 then
+    begin
+      P := Pointer(S);
+      Q := P^;
+      if Q in Quotes then
+        begin
+          Inc(P, L - 1);
+          if P^ = Q then
+            Result := True;
+        end;
+    end;
+end;
+
 function StrHasSurroundingQuotesW(const S: WideString; const Quotes: CharSet): Boolean;
 var P : PWideChar;
     Q : WideChar;
@@ -22484,6 +24478,14 @@ begin
     Result := S;
 end;
 
+function StrRemoveSurroundingQuotesB(const S: RawByteString; const Quotes: CharSet): RawByteString;
+begin
+  if StrHasSurroundingQuotesB(S, Quotes) then
+    Result := Copy(S, 2, Length(S) - 2)
+  else
+    Result := S;
+end;
+
 function StrRemoveSurroundingQuotesW(const S: WideString; const Quotes: CharSet): WideString;
 begin
   if StrHasSurroundingQuotesW(S, Quotes) then
@@ -22513,6 +24515,11 @@ begin
   Result := Quote + StrReplaceA(Quote, DupCharA(Quote, 2), S) + Quote;
 end;
 
+function StrQuoteB(const S: RawByteString; const Quote: AnsiChar): RawByteString;
+begin
+  Result := Quote + StrReplaceB(Quote, DupCharB(Quote, 2), S) + Quote;
+end;
+
 function StrQuoteW(const S: WideString; const Quote: WideChar): WideString;
 begin
   Result := Quote + StrReplaceW(Quote, DupCharW(Quote, 2), S) + Quote;
@@ -22539,6 +24546,19 @@ begin
   Quote := S[1];
   Result := StrRemoveSurroundingQuotesA(S, csQuotes);
   Result := StrReplaceA(DupCharA(Quote, 2), Quote, Result);
+end;
+
+function StrUnquoteB(const S: RawByteString): RawByteString;
+var Quote : AnsiChar;
+begin
+  if not StrHasSurroundingQuotesB(S, csQuotes) then
+    begin
+      Result := S;
+      exit;
+    end;
+  Quote := S[1];
+  Result := StrRemoveSurroundingQuotesB(S, csQuotes);
+  Result := StrReplaceB(DupCharB(Quote, 2), Quote, Result);
 end;
 
 function StrUnquoteW(const S: WideString): WideString;
@@ -22719,7 +24739,7 @@ var I, J, L, M : Integer;
     V : Byte;
     R : AnsiString;
     H1, H2 : AnsiChar;
-    H1Ch, H2Ch : Boolean;
+    H2Ch : Boolean;
 begin
   R := '';
   L := Length(S);
@@ -22736,13 +24756,11 @@ begin
       begin
         R := R + CopyRangeA(S, J, I - 1);
         Inc(I, M);
-        H1Ch := False;
         if I <= L then
           begin
             H1 := S[I];
             if IsHexAnsiChar(H1) then
               begin
-                H1Ch := True;
                 H2Ch := False;
                 if I < L then
                   begin
@@ -22900,6 +24918,15 @@ begin
     Result := S;
 end;
 
+function StrInclPrefixB(const S: RawByteString; const Prefix: RawByteString;
+  const AsciiCaseSensitive: Boolean): RawByteString;
+begin
+  if not StrMatchLeftB(S, Prefix, AsciiCaseSensitive) then
+    Result := Prefix + S
+  else
+    Result := S;
+end;
+
 function StrInclPrefixW(const S: WideString; const Prefix: WideString;
   const AsciiCaseSensitive: Boolean): WideString;
 begin
@@ -22931,6 +24958,15 @@ function StrInclSuffixA(const S: AnsiString; const Suffix: AnsiString;
   const AsciiCaseSensitive: Boolean): AnsiString;
 begin
   if not StrMatchRightA(S, Suffix, AsciiCaseSensitive) then
+    Result := S + Suffix
+  else
+    Result := S;
+end;
+
+function StrInclSuffixB(const S: RawByteString; const Suffix: RawByteString;
+  const AsciiCaseSensitive: Boolean): RawByteString;
+begin
+  if not StrMatchRightB(S, Suffix, AsciiCaseSensitive) then
     Result := S + Suffix
   else
     Result := S;
@@ -22972,6 +25008,15 @@ begin
     Result := S;
 end;
 
+function StrExclPrefixB(const S: RawByteString; const Prefix: RawByteString;
+  const AsciiCaseSensitive: Boolean): RawByteString;
+begin
+  if StrMatchLeftB(S, Prefix, AsciiCaseSensitive) then
+    Result := CopyFromB(S, Length(Prefix) + 1)
+  else
+    Result := S;
+end;
+
 function StrExclPrefixW(const S: WideString; const Prefix: WideString;
   const AsciiCaseSensitive: Boolean): WideString;
 begin
@@ -23003,6 +25048,15 @@ function StrExclSuffixA(const S: AnsiString; const Suffix: AnsiString;
   const AsciiCaseSensitive: Boolean): AnsiString;
 begin
   if StrMatchRightA(S, Suffix, AsciiCaseSensitive) then
+    Result := Copy(S, 1, Length(S) - Length(Suffix))
+  else
+    Result := S;
+end;
+
+function StrExclSuffixB(const S: RawByteString; const Suffix: RawByteString;
+  const AsciiCaseSensitive: Boolean): RawByteString;
+begin
+  if StrMatchRightB(S, Suffix, AsciiCaseSensitive) then
     Result := Copy(S, 1, Length(S) - Length(Suffix))
   else
     Result := S;
@@ -23063,6 +25117,13 @@ begin
     end;
 end;
 
+procedure StrEnsurePrefixB(var S: RawByteString; const Prefix: RawByteString;
+  const AsciiCaseSensitive: Boolean);
+begin
+  if (Prefix <> '') and not StrMatchLeftB(S, Prefix, AsciiCaseSensitive) then
+    S := Prefix + S;
+end;
+
 procedure StrEnsurePrefixW(var S: WideString; const Prefix: WideString;
   const AsciiCaseSensitive: Boolean);
 begin
@@ -23107,6 +25168,13 @@ begin
       Inc(P, L);
       MoveMem(Pointer(Suffix)^, P^, M);
     end;
+end;
+
+procedure StrEnsureSuffixB(var S: RawByteString; const Suffix: RawByteString;
+  const AsciiCaseSensitive: Boolean);
+begin
+  if (Suffix <> '') and not StrMatchRightB(S, Suffix, AsciiCaseSensitive) then
+    S := S + Suffix;
 end;
 
 procedure StrEnsureSuffixW(var S: WideString; const Suffix: WideString;
@@ -23155,6 +25223,13 @@ begin
     end;
 end;
 
+procedure StrEnsureNoPrefixB(var S: RawByteString; const Prefix: RawByteString;
+  const AsciiCaseSensitive: Boolean);
+begin
+  if StrMatchLeftB(S, Prefix, AsciiCaseSensitive) then
+    Delete(S, 1, Length(Prefix));
+end;
+
 procedure StrEnsureNoPrefixW(var S: WideString; const Prefix: WideString;
   const AsciiCaseSensitive: Boolean);
 begin
@@ -23181,6 +25256,13 @@ procedure StrEnsureNoSuffixA(var S: AnsiString; const Suffix: AnsiString;
   const AsciiCaseSensitive: Boolean);
 begin
   if StrMatchRightA(S, Suffix, AsciiCaseSensitive) then
+    SetLength(S, Length(S) - Length(Suffix));
+end;
+
+procedure StrEnsureNoSuffixB(var S: RawByteString; const Suffix: RawByteString;
+  const AsciiCaseSensitive: Boolean);
+begin
+  if StrMatchRightB(S, Suffix, AsciiCaseSensitive) then
     SetLength(S, Length(S) - Length(Suffix));
 end;
 
@@ -23652,6 +25734,21 @@ begin
   P := Q;
 end;
 
+function StrZSkipToStrB(var P: PAnsiChar; const S: RawByteString; const AsciiCaseSensitive: Boolean): Integer;
+var Q : PAnsiChar;
+begin
+  Result := 0;
+  Q := P;
+  if not Assigned(Q) then
+    exit;
+  while (Q^ <> #0) and not StrZMatchStrAsciiB(Q, S, AsciiCaseSensitive) do
+    begin
+      Inc(Q);
+      Inc(Result);
+    end;
+  P := Q;
+end;
+
 function StrZSkipToStrW(var P: PWideChar; const S: WideString; const AsciiCaseSensitive: Boolean): Integer;
 var Q : PWideChar;
 begin
@@ -23761,6 +25858,13 @@ end;
 function StrZSkipStrA(var P: PAnsiChar; const S: AnsiString; const AsciiCaseSensitive: Boolean): Boolean;
 begin
   Result := StrZMatchStrAsciiA(P, S, AsciiCaseSensitive);
+  if Result then
+    Inc(P, Length(S));
+end;
+
+function StrZSkipStrB(var P: PAnsiChar; const S: RawByteString; const AsciiCaseSensitive: Boolean): Boolean;
+begin
+  Result := StrZMatchStrAsciiB(P, S, AsciiCaseSensitive);
   if Result then
     Inc(P, Length(S));
 end;
@@ -23979,6 +26083,21 @@ begin
   Result := StrPToStrA(Q, L);
 end;
 
+function StrZExtractToStrB(var P: PAnsiChar; const S: RawByteString;
+    const CaseSensitive: Boolean): RawByteString;
+var Q : PAnsiChar;
+    L : Integer;
+begin
+  Q := P;
+  L := 0;
+  while (P^ <> #0) and not StrZMatchStrAsciiB(P, S, CaseSensitive) do
+    begin
+      Inc(P);
+      Inc(L);
+    end;
+  Result := StrPToStrB(Q, L);
+end;
+
 function StrZExtractToStrW(var P: PWideChar; const S: WideString;
     const CaseSensitive: Boolean): WideString;
 var Q : PWideChar;
@@ -24081,6 +26200,36 @@ begin
     Inc(L);
   until False;
   S := StrPToStrA(Q, L);
+  Result := True;
+end;
+
+function StrZExtractQuotedB(var P: PAnsiChar; var S: RawByteString; const Quote: CharSet): Boolean;
+var Q    : PAnsiChar;
+    C, D : AnsiChar;
+    L    : Integer;
+begin
+  C := P^;
+  if not (C in Quote) then
+    begin
+      Result := False;
+      exit;
+    end;
+  Inc(P);
+  Q := P;
+  L := 0;
+  repeat
+    D := P^;
+    if D = #0 then
+      break;
+    if D = C then
+      begin
+        Inc(P);
+        break;
+      end;
+    Inc(P);
+    Inc(L);
+  until False;
+  S := StrPToStrB(Q, L);
   Result := True;
 end;
 
@@ -24201,6 +26350,33 @@ begin
 end;
 {$ELSE}
 function StrReverseA(const S: AnsiString): AnsiString;
+var I, L : Integer;
+    P, Q : PAnsiChar;
+begin
+  L := Length(S);
+  if L = 0 then
+    begin
+      Result := '';
+      exit;
+    end;
+  if L = 1 then
+    begin
+      Result := S;
+      exit;
+    end;
+  SetLength(Result, L);
+  P := Pointer(S);
+  Q := Pointer(Result);
+  Inc(Q, L - 1);
+  for I := 1 to L do
+    begin
+      Q^ := P^;
+      Dec(Q);
+      Inc(P);
+    end;
+end;
+
+function StrReverseB(const S: RawByteString): RawByteString;
 var I, L : Integer;
     P, Q : PAnsiChar;
 begin
@@ -24392,6 +26568,14 @@ begin
     Result := 'False';
 end;
 
+function BooleanToStrB(const B: Boolean): RawByteString;
+begin
+  if B then
+    Result := 'True'
+  else
+    Result := 'False';
+end;
+
 function BooleanToStrW(const B: Boolean): WideString;
 begin
   if B then
@@ -24419,6 +26603,11 @@ end;
 function StrToBooleanA(const S: AnsiString): Boolean;
 begin
   Result := StrEqualNoAsciiCaseA(S, 'True');
+end;
+
+function StrToBooleanB(const S: RawByteString): Boolean;
+begin
+  Result := StrEqualNoAsciiCaseB(S, 'True');
 end;
 
 function StrToBooleanW(const S: WideString): Boolean;
@@ -24803,6 +26992,14 @@ begin
     Inc(Result, Length(S[I]));
 end;
 
+function StringsTotalLengthB(const S: array of RawByteString): Integer;
+var I : Integer;
+begin
+  Result := 0;
+  for I := 0 to Length(S) - 1 do
+    Inc(Result, Length(S[I]));
+end;
+
 function StringsTotalLengthW(const S: array of WideString): Integer;
 var I : Integer;
 begin
@@ -24941,6 +27138,8 @@ begin
   else                 // if grow to >= 16 then pre-allocate 1/4
     Result := L + (L shr 2);
 end;
+
+
 
 {                                                                              }
 { TAnsiStringBuilder                                                           }
@@ -25120,6 +27319,194 @@ begin
 end;
 
 procedure TAnsiStringBuilder.Pack;
+var L : Integer;
+begin
+  L := FLength;
+  if L = System.Length(FString) then
+    exit;
+  SetLength(FString, L);
+end;
+
+
+
+{                                                                              }
+{ TRawByteStringBuilder                                                        }
+{                                                                              }
+constructor TRawByteStringBuilder.Create(const S: RawByteString);
+begin
+  inherited Create;
+  SetAsRawByteString(S);
+end;
+
+constructor TRawByteStringBuilder.Create(const Capacity: Integer);
+begin
+  inherited Create;
+  EnsureCapacity(Capacity);
+end;
+
+procedure TRawByteStringBuilder.EnsureCapacity(const L: Integer);
+var N : Integer;
+begin
+  N := System.Length(FString);
+  if L > N then
+    begin
+      N := StringBuilderNewCapacity(L, N);
+      SetLength(FString, N);
+    end;
+end;
+
+function TRawByteStringBuilder.GetAsRawByteString: RawByteString;
+begin
+  if FLength = System.Length(FString) then
+    Result := FString // return reference instead of copy
+  else
+    Result := Copy(FString, 1, FLength);
+end;
+
+procedure TRawByteStringBuilder.SetAsRawByteString(const S: RawByteString);
+begin
+  FString := S;
+  FLength := System.Length(S);
+end;
+
+function TRawByteStringBuilder.GetAsString: String;
+begin
+  {$IFDEF StringIsUnicode}
+  Result := String(GetAsRawByteString);
+  {$ELSE}
+  Result := GetAsRawByteString;
+  {$ENDIF}
+end;
+
+procedure TRawByteStringBuilder.Clear;
+begin
+  FString := '';
+  FLength := 0;
+end;
+
+procedure TRawByteStringBuilder.Assign(const S: TRawByteStringBuilder);
+var L : Integer;
+begin
+  L := S.FLength;
+  FString := Copy(S.FString, 1, L);
+  FLength := L;
+end;
+
+procedure TRawByteStringBuilder.Append(const S: RawByteString);
+var M, L, N : Integer;
+    P       : PAnsiChar;
+begin
+  M := System.Length(S);
+  if M = 0 then
+    exit;
+  N := FLength;
+  L := N + M;
+  if L > System.Length(FString) then
+    EnsureCapacity(L);
+  P := Pointer(FString);
+  Inc(P, N);
+  MoveMem(Pointer(S)^, P^, M);
+  FLength := L;
+end;
+
+procedure TRawByteStringBuilder.AppendCRLF;
+begin
+  Append(AsciiCRLF);
+end;
+
+procedure TRawByteStringBuilder.AppendLn(const S: RawByteString);
+begin
+  Append(S);
+  AppendCRLF;
+end;
+
+procedure TRawByteStringBuilder.Append(const S: RawByteString; const Count: Integer);
+var M, L, N, I : Integer;
+    P          : PAnsiChar;
+begin
+  if Count <= 0 then
+    exit;
+  M := System.Length(S);
+  if M = 0 then
+    exit;
+  N := FLength;
+  L := N + (M * Count);
+  if L > System.Length(FString) then
+    EnsureCapacity(L);
+  P := Pointer(FString);
+  Inc(P, N);
+  for I := 1 to Count do
+    begin
+      MoveMem(Pointer(S)^, P^, M);
+      Inc(P, M);
+    end;
+  FLength := L;
+end;
+
+procedure TRawByteStringBuilder.AppendCh(const C: AnsiChar);
+var L, N : Integer;
+    P    : PAnsiChar;
+begin
+  N := FLength;
+  L := N + 1;
+  if L > System.Length(FString) then
+    EnsureCapacity(L);
+  P := Pointer(FString);
+  Inc(P, N);
+  P^ := C;
+  FLength := L;
+end;
+
+procedure TRawByteStringBuilder.AppendCh(const C: AnsiChar; const Count: Integer);
+var L, N : Integer;
+    P    : PAnsiChar;
+begin
+  if Count <= 0 then
+    exit;
+  N := FLength;
+  L := N + Count;
+  if L > System.Length(FString) then
+    EnsureCapacity(L);
+  P := Pointer(FString);
+  Inc(P, N);
+  FillMem(P^, Count, Ord(C));
+  FLength := L;
+end;
+
+procedure TRawByteStringBuilder.Append(const BufPtr: Pointer; const Size: Integer);
+var L, N : Integer;
+    P    : PAnsiChar;
+begin
+  if Size <= 0 then
+    exit;
+  N := FLength;
+  L := N + Size;
+  if L > System.Length(FString) then
+    EnsureCapacity(L);
+  P := Pointer(FString);
+  Inc(P, N);
+  MoveMem(BufPtr^, P^, Size);
+  FLength := L;
+end;
+
+procedure TRawByteStringBuilder.Append(const S: TRawByteStringBuilder);
+var M, L, N : Integer;
+    P       : PAnsiChar;
+begin
+  M := S.FLength;
+  if M = 0 then
+    exit;
+  N := FLength;
+  L := N + M;
+  if L > System.Length(FString) then
+    EnsureCapacity(L);
+  P := Pointer(FString);
+  Inc(P, N);
+  MoveMem(Pointer(S.FString)^, P^, M);
+  FLength := L;
+end;
+
+procedure TRawByteStringBuilder.Pack;
 var L : Integer;
 begin
   L := FLength;
@@ -25664,6 +28051,33 @@ begin
   end;
 end;
 
+procedure SelfTest_RawByteStringBuilder;
+var A : TRawByteStringBuilder;
+begin
+  A := TRawByteStringBuilder.Create;
+  try
+    Assert(A.Length = 0);
+    A.Append('X');
+    Assert(A.Length = 1);
+    A.Append('ABC');
+    Assert(A.Length = 4);
+    Assert(A.GetAsRawByteString = 'XABC');
+    A.AppendCRLF;
+    Assert(A.Length = 6);
+    A.AppendCh('D');
+    Assert(A.Length = 7);
+    A.AppendCh('E', 3);
+    Assert(A.Length = 10);
+    Assert(A.GetAsRawByteString = 'XABC'#13#10'DEEE');
+    A.Pack;
+    Assert(A.Length = 10);
+    A.Clear;
+    Assert(A.Length = 0);
+  finally
+    A.Free;
+  end;
+end;
+
 procedure SelfTest_WideStringBuilder;
 var A : TWideStringBuilder;
 begin
@@ -25782,6 +28196,14 @@ begin
   Assert(not StrIsIntegerA('-1234567890X'), 'StrIsInteger');
   Assert(not StrIsIntegerA('-'), 'StrIsInteger');
 
+  Assert(StrIsNumericB('1234567890'), 'StrIsNumeric');
+  Assert(not StrIsNumericB('1234567890X'), 'StrIsNumeric');
+  Assert(not StrIsNumericB(''), 'StrIsNumeric');
+  Assert(StrIsIntegerB('-1234567890'), 'StrIsInteger');
+  Assert(StrIsIntegerB('0'), 'StrIsInteger');
+  Assert(not StrIsIntegerB('-1234567890X'), 'StrIsInteger');
+  Assert(not StrIsIntegerB('-'), 'StrIsInteger');
+
   Assert(StrIsNumericW('1234567890'), 'StrIsNumeric');
   Assert(not StrIsNumericW('1234567890X'), 'StrIsNumeric');
   Assert(not StrIsNumericW(''), 'StrIsNumeric');
@@ -25809,6 +28231,17 @@ begin
   Assert(CopyRangeA('1234567890', -2, 3) = '123', 'CopyRange');
   Assert(CopyRangeA('1234567890', 2, -1) = '', 'CopyRange');
   Assert(CopyRangeA('1234567890', -4, -2) = '', 'CopyRange');
+
+  Assert(CopyRangeB('', 1, 2) =  '', 'CopyRange');
+  Assert(CopyRangeB('', -1, -2) = '', 'CopyRange');
+  Assert(CopyRangeB('1234567890', 5, 7) = '567', 'CopyRange');
+  Assert(CopyRangeB('1234567890', 1, 1) = '1', 'CopyRange');
+  Assert(CopyRangeB('1234567890', 0, 11) = '1234567890', 'CopyRange');
+  Assert(CopyRangeB('1234567890', 7, 4) = '', 'CopyRange');
+  Assert(CopyRangeB('1234567890', 1, 0) = '', 'CopyRange');
+  Assert(CopyRangeB('1234567890', -2, 3) = '123', 'CopyRange');
+  Assert(CopyRangeB('1234567890', 2, -1) = '', 'CopyRange');
+  Assert(CopyRangeB('1234567890', -4, -2) = '', 'CopyRange');
 
   Assert(CopyRangeW('', 1, 2) =  '', 'CopyRange');
   Assert(CopyRangeW('', -1, -2) = '', 'CopyRange');
@@ -25882,6 +28315,16 @@ begin
   Assert(CopyLeftA('1234567890', 0) = '', 'CopyLeft');
   Assert(CopyLeftA('1234567890', -2) = '', 'CopyLeft');
 
+  Assert(CopyLeftB('a', 0) = '', 'CopyLeft');
+  Assert(CopyLeftB('a', -1) = '', 'CopyLeft');
+  Assert(CopyLeftB('', 1) = '', 'CopyLeft');
+  Assert(CopyLeftB('b', 1) = 'b', 'CopyLeft');
+  Assert(CopyLeftB('', -1) = '', 'CopyLeft');
+  Assert(CopyLeftB('1234567890', 3) = '123', 'CopyLeft');
+  Assert(CopyLeftB('1234567890', 11) = '1234567890', 'CopyLeft');
+  Assert(CopyLeftB('1234567890', 0) = '', 'CopyLeft');
+  Assert(CopyLeftB('1234567890', -2) = '', 'CopyLeft');
+
   Assert(CopyLeftW('a', 0) = '', 'CopyLeft');
   Assert(CopyLeftW('a', -1) = '', 'CopyLeft');
   Assert(CopyLeftW('', 1) = '', 'CopyLeft');
@@ -25921,6 +28364,15 @@ begin
   Assert(CopyRightA('1234567890', 11) = '1234567890', 'CopyRight');
   Assert(CopyRightA('1234567890', 0) = '', 'CopyRight');
   Assert(CopyRightA('1234567890', -2) = '', 'CopyRight');
+
+  Assert(CopyRightB('a', 0) = '', 'CopyRight');
+  Assert(CopyRightB('a', -1) = '', 'CopyRight');
+  Assert(CopyRightB('', 1) = '', 'CopyRight');
+  Assert(CopyRightB('', -2) = '', 'CopyRight');
+  Assert(CopyRightB('1234567890', 3) = '890', 'CopyRight');
+  Assert(CopyRightB('1234567890', 11) = '1234567890', 'CopyRight');
+  Assert(CopyRightB('1234567890', 0) = '', 'CopyRight');
+  Assert(CopyRightB('1234567890', -2) = '', 'CopyRight');
 
   Assert(CopyRightW('a', 0) = '', 'CopyRight');
   Assert(CopyRightW('a', -1) = '', 'CopyRight');
@@ -26102,6 +28554,11 @@ begin
   Assert(StrEqualNoAsciiCaseA('@ABCDEFGHIJKLMNOPQRSTUVWXYZ` ', '@abcdefghijklmnopqrstuvwxyz` '), 'StrEqualNoCase');
   Assert(not StrEqualNoAsciiCaseA('@ABCDEFGHIJKLMNOPQRSTUVWXY-` ', '@abcdefghijklmnopqrstuvwxyz` '), 'StrEqualNoCase');
 
+  Assert(StrEqualNoAsciiCaseB('A', 'a'), 'StrEqualNoCase');
+  Assert(not StrEqualNoAsciiCaseB('A', 'B'), 'StrEqualNoCase');
+  Assert(StrEqualNoAsciiCaseB('@ABCDEFGHIJKLMNOPQRSTUVWXYZ` ', '@abcdefghijklmnopqrstuvwxyz` '), 'StrEqualNoCase');
+  Assert(not StrEqualNoAsciiCaseB('@ABCDEFGHIJKLMNOPQRSTUVWXY-` ', '@abcdefghijklmnopqrstuvwxyz` '), 'StrEqualNoCase');
+
   Assert(StrEqualNoAsciiCaseW('A', 'a'), 'StrEqualNoCase');
   Assert(not StrEqualNoAsciiCaseW('A', 'B'), 'StrEqualNoCase');
   Assert(StrEqualNoAsciiCaseW('@ABCDEFGHIJKLMNOPQRSTUVWXYZ` ', '@abcdefghijklmnopqrstuvwxyz` '), 'StrEqualNoCase');
@@ -26120,6 +28577,9 @@ begin
   { StrReverse                                                                 }
   Assert(StrReverseA('12345') = '54321', 'StrReverse');
   Assert(StrReverseA('1234') = '4321', 'StrReverse');
+
+  Assert(StrReverseB('12345') = '54321', 'StrReverse');
+  Assert(StrReverseB('1234') = '4321', 'StrReverse');
 
   Assert(StrReverseW('12345') = '54321', 'StrReverse');
   Assert(StrReverseW('1234') = '4321', 'StrReverse');
@@ -26148,6 +28608,24 @@ begin
   Assert(StrCompareA('', '') = 0, 'StrCompareNoCase');
   Assert(StrCompareA('', 'a') = -1, 'StrCompareNoCase');
   Assert(StrCompareA('a', '') = 1, 'StrCompareNoCase');
+
+  Assert(StrCompareNoAsciiCaseB('a', 'a') = 0, 'StrCompareNoCase');
+  Assert(StrCompareNoAsciiCaseB('a', 'b') = -1, 'StrCompareNoCase');
+  Assert(StrCompareNoAsciiCaseB('b', 'a') = 1, 'StrCompareNoCase');
+  Assert(StrCompareNoAsciiCaseB('A', 'a') = 0, 'StrCompareNoCase');
+  Assert(StrCompareNoAsciiCaseB('A', 'b') = -1, 'StrCompareNoCase');
+  Assert(StrCompareNoAsciiCaseB('b', 'A') = 1, 'StrCompareNoCase');
+  Assert(StrCompareNoAsciiCaseB('aa', 'a') = 1, 'StrCompareNoCase');
+  Assert(StrCompareNoAsciiCaseB('a', 'aa') = -1, 'StrCompareNoCase');
+  Assert(StrCompareNoAsciiCaseB('AA', 'b') = -1, 'StrCompareNoCase');
+  Assert(StrCompareNoAsciiCaseB('B', 'aa') = 1, 'StrCompareNoCase');
+  Assert(StrCompareNoAsciiCaseB('aa', 'Aa') = 0, 'StrCompareNoCase');
+  Assert(StrCompareB('A', 'a') = -1, 'StrCompareNoCase');
+  Assert(StrCompareB('a', 'A') = 1, 'StrCompareNoCase');
+  Assert(StrCompareB('a', 'aa') = -1, 'StrCompareNoCase');
+  Assert(StrCompareB('', '') = 0, 'StrCompareNoCase');
+  Assert(StrCompareB('', 'a') = -1, 'StrCompareNoCase');
+  Assert(StrCompareB('a', '') = 1, 'StrCompareNoCase');
 
   Assert(StrCompareNoAsciiCaseW('a', 'a') = 0, 'StrCompareNoCase');
   Assert(StrCompareNoAsciiCaseW('a', 'b') = -1, 'StrCompareNoCase');
@@ -26236,6 +28714,39 @@ begin
   Assert(StrMatchLenA('', ['a', 'b', 'c'], 1) = 0, 'StrMatchLen');
   Assert(StrMatchLenA('dcba', ['a', 'b', 'c'], 2) = 3, 'StrMatchLen');
   Assert(StrMatchLenA('dcba', ['a', 'b', 'c'], 1) = 0, 'StrMatchLen');
+
+  Assert(not StrMatchB('', '', 1), 'StrMatch');
+  Assert(not StrMatchB('', 'a', 1), 'StrMatch');
+  Assert(not StrMatchB('a', '', 1), 'StrMatch');
+  Assert(not StrMatchB('a', 'A', 1), 'StrMatch');
+  Assert(StrMatchB('A', 'A', 1), 'StrMatch');
+  Assert(not StrMatchB('abcdef', 'xx', 1), 'StrMatch');
+  Assert(StrMatchB('xbcdef', 'x', 1), 'StrMatch');
+  Assert(StrMatchB('abcdxxxxx', 'xxxxx', 5), 'StrMatch');
+  Assert(StrMatchB('abcdef', 'abcdef', 1), 'StrMatch');
+  Assert(not StrMatchNoAsciiCaseB('abcdef', 'xx', 1), 'StrMatchNoCase');
+  Assert(StrMatchNoAsciiCaseB('xbCDef', 'xBCd', 1), 'StrMatchNoCase');
+  Assert(StrMatchNoAsciiCaseB('abcdxxX-xx', 'Xxx-xX', 5), 'StrMatchNoCase');
+  Assert(StrMatchB('abcde', 'abcd', 1), 'StrMatch');
+  Assert(StrMatchB('abcde', 'abc', 1), 'StrMatch');
+  Assert(StrMatchB('abcde', 'ab', 1), 'StrMatch');
+  Assert(StrMatchB('abcde', 'a', 1), 'StrMatch');
+  Assert(StrMatchNoAsciiCaseB(' abC-Def{', ' AbC-def{', 1), 'StrMatchNoCase');
+  Assert(StrMatchLeftB('ABC1D', 'aBc1', False), 'StrMatchLeft');
+  Assert(StrMatchLeftB('aBc1D', 'aBc1', True), 'StrMatchLeft');
+  Assert(not StrMatchLeftB('AB1D', 'ABc1', False), 'StrMatchLeft');
+  Assert(not StrMatchLeftB('aBC1D', 'aBc1', True), 'StrMatchLeft');
+  Assert(not StrMatchCharB('', ['a', 'b', 'c']), 'StrMatchChar');
+  Assert(StrMatchCharB('a', ['a', 'b', 'c']), 'StrMatchChar');
+  Assert(not StrMatchCharB('d', ['a', 'b', 'c']), 'StrMatchChar');
+  Assert(StrMatchCharB('acbba', ['a', 'b', 'c']), 'StrMatchChar');
+  Assert(not StrMatchCharB('acbd', ['a', 'b', 'c']), 'StrMatchChar');
+  Assert(StrMatchLenB('abcd', ['a', 'b', 'c'], 1) = 3, 'StrMatchLen');
+  Assert(StrMatchLenB('abcd', ['a', 'b', 'c'], 3) = 1, 'StrMatchLen');
+  Assert(StrMatchLenB('abcd', ['a', 'b', 'c'], 4) = 0, 'StrMatchLen');
+  Assert(StrMatchLenB('', ['a', 'b', 'c'], 1) = 0, 'StrMatchLen');
+  Assert(StrMatchLenB('dcba', ['a', 'b', 'c'], 2) = 3, 'StrMatchLen');
+  Assert(StrMatchLenB('dcba', ['a', 'b', 'c'], 1) = 0, 'StrMatchLen');
 
   Assert(not StrMatchW('', '', 1), 'StrMatch');
   Assert(not StrMatchW('', 'a', 1), 'StrMatch');
@@ -26373,6 +28884,42 @@ begin
   Assert(PosNotCharA(AnsiChar('a'), 'abac') = 2, 'PosNotChar');
   Assert(PosNotCharSetA(['a'..'z'], 'abac1a') = 5, 'PosNotChar');
 
+  Assert(PosStrB('', 'ABCABC') = 0, 'PosStr');
+  Assert(PosStrB('', 'a') = 0, 'PosStr');
+  Assert(PosStrB('A', '') = 0, 'PosStr');
+  Assert(PosStrB('A', 'ABCABC') = 1, 'PosStr');
+  Assert(PosStrB('A', 'ABCABC', 2) = 4, 'PosStr');
+  Assert(PosStrB('ab', 'a') = 0, 'PosStr');
+  Assert(PosStrB('ab', 'ab') = 1, 'PosStr');
+  Assert(PosStrB('ab', 'zxab') = 3, 'PosStr');
+  Assert(PosStrB('ab', '') = 0, 'PosStr');
+  Assert(PosStrB('ab', 'axdba') = 0, 'PosStr');
+  Assert(PosStrB('a', 'AbAc', 1, False) = 1, 'PosStr');
+  Assert(PosStrB('ba', 'ABAcabac', 1, False) = 2, 'PosStr');
+  Assert(PosStrB('a', 'abac', 2) = 3, 'PosStr');
+  Assert(PosStrB('ab', 'abacabac', 2) = 5, 'PosStr');
+  Assert(PosStrRevB('A', 'ABCABC') = 4, 'PosStrRev');
+  Assert(PosStrRevB('A', 'ABCABCA') = 7, 'PosStrRev');
+  Assert(PosStrRevB('CA', 'ABCABCA') = 6, 'PosStrRev');
+  Assert(PosStrRevB('ab', 'abacabac') = 5, 'PosStrRev');
+  Assert(PosNStrB('AB', 'ABCABCDAB', 3) = 8, 'PosNStr');
+  Assert(PosCharSetB([], 'a') = 0, 'PosChar');
+  Assert(PosCharSetB(['a'], 'a') = 1, 'PosChar');
+  Assert(PosCharSetB(['a'], '') = 0, 'PosChar');
+  Assert(PosCharSetB(['a'], 'aa') = 1, 'PosChar');
+  Assert(PosCharSetB(['a'], 'ba') = 2, 'PosChar');
+  Assert(PosCharSetB(['a'], 'zx') = 0, 'PosChar');
+  Assert(PosCharB(AnsiChar('a'), 'a') = 1, 'PosChar');
+  Assert(PosCharB(AnsiChar('a'), '') = 0, 'PosChar');
+  Assert(PosCharB(AnsiChar('a'), 'aa') = 1, 'PosChar');
+  Assert(PosCharB(AnsiChar('a'), 'ba') = 2, 'PosChar');
+  Assert(PosCharB(AnsiChar('a'), 'zx') = 0, 'PosChar');
+  Assert(PosCharSetB(['a'], 'abac', 2) = 3, 'PosChar');
+  Assert(PosCharRevB(AnsiChar('a'), 'abac') = 3, 'PosCharRev');
+  Assert(PosCharSetRevB(['a'..'z'], 'abac') = 4, 'PosCharRev');
+  Assert(PosNotCharB(AnsiChar('a'), 'abac') = 2, 'PosNotChar');
+  Assert(PosNotCharSetB(['a'..'z'], 'abac1a') = 5, 'PosNotChar');
+
   Assert(PosStrW('', 'ABCABC') = 0, 'PosStr');
   Assert(PosStrW('', 'a') = 0, 'PosStr');
   Assert(PosStrW('A', '') = 0, 'PosStr');
@@ -26503,6 +29050,14 @@ begin
   Assert(StrTrimA('', [' ']) = '', 'Trim');
   Assert(StrTrimA('X', [' ']) = 'X', 'Trim');
 
+  Assert(StrTrimLeftB('   123   ') = '123   ', 'TrimLeft');
+  Assert(StrTrimLeftStrNoCaseB('   123   ', '  ') = ' 123   ', 'TrimLeftStrNoCase');
+  Assert(StrTrimRightB('   123   ') = '   123', 'TrimRight');
+  Assert(StrTrimRightStrNoCaseB('   123   ', '  ') = '   123 ', 'TrimRightStrNoCase');
+  Assert(StrTrimB('   123   ', [' ']) = '123', 'Trim');
+  Assert(StrTrimB('', [' ']) = '', 'Trim');
+  Assert(StrTrimB('X', [' ']) = 'X', 'Trim');
+
   Assert(StrTrimLeftW('   123   ') = '123   ', 'TrimLeft');
   Assert(StrTrimLeftStrNoCaseW('   123   ', '  ') = ' 123   ', 'TrimLeftStrNoCase');
   Assert(StrTrimRightW('   123   ') = '   123', 'TrimRight');
@@ -26542,6 +29097,15 @@ begin
   Assert(DupCharA(C, 0) = '', 'Dup');
   Assert(DupCharA(C, -1) = '', 'Dup');
 
+  Assert(DupStrB('xy', 3) = 'xyxyxy', 'Dup');
+  Assert(DupStrB('', 3) = '', 'Dup');
+  Assert(DupStrB('a', 0) = '', 'Dup');
+  Assert(DupStrB('a', -1) = '', 'Dup');
+  C := 'x';
+  Assert(DupCharB(C, 6) = 'xxxxxx', 'Dup');
+  Assert(DupCharB(C, 0) = '', 'Dup');
+  Assert(DupCharB(C, -1) = '', 'Dup');
+
   Assert(DupStrW('xy', 3) = 'xyxyxy', 'Dup');
   Assert(DupStrW('', 3) = '', 'Dup');
   Assert(DupStrW('a', 0) = '', 'Dup');
@@ -26577,6 +29141,14 @@ begin
   Assert(StrPadRightA('xxx', 'y', 6) = 'xxxyyy', 'PadRight');
   Assert(StrPadRightA('xxx', 'y', 2, True) = 'xx', 'PadRight');
   Assert(StrPadA('xxx', 'y', 7) = 'yyxxxyy', 'Pad');
+
+  Assert(StrPadLeftB('xxx', 'y', 6) = 'yyyxxx', 'PadLeft');
+  Assert(StrPadLeftB('xxx', 'y', 2, True) = 'xx', 'PadLeft');
+  Assert(StrPadLeftB('x', ' ', 3, True) = '  x', 'PadLeft');
+  Assert(StrPadLeftB('xabc', ' ', 3, True) = 'xab', 'PadLeft');
+  Assert(StrPadRightB('xxx', 'y', 6) = 'xxxyyy', 'PadRight');
+  Assert(StrPadRightB('xxx', 'y', 2, True) = 'xx', 'PadRight');
+  Assert(StrPadB('xxx', 'y', 7) = 'yyxxxyy', 'Pad');
 
   Assert(StrPadLeftW('xxx', 'y', 6) = 'yyyxxx', 'PadLeft');
   Assert(StrPadLeftW('xxx', 'y', 2, True) = 'xx', 'PadLeft');
@@ -26670,6 +29242,10 @@ begin
   Assert(StrCountCharA('abcxyzdexxyxyz', AnsiChar('x')) = 4);
   Assert(StrCountCharA('abcxyzdexxyxyz', AnsiChar('q')) = 0);
   Assert(StrCountCharA('abcxyzdexxyxyz', ['a'..'z']) = 14);
+
+  Assert(StrCountCharB('abcxyzdexxyxyz', AnsiChar('x')) = 4);
+  Assert(StrCountCharB('abcxyzdexxyxyz', AnsiChar('q')) = 0);
+  Assert(StrCountCharB('abcxyzdexxyxyz', ['a'..'z']) = 14);
 
   Assert(StrCountCharW('abcxyzdexxyxyz', WideChar('x')) = 4);
   Assert(StrCountCharW('abcxyzdexxyxyz', WideChar('q')) = 0);
@@ -26798,6 +29374,45 @@ begin
   Assert(StrRemoveDupA('BBBAABABBA', 'A') = 'BBBABABBA', 'StrRemoveDup');
   {$IFNDEF CLR}
   Assert(StrRemoveCharSetA('BBBAABABBA', ['B']) = 'AAAA', 'StrRemoveChar');
+  {$ENDIF}
+
+  Assert(StrReplaceCharB(AnsiChar('X'), AnsiChar('A'), '') = '', 'StrReplaceChar');
+  Assert(StrReplaceCharB(AnsiChar('X'), AnsiChar('A'), 'XXX') = 'AAA', 'StrReplaceChar');
+  Assert(StrReplaceCharB(AnsiChar('X'), AnsiChar('A'), 'X') = 'A', 'StrReplaceChar');
+  Assert(StrReplaceCharB(AnsiChar('X'), AnsiChar('!'), 'ABCXXBXAC') = 'ABC!!B!AC', 'StrReplaceChar');
+  Assert(StrReplaceCharB(['A', 'B'], AnsiChar('C'), 'ABCDABCD') = 'CCCDCCCD', 'StrReplaceChar');
+  Assert(StrReplaceB('', 'A', 'ABCDEF') = 'ABCDEF', 'StrReplace');
+  Assert(StrReplaceB('B', 'A', 'ABCDEFEDCBA') = 'AACDEFEDCAA', 'StrReplace');
+  Assert(StrReplaceB('BC', '', 'ABCDEFEDCBA') = 'ADEFEDCBA', 'StrReplace');
+  Assert(StrReplaceB('A', '', 'ABAABAA') = 'BB', 'StrReplace');
+  Assert(StrReplaceB('C', 'D', 'ABAABAA') = 'ABAABAA', 'StrReplace');
+  Assert(StrReplaceB('B', 'CC', 'ABAABAA') = 'ACCAACCAA', 'StrReplace');
+  Assert(StrReplaceB('a', 'b', 'bababa') = 'bbbbbb', 'StrReplace');
+  Assert(StrReplaceB('a', '', 'bababa') = 'bbb', 'StrReplace');
+  Assert(StrReplaceB('a', '', 'aaa') = '', 'StrReplace');
+  Assert(StrReplaceB('aba', 'x', 'bababa') = 'bxba', 'StrReplace');
+  Assert(StrReplaceB('b', 'bb', 'bababa') = 'bbabbabba', 'StrReplace');
+  Assert(StrReplaceB('c', 'aa', 'bababa') = 'bababa', 'StrReplace');
+  Assert(StrReplaceB('ba', '', 'bababa') = '', 'StrReplace');
+  Assert(StrReplaceB('BA', '', 'bababa', False) = '', 'StrReplace');
+  Assert(StrReplaceB('BA', 'X', 'bababa', False) = 'XXX', 'StrReplace');
+  Assert(StrReplaceB('aa', '12', 'aaaaa') = '1212a', 'StrReplace');
+  Assert(StrReplaceB('aa', 'a', 'aaaaa') = 'aaa', 'StrReplace');
+  {$IFNDEF CLR}
+  Assert(StrReplaceB(['b'], 'z', 'bababa') = 'zazaza', 'StrReplace');
+  Assert(StrReplaceB(['b', 'a'], 'z', 'bababa') = 'zzzzzz', 'StrReplace');
+  {$ENDIF}
+  Assert(StrReplaceB('a', 'b', 'bababa') = 'bbbbbb', 'StrReplace');
+  Assert(StrReplaceB('a', '', 'bababa') = 'bbb', 'StrReplace');
+  Assert(StrReplaceB('a', '', 'aaa') = '', 'StrReplace');
+  S := DupStrB('ABCDEFGH', 100000);
+  S := StrReplaceB('BC', 'X', S);
+  Assert(S = DupStrB('AXDEFGH', 100000), 'StrReplace');
+  // Assert(StrRemoveDupB('BBBAABABBA', 'B') = 'BAABABA', 'StrRemoveDup');
+  // Assert(StrRemoveDupB('azaazzel', 'a') = 'azazzel', 'StrRemoveDup');
+  // Assert(StrRemoveDupB('BBBAABABBA', 'A') = 'BBBABABBA', 'StrRemoveDup');
+  {$IFNDEF CLR}
+  Assert(StrRemoveCharSetB('BBBAABABBA', ['B']) = 'AAAA', 'StrRemoveChar');
   {$ENDIF}
 
   Assert(StrReplaceCharW(WideChar('X'), WideChar('A'), '') = '', 'StrReplaceChar');
@@ -27222,6 +29837,7 @@ begin
   {$ENDIF}
 
   SelfTest_AnsiStringBuilder;
+  SelfTest_RawByteStringBuilder;
   SelfTest_WideStringBuilder;
   SelfTest_StringBuilder;
 end;

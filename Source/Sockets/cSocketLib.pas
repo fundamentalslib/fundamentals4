@@ -62,6 +62,7 @@
 {   Delphi 2007 Win32                  4.14  2011/09/27                        }
 {   Delphi 2009 Win32                  4.14  2011/09/27                        }
 {   Delphi XE2 Win32                   4.15  2014/04/23                        }
+{   Delphi XE7 Win64                   4.15  2015/03/13                        }
 {   FreePascal 2.6.2 Linux i386        4.15  2014/04/23                        }
 {   FreePascal 2.6.2 Win32 i386        4.15  2014/04/23                        }
 {                                                                              }
