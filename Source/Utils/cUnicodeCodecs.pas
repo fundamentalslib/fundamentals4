@@ -2,10 +2,10 @@
 {                                                                              }
 {   Library:          Fundamentals 4.00                                        }
 {   File name:        cUnicodeCodecs.pas                                       }
-{   File version:     4.19                                                     }
+{   File version:     4.20                                                     }
 {   Description:      Unicode codecs                                           }
 {                                                                              }
-{   Copyright:        Copyright (c) 2002-2012                                  }
+{   Copyright:        Copyright (c) 2002-2015                                  }
 {                     David J Butler and Dieter Köhler                         }
 {                     All rights reserved.                                     }
 {                     See license below.                                       }
@@ -85,10 +85,11 @@
 {   2011/09/28  4.17  Revision for Delphi 2009 Win32.                          }
 {   2012/05/23  4.18  Fixed bug in TUCS2Codec.Decode reported by brianjford.   }
 {   2012/08/25  4.19  UnicodeString functions.                                 }
+{   2015/03/14  4.20  Use RawByteString to avoid auto string conversions.      }
 {                                                                              }
 { Supported compilers:                                                         }
 {                                                                              }
-{   Borland Delphi 5/6/7/2005/2006/2007/2009 Win32 i386                        }
+{   Delphi XE7 Win64                    4.20  2015/03/14                       }
 {   FreePascal 2 Win32 i386                                                    }
 {   FreePascal 2 Linux i386                                                    }
 {                                                                              }
@@ -115,6 +116,26 @@ interface
 uses
   { System }
   SysUtils;
+
+
+
+{                                                                              }
+{ RawByteString                                                                }
+{                                                                              }
+{$IFNDEF SupportRawByteString}
+type
+  RawByteString = AnsiString;
+{$ENDIF}
+
+
+
+{                                                                              }
+{ UTF8String                                                                   }
+{                                                                              }
+{$IFNDEF SupportUTF8String}
+type
+  UTF8String = AnsiString;
+{$ENDIF}
 
 
 
@@ -155,6 +176,8 @@ const
 {                                                                              }
 function  IsUSASCIIBuf(const S: PAnsiChar; const Len: Integer): Boolean;
 function  IsUSASCIIAnsiString(const S: AnsiString): Boolean;
+function  IsUSASCIIRawByteString(const S: RawByteString): Boolean;
+function  IsUSASCIIUTF8String(const S: UTF8String): Boolean;
 function  IsUSASCIIWideBuf(const Buf: PWideChar; const Len: Integer): Boolean;
 function  IsUSASCIIWideString(const S: WideString): Boolean;
 function  IsUSASCIIUnicodeString(const S: UnicodeString): Boolean;
@@ -162,20 +185,20 @@ function  IsUSASCIIUnicodeString(const S: UnicodeString): Boolean;
 
 
 {                                                                              }
-{ Long string conversion functions                                             }
+{ Long string raw conversion functions                                         }
 {                                                                              }
 procedure LongToWide(const Buf: Pointer; const BufSize: Integer; const DestBuf: Pointer);
 function  LongToWideString(const S: PAnsiChar; const Len: Integer): WideString;
 function  LongToUnicodeString(const S: PAnsiChar; const Len: Integer): UnicodeString;
 
-function  LongStringToWideString(const S: AnsiString): WideString;
-function  LongStringToUnicodeString(const S: AnsiString): UnicodeString;
+function  LongStringToWideString(const S: RawByteString): WideString;
+function  LongStringToUnicodeString(const S: RawByteString): UnicodeString;
 
 procedure WideToLong(const Buf: Pointer; const Len: Integer; const DestBuf: Pointer);
-function  WideToLongString(const P: PWideChar; const Len: Integer): AnsiString;
+function  WideToLongString(const P: PWideChar; const Len: Integer): RawByteString;
 
-function  WideStringToLongString(const S: WideString): AnsiString;
-function  UnicodeStringToLongString(const S: UnicodeString): AnsiString;
+function  WideStringToLongString(const S: WideString): RawByteString;
+function  UnicodeStringToLongString(const S: UnicodeString): RawByteString;
 
 
 
@@ -222,28 +245,28 @@ function  DetectUTF8BOM(const P: PAnsiChar; const Size: Integer): Boolean;
 
 function  UTF8CharSize(const P: PAnsiChar; const Size: Integer): Integer;
 function  UTF8BufLength(const P: PAnsiChar; const Size: Integer): Integer;
-function  UTF8StringLength(const S: AnsiString): Integer;
-function  UTF8StringToWideString(const S: AnsiString): WideString;
-function  UTF8StringToUnicodeString(const S: AnsiString): UnicodeString;
+function  UTF8StringLength(const S: RawByteString): Integer;
+function  UTF8StringToWideString(const S: RawByteString): WideString;
+function  UTF8StringToUnicodeString(const S: RawByteString): UnicodeString;
 function  UTF8StringToUnicodeStringP(const S: PAnsiChar; const Size: Integer): UnicodeString;
-function  UTF8StringToLongString(const S: AnsiString): AnsiString;
-function  UTF8StringToString(const S: AnsiString): String;
+function  UTF8StringToLongString(const S: RawByteString): RawByteString;
+function  UTF8StringToString(const S: RawByteString): String;
 
 function  UCS4CharToUTF8CharSize(const Ch: UCS4Char): Integer;
 function  WideBufToUTF8Size(const Buf: PWideChar; const Len: Integer): Integer;
 function  WideStringToUTF8Size(const S: WideString): Integer;
 function  UnicodeStringToUTF8Size(const S: UnicodeString): Integer;
-function  WideBufToUTF8String(const Buf: PWideChar; const Len: Integer): AnsiString;
-function  WideStringToUTF8String(const S: WideString): AnsiString;
+function  WideBufToUTF8String(const Buf: PWideChar; const Len: Integer): RawByteString;
+function  WideStringToUTF8String(const S: WideString): RawByteString;
 function  WideStringToUnicodeString(const S: WideString): UnicodeString;
-function  UnicodeStringToUTF8String(const S: UnicodeString): AnsiString;
+function  UnicodeStringToUTF8String(const S: UnicodeString): RawByteString;
 function  UnicodeStringToWideString(const S: UnicodeString): WideString;
 function  LongBufToUTF8Size(const Buf: PAnsiChar; const Len: Integer): Integer;
-function  LongStringToUTF8Size(const S: AnsiString): Integer;
-function  LongStringToUTF8String(const S: AnsiString): AnsiString;
-function  UCS4CharToUTF8String(const Ch: UCS4Char): AnsiString;
-function  ISO8859_1StringToUTF8String(const S: AnsiString): AnsiString;
-function  StringToUTF8String(const S: String): AnsiString;
+function  LongStringToUTF8Size(const S: RawByteString): Integer;
+function  LongStringToUTF8String(const S: RawByteString): RawByteString;
+function  UCS4CharToUTF8String(const Ch: UCS4Char): RawByteString;
+function  ISO8859_1StringToUTF8String(const S: RawByteString): RawByteString;
+function  StringToUTF8String(const S: String): RawByteString;
 
 
 
@@ -365,11 +388,11 @@ type
               const DestBuf: Pointer; const DestSize: Integer;
               out ProcessedBytes, DestLength: Integer); virtual; abstract;
     function  Encode(const S: PWideChar; const Length: Integer;
-              out ProcessedChars: Integer): AnsiString; virtual; abstract;
+              out ProcessedChars: Integer): RawByteString; virtual; abstract;
 
     procedure DecodeStr(const Buf: Pointer; const BufSize: Integer;
               var Dest: WideString);
-    function  EncodeStr(const S: WideString): AnsiString;
+    function  EncodeStr(const S: WideString): RawByteString;
 
     procedure ReadUCS4Char(out C: UCS4Char; out ByteCount: Integer);
     procedure WriteUCS4Char(const C: UCS4Char; out ByteCount: Integer); virtual;
@@ -434,16 +457,17 @@ function  DetectUTFEncoding(const Buf: Pointer; const BufSize: Integer;
 function  EncodingToUTF16(const CodecClass: TUnicodeCodecClass;
           const Buf: Pointer; const BufSize: Integer): WideString; overload;
 function  EncodingToUTF16(const CodecClass: TUnicodeCodecClass;
-          const S: AnsiString): WideString; overload;
+          const S: RawByteString): WideString; overload;
 
 function  EncodingToUTF16(const CodecAlias: String;
           const Buf: Pointer; const BufSize: Integer): WideString; overload;
-function  EncodingToUTF16(const CodecAlias: String; const S: AnsiString): WideString; overload;
+function  EncodingToUTF16(const CodecAlias: String;
+          const S: RawByteString): WideString; overload;
 
 function  UTF16ToEncoding(const CodecClass: TUnicodeCodecClass;
-          const S: WideString): AnsiString; overload;
+          const S: WideString): RawByteString; overload;
 function  UTF16ToEncoding(const CodecAlias: String;
-          const S: WideString): AnsiString; overload;
+          const S: WideString): RawByteString; overload;
 
 
 
@@ -467,7 +491,7 @@ type
               const DestBuf: Pointer; const DestSize: Integer;
               out ProcessedBytes, DestLength: Integer); override;
     function  Encode(const S: PWideChar; const Length: Integer;
-              out ProcessedChars: Integer): AnsiString; override;
+              out ProcessedChars: Integer): RawByteString; override;
     procedure WriteUCS4Char(const C: UCS4Char; out ByteCount: Integer); override;
   end;
 
@@ -493,7 +517,7 @@ type
               const DestBuf: Pointer; const DestSize: Integer;
               out ProcessedBytes, DestLength: Integer); override;
     function  Encode(const S: PWideChar; const Length: Integer;
-              out ProcessedChars: Integer): AnsiString; override;
+              out ProcessedChars: Integer): RawByteString; override;
     procedure WriteUCS4Char(const C: UCS4Char; out ByteCount: Integer); override;
   end;
 
@@ -519,7 +543,7 @@ type
               const DestBuf: Pointer; const DestSize: Integer;
               out ProcessedBytes, DestLength: Integer); override;
     function  Encode(const S: PWideChar; const Length: Integer;
-              out ProcessedChars: Integer): AnsiString; override;
+              out ProcessedChars: Integer): RawByteString; override;
     procedure WriteUCS4Char(const C: UCS4Char; out ByteCount: Integer); override;
   end;
 
@@ -542,7 +566,7 @@ type
               const DestBuf: Pointer; const DestSize: Integer;
               out ProcessedBytes, DestLength: Integer); override;
     function  Encode(const S: PWideChar; const Length: Integer;
-              out ProcessedChars: Integer): AnsiString; override;
+              out ProcessedChars: Integer): RawByteString; override;
     procedure WriteUCS4Char(const C: UCS4Char; out ByteCount: Integer); override;
   end;
 
@@ -565,7 +589,7 @@ type
               const DestBuf: Pointer; const DestSize: Integer;
               out ProcessedBytes, DestLength: Integer); override;
     function  Encode(const S: PWideChar; const Length: Integer;
-              out ProcessedChars: Integer): AnsiString; override;
+              out ProcessedChars: Integer): RawByteString; override;
     procedure WriteUCS4Char(const C: UCS4Char; out ByteCount: Integer); override;
   end;
 
@@ -588,7 +612,7 @@ type
               const DestBuf: Pointer; const DestSize: Integer;
               out ProcessedBytes, DestLength: Integer); override;
     function  Encode(const S: PWideChar; const Length: Integer;
-              out ProcessedChars: Integer): AnsiString; override;
+              out ProcessedChars: Integer): RawByteString; override;
     procedure WriteUCS4Char(const C: UCS4Char; out ByteCount: Integer); override;
   end;
 
@@ -611,7 +635,7 @@ type
               const DestBuf: Pointer; const DestSize: Integer;
               out ProcessedBytes, DestLength: Integer); override;
     function  Encode(const S: PWideChar; const Length: Integer;
-              out ProcessedChars: Integer): AnsiString; override;
+              out ProcessedChars: Integer): RawByteString; override;
     procedure WriteUCS4Char(const C: UCS4Char; out ByteCount: Integer); override;
   end;
 
@@ -634,7 +658,7 @@ type
               const DestBuf: Pointer; const DestSize: Integer;
               out ProcessedBytes, DestLength: Integer); override;
     function  Encode(const S: PWideChar; const Length: Integer;
-              out ProcessedChars: Integer): AnsiString; override;
+              out ProcessedChars: Integer): RawByteString; override;
     procedure WriteUCS4Char(const C: UCS4Char; out ByteCount: Integer); override;
   end;
 
@@ -666,7 +690,7 @@ type
               const DestBuf: Pointer; const DestSize: Integer;
               out ProcessedBytes, DestLength: Integer); override;
     function  Encode(const S: PWideChar; const Length: Integer;
-              out ProcessedChars: Integer): AnsiString; override;
+              out ProcessedChars: Integer): RawByteString; override;
 
     function  DecodeChar(const P: AnsiChar): WideChar; virtual; abstract;
     function  EncodeChar(const Ch: WideChar): AnsiChar; virtual; abstract;
@@ -1513,6 +1537,16 @@ begin
   Result := IsUSASCIIBuf(Pointer(S), Length(S));
 end;
 
+function IsUSASCIIRawByteString(const S: RawByteString): Boolean;
+begin
+  Result := IsUSASCIIBuf(Pointer(S), Length(S));
+end;
+
+function IsUSASCIIUTF8String(const S: UTF8String): Boolean;
+begin
+  Result := IsUSASCIIBuf(Pointer(S), Length(S));
+end;
+
 function IsUSASCIIWideBuf(const Buf: PWideChar; const Len: Integer): Boolean;
 var I : Integer;
     P : PWideChar;
@@ -1597,7 +1631,7 @@ begin
     end;
 end;
 
-function LongStringToWideString(const S: AnsiString): WideString;
+function LongStringToWideString(const S: RawByteString): WideString;
 var L : Integer;
 begin
   L := Length(S);
@@ -1606,7 +1640,7 @@ begin
     LongToWide(Pointer(S), L, Pointer(Result));
 end;
 
-function LongStringToUnicodeString(const S: AnsiString): UnicodeString;
+function LongStringToUnicodeString(const S: RawByteString): UnicodeString;
 var L : Integer;
 begin
   L := Length(S);
@@ -1649,7 +1683,7 @@ begin
     end;
 end;
 
-function WideToLongString(const P: PWideChar; const Len: Integer): AnsiString;
+function WideToLongString(const P: PWideChar; const Len: Integer): RawByteString;
 var I : Integer;
     S : PWideChar;
     Q : PAnsiChar;
@@ -1674,12 +1708,12 @@ begin
     end;
 end;
 
-function WideStringToLongString(const S: WideString): AnsiString;
+function WideStringToLongString(const S: WideString): RawByteString;
 begin
   Result := WideToLongString(Pointer(S), Length(S));
 end;
 
-function UnicodeStringToLongString(const S: UnicodeString): AnsiString;
+function UnicodeStringToLongString(const S: UnicodeString): RawByteString;
 begin
   Result := WideToLongString(Pointer(S), Length(S));
 end;
@@ -2052,7 +2086,7 @@ begin
     end;
 end;
 
-function UTF8StringLength(const S: AnsiString): Integer;
+function UTF8StringLength(const S: RawByteString): Integer;
 begin
   Result := UTF8BufLength(Pointer(S), Length(S));
 end;
@@ -2115,12 +2149,12 @@ begin
   Result := WideBufToUTF8Size(Pointer(S), Length(S));
 end;
 
-function LongStringToUTF8Size(const S: AnsiString): Integer;
+function LongStringToUTF8Size(const S: RawByteString): Integer;
 begin
   Result := LongBufToUTF8Size(Pointer(S), Length(S));
 end;
 
-function UTF8StringToWideString(const S: AnsiString): WideString;
+function UTF8StringToWideString(const S: RawByteString): WideString;
 var P       : PAnsiChar;
     Q       : PWideChar;
     L, M, I : Integer;
@@ -2188,12 +2222,12 @@ begin
   SetLength(Result, M); // actual size
 end;
 
-function UTF8StringToUnicodeString(const S: AnsiString): UnicodeString;
+function UTF8StringToUnicodeString(const S: RawByteString): UnicodeString;
 begin
   Result := UTF8StringToUnicodeStringP(Pointer(S), Length(S));
 end;
 
-function UTF8StringToLongString(const S: AnsiString): AnsiString;
+function UTF8StringToLongString(const S: RawByteString): RawByteString;
 var P       : PAnsiChar;
     Q       : PAnsiChar;
     L, M, I : Integer;
@@ -2229,7 +2263,7 @@ begin
   SetLength(Result, M); // actual size
 end;
 
-function UTF8StringToString(const S: AnsiString): String;
+function UTF8StringToString(const S: RawByteString): String;
 begin
   {$IFDEF StringIsUnicode}
   Result := UTF8StringToUnicodeString(S);
@@ -2238,7 +2272,7 @@ begin
   {$ENDIF}
 end;
 
-function WideBufToUTF8String(const Buf: PWideChar; const Len: Integer): AnsiString;
+function WideBufToUTF8String(const Buf: PWideChar; const Len: Integer): RawByteString;
 var P     : PWideChar;
     Q     : PAnsiChar;
     I, M,
@@ -2270,7 +2304,7 @@ begin
   SetLength(Result, M); // actual size
 end;
 
-function LongStringToUTF8String(const S: AnsiString): AnsiString;
+function LongStringToUTF8String(const S: RawByteString): RawByteString;
 var P       : PAnsiChar;
     Q       : PAnsiChar;
     I, M, N : Integer;
@@ -2303,7 +2337,7 @@ begin
   SetLength(Result, M); // actual size
 end;
 
-function WideStringToUTF8String(const S: WideString): AnsiString;
+function WideStringToUTF8String(const S: WideString): RawByteString;
 begin
   Result := WideBufToUTF8String(Pointer(S), Length(S));
 end;
@@ -2313,7 +2347,7 @@ begin
   Result := S;
 end;
 
-function UnicodeStringToUTF8String(const S: UnicodeString): AnsiString;
+function UnicodeStringToUTF8String(const S: UnicodeString): RawByteString;
 begin
   Result := WideBufToUTF8String(Pointer(S), Length(S));
 end;
@@ -2326,7 +2360,7 @@ end;
 const
   MaxUTF8SequenceSize = 4;
 
-function UCS4CharToUTF8String(const Ch: UCS4Char): AnsiString;
+function UCS4CharToUTF8String(const Ch: UCS4Char): RawByteString;
 var Buf     : array[0..MaxUTF8SequenceSize - 1] of Byte;
     Size, I : Integer;
     P, Q    : PAnsiChar;
@@ -2347,7 +2381,7 @@ begin
     end;
 end;
 
-function ISO8859_1StringToUTF8String(const S: AnsiString): AnsiString;
+function ISO8859_1StringToUTF8String(const S: RawByteString): RawByteString;
 var P, Q  : PAnsiChar;
     L, I,
     M, J  : Integer;
@@ -2387,7 +2421,7 @@ begin
     end;
 end;
 
-function StringToUTF8String(const S: String): AnsiString;
+function StringToUTF8String(const S: String): RawByteString;
 begin
   {$IFDEF StringIsUnicode}
   Result := UnicodeStringToUTF8String(S);
@@ -2699,7 +2733,7 @@ begin
 end;
 
 function EncodingToUTF16(const CodecClass: TUnicodeCodecClass;
-    const S: AnsiString): WideString;
+    const S: RawByteString): WideString;
 var C : TCustomUnicodeCodec;
 begin
   if not Assigned(CodecClass) then
@@ -2722,13 +2756,13 @@ begin
       Buf, BufSize);
 end;
 
-function EncodingToUTF16(const CodecAlias: String; const S: AnsiString): WideString;
+function EncodingToUTF16(const CodecAlias: String; const S: RawByteString): WideString;
 begin
   Result := EncodingToUTF16(GetCodecClassByAlias(CodecAlias), S);
 end;
 
 function UTF16ToEncoding(const CodecClass: TUnicodeCodecClass;
-    const S: WideString): AnsiString;
+    const S: WideString): RawByteString;
 var C : TCustomUnicodeCodec;
     I : Integer;
 begin
@@ -2745,7 +2779,7 @@ begin
   end;
 end;
 
-function UTF16ToEncoding(const CodecAlias: String; const S: WideString): AnsiString;
+function UTF16ToEncoding(const CodecAlias: String; const S: WideString): RawByteString;
 begin
   Result := UTF16ToEncoding(GetCodecClassByAlias(CodecAlias), S);
 end;
@@ -2918,7 +2952,7 @@ begin
     SetLength(Dest, M);
 end;
 
-function TCustomUnicodeCodec.EncodeStr(const S: WideString): AnsiString;
+function TCustomUnicodeCodec.EncodeStr(const S: WideString): RawByteString;
 var I : Integer;
 begin
   Result := Encode(Pointer(S), Length(S), I);
@@ -3059,7 +3093,7 @@ begin
 end;
 
 function TCustomSingleByteCodec.Encode(const S: PWideChar; const Length: Integer;
-    out ProcessedChars: Integer): AnsiString;
+    out ProcessedChars: Integer): RawByteString;
 var P       : PAnsiChar;
     Q       : PWideChar;
     I, L, M : Integer;
@@ -3254,7 +3288,7 @@ begin
 end;
 
 function TUTF8Codec.Encode(const S: PWideChar; const Length: Integer;
-    out ProcessedChars: Integer): AnsiString;
+    out ProcessedChars: Integer): RawByteString;
 var P     : PWideChar;
     Q     : PAnsiChar;
     I, L,
@@ -3405,7 +3439,7 @@ begin
 end;
 
 function TUTF16BECodec.Encode(const S: PWideChar; const Length: Integer;
-    out ProcessedChars: Integer): AnsiString;
+    out ProcessedChars: Integer): RawByteString;
 var L : Integer;
 begin
   if Length <= 0 then
@@ -3542,7 +3576,7 @@ begin
 end;
 
 function TUTF16LECodec.Encode(const S: PWideChar; const Length: Integer;
-    out ProcessedChars: Integer): AnsiString;
+    out ProcessedChars: Integer): RawByteString;
 var I, L : Integer;
     P, Q : PWideChar;
 begin
@@ -3731,7 +3765,7 @@ begin
 end;
 
 function TUCS4BECodec.Encode(const S: PWideChar; const Length: Integer;
-  out ProcessedChars: Integer): AnsiString;
+  out ProcessedChars: Integer): RawByteString;
 var P, N          : PWideChar;
     Q             : PAnsiChar;
     M             : Integer;
@@ -3941,7 +3975,7 @@ begin
 end;
 
 function TUCS4LECodec.Encode(const S: PWideChar; const Length: Integer;
-    out ProcessedChars: Integer): AnsiString;
+    out ProcessedChars: Integer): RawByteString;
 var P, N          : PWideChar;
     Q             : PAnsiChar;
     M             : Integer;
@@ -4150,7 +4184,7 @@ begin
 end;
 
 function TUCS4_2143Codec.Encode(const S: PWideChar; const Length: Integer;
-    out ProcessedChars: Integer): AnsiString;
+    out ProcessedChars: Integer): RawByteString;
 var P, N          : PWideChar;
     Q             : PAnsiChar;
     M             : Integer;
@@ -4359,7 +4393,7 @@ begin
 end;
 
 function TUCS4_3412Codec.Encode(const S: PWideChar; const Length: Integer;
-    out ProcessedChars: Integer): AnsiString;
+    out ProcessedChars: Integer): RawByteString;
 var P, N          : PWideChar;
     Q             : PAnsiChar;
     M             : Integer;
@@ -4537,7 +4571,7 @@ begin
 end;
 
 function TUCS2Codec.Encode(const S: PWideChar; const Length: Integer;
-    out ProcessedChars: Integer): AnsiString;
+    out ProcessedChars: Integer): RawByteString;
 var P       : PWideChar;
     Q       : PWideChar;
     I, L, M : Integer;
@@ -9706,20 +9740,24 @@ end;
 {$IFDEF UNICODECODECS_SELFTEST}
 {$ASSERTIONS ON}
 procedure SelfTest;
-const W1 : array[0..3] of WideChar = (#$0041, #$2262, #$0391, #$002E);
-      W2 : array[0..2] of WideChar = (#$D55C, #$AD6D, #$C5B4);
-      W3 : array[0..2] of WideChar = (#$65E5, #$672C, #$8A9E);
+const
+  W1 : array[0..3] of WideChar = (#$0041, #$2262, #$0391, #$002E);
+  W2 : array[0..2] of WideChar = (#$D55C, #$AD6D, #$C5B4);
+  W3 : array[0..2] of WideChar = (#$65E5, #$672C, #$8A9E);
+  S1 = RawByteString(#$41#$E2#$89#$A2#$CE#$91#$2E);
+  S2 = RawByteString(#$ED#$95#$9C#$EA#$B5#$AD#$EC#$96#$B4);
+  S3 = RawByteString(#$E6#$97#$A5#$E6#$9C#$AC#$E8#$AA#$9E);
 begin
   // UTF-8 test cases from RFC 2279
   Assert(WideStringToUTF8String(W1) = #$41#$E2#$89#$A2#$CE#$91#$2E, 'WideStringToUTF8String');
   Assert(WideStringToUTF8String(W2) = #$ED#$95#$9C#$EA#$B5#$AD#$EC#$96#$B4, 'WideStringToUTF8String');
   Assert(WideStringToUTF8String(W3) = #$E6#$97#$A5#$E6#$9C#$AC#$E8#$AA#$9E, 'WideStringToUTF8String');
-  Assert(UTF8StringToWideString(#$41#$E2#$89#$A2#$CE#$91#$2E) = W1, 'UTF8StringToWideString');
-  Assert(UTF8StringToWideString(#$ED#$95#$9C#$EA#$B5#$AD#$EC#$96#$B4) = W2, 'UTF8StringToWideString');
-  Assert(UTF8StringToWideString(#$E6#$97#$A5#$E6#$9C#$AC#$E8#$AA#$9E) = W3, 'UTF8StringToWideString');
-  Assert(UTF8StringLength(#$41#$E2#$89#$A2#$CE#$91#$2E) = 4, 'UTF8StringLength');
-  Assert(UTF8StringLength(#$ED#$95#$9C#$EA#$B5#$AD#$EC#$96#$B4) = 3, 'UTF8StringLength');
-  Assert(UTF8StringLength(#$E6#$97#$A5#$E6#$9C#$AC#$E8#$AA#$9E) = 3, 'UTF8StringLength');
+  Assert(UTF8StringToWideString(S1) = W1, 'UTF8StringToWideString');
+  Assert(UTF8StringToWideString(S2) = W2, 'UTF8StringToWideString');
+  Assert(UTF8StringToWideString(S3) = W3, 'UTF8StringToWideString');
+  Assert(UTF8StringLength(S1) = 4, 'UTF8StringLength');
+  Assert(UTF8StringLength(S2) = 3, 'UTF8StringLength');
+  Assert(UTF8StringLength(S3) = 3, 'UTF8StringLength');
 
   // ASCII
   Assert(IsUSASCIIAnsiString('012XYZabc{}_ '), 'IsUSASCIIString');
