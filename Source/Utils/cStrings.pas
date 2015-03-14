@@ -107,11 +107,9 @@
 {                                                                              }
 { Supported compilers:                                                         }
 {                                                                              }
-{   Delphi 5 Win32                      4.48  2011/03/17                       }
-{   Delphi 6 Win32                                                             }
+{   Delphi 5 Win32                      4.60  2015/03/14                       }
+{   Delphi 6 Win32                      4.60  2015/03/14                       }
 {   Delphi 7 Win32                      4.57  2012/08/30                       }
-{   Delphi 2005 Win32                                                          }
-{   Delphi 2006 Win32                                                          }
 {   Delphi 2007 Win32                   4.57  2012/08/29                       }
 {   Delphi 2009 Win32                   4.50  2011/09/27                       }
 {   Delphi 2009 .NET                    4.46  2009/10/09                       }
@@ -385,7 +383,7 @@ const
 
   WideSingleQuote = WideChar('''');
   WideDoubleQuote = WideChar('"');
-  
+
   WideNoBreakSpace       = WideChar(#$00A0);
   WideLineSeparator      = WideChar(#$2028);
   WideParagraphSeparator = WideChar(#$2029);
@@ -412,8 +410,10 @@ const
 {                                                                              }
 { WideString constants                                                         }
 {                                                                              }
-{$IFNDEF DELPHI5}
-// Both definitions for WideCRLF below fail with Delphi 5
+{$IFDEF DELPHI5}
+const
+  WideCRLF = WideString(#13#10);
+{$ELSE}
 {$IFDEF DELPHI7_DOWN}
 const
   WideCRLF = WideString(WideCR) + WideString(WideLF);
@@ -21686,7 +21686,9 @@ begin
   I := PosCharSetW(Find, S);
   if I = 0 then
     exit;
+  {$IFNDEF DELPHI5}
   UniqueString(Result);
+  {$ENDIF}
   Q := Pointer(Result);
   Inc(Q, I - 1);
   P := Pointer(S);
@@ -21712,7 +21714,9 @@ begin
   I := PosCharSetU(Find, S);
   if I = 0 then
     exit;
+  {$IFNDEF DELPHI5}
   UniqueString(Result);
+  {$ENDIF}
   Q := Pointer(Result);
   Inc(Q, I - 1);
   P := Pointer(S);
@@ -22524,7 +22528,9 @@ begin
     end;
   // Remove duplicates
   Result := S;
+  {$IFNDEF DELPHI5}
   UniqueString(Result);
+  {$ENDIF}
   P := Pointer(S);
   Q := Pointer(Result);
   D := P^;
@@ -22583,7 +22589,9 @@ begin
     end;
   // Remove duplicates
   Result := S;
+  {$IFNDEF DELPHI5}
   UniqueString(Result);
+  {$ENDIF}
   P := Pointer(S);
   Q := Pointer(Result);
   D := P^;
@@ -28091,9 +28099,9 @@ begin
     Assert(A.GetAsWideString = 'XABC');
     A.AppendCRLF;
     Assert(A.Length = 6);
-    A.AppendCh('D');
+    A.AppendCh(WideChar('D'));
     Assert(A.Length = 7);
-    A.AppendCh('E', 3);
+    A.AppendCh(WideChar('E'), 3);
     Assert(A.Length = 10);
     Assert(A.GetAsWideString = 'XABC'#13#10'DEEE');
     A.Pack;

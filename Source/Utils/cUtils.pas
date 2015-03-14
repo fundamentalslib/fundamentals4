@@ -107,12 +107,9 @@
 {                                                                              }
 { Supported compilers:                                                         }
 {                                                                              }
-{   Delphi 5 Win32                                                             }
-{   Delphi 6 Win32                                                             }
-{   Delphi 7 Win32                      4.50  2012/08/30                       }
-{   Delphi 8 .NET                                                              }
-{   Delphi 2005 Win32                                                          }
-{   Delphi 2006 Win32                                                          }
+{   Delphi 5 Win32                      4.55  2015/03/14                       }
+{   Delphi 6 Win32                      4.55  2015/03/14                       }
+{   Delphi 7 Win32                      4.55  2015/03/14                       }
 {   Delphi 2007 Win32                   4.50  2012/08/26                       }
 {   Delphi 2009 Win32                   4.46  2011/09/27                       }
 {   Delphi 2009 .NET                    4.45  2009/10/09                       }
@@ -415,6 +412,7 @@ type
   PRawByteChar = ^RawByteChar;
   {$IFNDEF SupportRawByteString}
   RawByteString = AnsiString;
+  PRawByteString = ^RawByteString;
   {$ENDIF}
   RawByteCharSet = set of RawByteChar;
 
@@ -434,6 +432,7 @@ type
   UTF8Char = AnsiChar;
   PUTF8Char = ^UTF8Char;
   UTF8String = AnsiString;
+  PUTF8String = ^UTF8String;
   {$ENDIF}
   UTF8StringArray = array of UTF8String;
 
@@ -1151,9 +1150,11 @@ function  StrToPointerB(const S: RawByteString): Pointer;
 function  StrToPointerW(const S: WideString): Pointer;
 function  StrToPointer(const S: String): Pointer;
 
+{$IFDEF SupportInterface}
 function  InterfaceToStrA(const I: IInterface): AnsiString;
 function  InterfaceToStrW(const I: IInterface): WideString;
 function  InterfaceToStr(const I: IInterface): String;
+{$ENDIF}
 {$ENDIF}
 
 function  ObjectClassName(const O: TObject): String;
@@ -4432,6 +4433,7 @@ begin
   Result := NativeUIntToBase(A, Digits, 2);
 end;
 
+{$IFOPT Q+}{$DEFINE QOn}{$Q-}{$ELSE}{$UNDEF QOn}{$ENDIF} // Delphi 7 incorrectly overflowing for -922337203685477580 * 10
 function TryStringToInt64PA(const BufP: Pointer; const BufLen: Integer; out Value: Int64; out StrLen: Integer): TConvertResult;
 var Len : Integer;
     DigVal : Integer;
@@ -4484,9 +4486,7 @@ begin
               Result := convertOverflow;
               exit;
             end;
-          {$IFOPT Q+}{$DEFINE QOn}{$Q-}{$ELSE}{$UNDEF QOn}{$ENDIF} // overflowing for -922337203685477580 * 10 ?
           Res := Res * 10;
-          {$IFDEF QOn}{$Q+}{$ENDIF}
           DigVal := AnsiCharToInt(Ch);
           if ((Res = 9223372036854775800) and (DigVal > 7)) or
              ((Res = -9223372036854775800) and (DigVal > 8)) then
@@ -4518,7 +4518,9 @@ begin
       Result := convertOK;
     end;
 end;
+{$IFDEF QOn}{$Q+}{$ENDIF}
 
+{$IFOPT Q+}{$DEFINE QOn}{$Q-}{$ELSE}{$UNDEF QOn}{$ENDIF} // Delphi 7 incorrectly overflowing for -922337203685477580 * 10
 function TryStringToInt64PW(const BufP: Pointer; const BufLen: Integer; out Value: Int64; out StrLen: Integer): TConvertResult;
 var Len : Integer;
     DigVal : Integer;
@@ -4571,9 +4573,7 @@ begin
               Result := convertOverflow;
               exit;
             end;
-          {$IFOPT Q+}{$DEFINE QOn}{$Q-}{$ELSE}{$UNDEF QOn}{$ENDIF} // overflowing for -922337203685477580 * 10 ?
           Res := Res * 10;
-          {$IFDEF QOn}{$Q+}{$ENDIF}
           DigVal := WideCharToInt(Ch);
           if ((Res = 9223372036854775800) and (DigVal > 7)) or
              ((Res = -9223372036854775800) and (DigVal > 8)) then
@@ -4605,7 +4605,9 @@ begin
       Result := convertOK;
     end;
 end;
+{$IFDEF QOn}{$Q+}{$ENDIF}
 
+{$IFOPT Q+}{$DEFINE QOn}{$Q-}{$ELSE}{$UNDEF QOn}{$ENDIF} // Delphi 7 incorrectly overflowing for -922337203685477580 * 10
 function TryStringToInt64P(const BufP: Pointer; const BufLen: Integer; out Value: Int64; out StrLen: Integer): TConvertResult;
 var Len : Integer;
     DigVal : Integer;
@@ -4658,9 +4660,7 @@ begin
               Result := convertOverflow;
               exit;
             end;
-          {$IFOPT Q+}{$DEFINE QOn}{$Q-}{$ELSE}{$UNDEF QOn}{$ENDIF} // overflowing for -922337203685477580 * 10 ?
           Res := Res * 10;
-          {$IFDEF QOn}{$Q+}{$ENDIF}
           DigVal := CharToInt(Ch);
           if ((Res = 9223372036854775800) and (DigVal > 7)) or
              ((Res = -9223372036854775800) and (DigVal > 8)) then
@@ -4692,6 +4692,7 @@ begin
       Result := convertOK;
     end;
 end;
+{$IFDEF QOn}{$Q+}{$ENDIF}
 
 function TryStringToInt64A(const S: AnsiString; out A: Int64): Boolean;
 var L, N : Integer;
@@ -6698,6 +6699,7 @@ begin
   Result := Pointer(BaseStrToNativeUInt(S, 4, V));
 end;
 
+{$IFDEF SupportInterface}
 function InterfaceToStrA(const I: IInterface): AnsiString;
 begin
   Result := NativeUIntToBaseA(NativeUInt(I), NativeWordSize * 2, 16, True);
@@ -6712,6 +6714,7 @@ function InterfaceToStr(const I: IInterface): String;
 begin
   Result := NativeUIntToBase(NativeUInt(I), NativeWordSize * 2, 16, True);
 end;
+{$ENDIF}
 {$ENDIF}
 
 function ObjectClassName(const O: TObject): String;
@@ -8190,7 +8193,9 @@ begin
   Assert(IntToStringA(123) = '123',                       'IntToStringA');
   Assert(IntToStringA(-123) = '-123',                     'IntToStringA');
   Assert(IntToStringA(MinLongInt) = '-2147483648',        'IntToStringA');
+  {$IFNDEF DELPHI7_DOWN}
   Assert(IntToStringA(-2147483649) = '-2147483649',       'IntToStringA');
+  {$ENDIF}
   Assert(IntToStringA(MaxLongInt) = '2147483647',         'IntToStringA');
   Assert(IntToStringA(2147483648) = '2147483648',         'IntToStringA');
   Assert(IntToStringA(MinInt64) = '-9223372036854775808', 'IntToStringA');
@@ -8204,7 +8209,9 @@ begin
   Assert(IntToStringB(123) = '123',                       'IntToStringB');
   Assert(IntToStringB(-123) = '-123',                     'IntToStringB');
   Assert(IntToStringB(MinLongInt) = '-2147483648',        'IntToStringB');
+  {$IFNDEF DELPHI7_DOWN}
   Assert(IntToStringB(-2147483649) = '-2147483649',       'IntToStringB');
+  {$ENDIF}
   Assert(IntToStringB(MaxLongInt) = '2147483647',         'IntToStringB');
   Assert(IntToStringB(2147483648) = '2147483648',         'IntToStringB');
   Assert(IntToStringB(MinInt64) = '-9223372036854775808', 'IntToStringB');
@@ -8392,7 +8399,9 @@ begin
   Assert(StringToInt64A('-123') = -123,                                 'StringToInt64');
   Assert(StringToInt64A('-0001') = -1,                                  'StringToInt64');
   Assert(StringToInt64A('-9223372036854775807') = -9223372036854775807, 'StringToInt64');
+  {$IFNDEF DELPHI7_DOWN}
   Assert(StringToInt64A('-9223372036854775808') = -9223372036854775808, 'StringToInt64');
+  {$ENDIF}
   Assert(StringToInt64A('9223372036854775807') = 9223372036854775807,   'StringToInt64');
 
   Assert(HexToUIntA('FFFFFFFF') = $FFFFFFFF, 'HexStringToUInt');

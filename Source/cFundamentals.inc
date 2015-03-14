@@ -1,7 +1,7 @@
 {******************************************************************************}
 {                                                                              }
 {   File name:        cFundamentals.inc                                        }
-{   File updated:     2015/02/07                                               }
+{   File updated:     2015/03/14                                               }
 {                                                                              }
 {   Library:          Fundamentals 4.00                                        }
 {   Home page:        http://fundementals.sourceforge.net                      }
@@ -98,6 +98,7 @@
 {   SupportCurrency            - Compiler supports Currency type.              }
 {   SupportVariant             - Compiler supports Variant type.               }
 {   SupportAssert              - Compiler supports Assert statement.           }
+{   SupportInterface           - Compiler supports IInterface.                 }
 {   SupportOverload            - Compiler supports method overloading.         }
 {   SupportInline              - Compiler supports inline functions.           }
 {   SupportForIn               - Compiler supports for-in loop.                }
@@ -628,10 +629,17 @@
 {                                                                              }
 { Future Delphi versions                                                       }
 {                                                                              }
-{$IFDEF CONDITIONALEXPRESSIONS}
-  {$IF CompilerVersion > 21.0}
-    {$DEFINE DELPHI_Future}
-  {$IFEND}
+{$IFDEF VER290}
+  {$DEFINE DELPHI_Future}
+{$ENDIF}
+{$IFDEF VER300}
+  {$DEFINE DELPHI_Future}
+{$ENDIF}
+{$IFDEF VER310}
+  {$DEFINE DELPHI_Future}
+{$ENDIF}
+{$IFDEF VER320}
+  {$DEFINE DELPHI_Future}
 {$ENDIF}
 
 {$IFDEF DELPHI_Future}
@@ -782,6 +790,7 @@
 {$ENDIF}
 
 {$IFDEF DELPHI6_UP}
+  {$DEFINE SupportInterface}
   {$DEFINE SupportUTF8String}
   {$DEFINE SupportUCS4String}
   {$DEFINE SupportUCS4Char}
@@ -932,6 +941,7 @@
   {$DEFINE SupportWideString}
   {$DEFINE SupportDynArray}
   {$DEFINE SupportAssert}
+  {$DEFINE SupportInterface}
   {$DEFINE SupportOverload}
   {$DEFINE SupportUTF8String}
   {$DEFINE SupportUCS4String}
