@@ -2,10 +2,10 @@
 {                                                                              }
 {   Library:          Fundamentals 4.00                                        }
 {   File name:        cDataStructs.pas                                         }
-{   File version:     4.35                                                     }
+{   File version:     4.36                                                     }
 {   Description:      Data structures                                          }
 {                                                                              }
-{   Copyright:        Copyright (c) 1999-2013, David J Butler                  }
+{   Copyright:        Copyright (c) 1999-2015, David J Butler                  }
 {                     All rights reserved.                                     }
 {                     Redistribution and use in source and binary forms, with  }
 {                     or without modification, are permitted provided that     }
@@ -56,6 +56,7 @@
 {     + Extended                                                               }
 {     + Pointer                                                                }
 {     + AnsiString                                                             }
+{     + RawByteString                                                          }
 {     + WideString                                                             }
 {     + String                                                                 }
 {     + Object                                                                 }
@@ -76,6 +77,7 @@
 {     + Extended                                                               }
 {     + Pointer                                                                }
 {     + AnsiString                                                             }
+{     + RawByteString                                                          }
 {     + WideString                                                             }
 {     + String                                                                 }
 {     + TObject                                                                }
@@ -162,16 +164,15 @@
 {                     H Visli.                                                 }
 {   2012/04/11  4.34  Unicode string changes.                                  }
 {   2012/09/01  4.35  Unicode string changes.                                  }
+{   2015/03/13  4.36  RawByteString support.                                   }
 {                                                                              }
 { Supported compilers:                                                         }
 {                                                                              }
-{   Borland Delphi 5-7 Win32 i386                                              }
-{   FreePascal 2 Win32 i386                                                    }
-{   FreePascal 2 Linux i386                                                    }
+{   Delphi XE7 Win64                    4.36  2015/03/14                       }
 {                                                                              }
 {******************************************************************************}
 
-{$INCLUDE cDefines.inc}
+{$INCLUDE ..\cFundamentals.inc}
 
 {$IFDEF FREEPASCAL}
   {$WARNINGS OFF}
@@ -282,12 +283,12 @@ procedure TypeClear(const V: TObject);
 function  TypeIsEqual(const A, B: TObject): Boolean;
 function  TypeCompare(const A, B: TObject): TCompareResult;
 function  TypeHashValue(const A: TObject): LongWord;
+function  TypeGetAsString(const V: TObject): String;
+procedure TypeSetAsString(const V: TObject; const S: String);
 function  TypeGetAsUTF8String(const V: TObject): AnsiString;
 procedure TypeSetAsUTF8String(const V: TObject; const S: AnsiString);
 function  TypeGetAsUnicodeString(const V: TObject): UnicodeString;
 procedure TypeSetAsUnicodeString(const V: TObject; const S: UnicodeString);
-function  TypeGetAsString(const V: TObject): String;
-procedure TypeSetAsString(const V: TObject; const S: String);
 
 
 
@@ -653,19 +654,49 @@ type
 
 {                                                                              }
 { ARawByteStringArray                                                          }
+{   Base class for an array of RawByteStrings.                                 }
 {                                                                              }
 type
-  ARawByteStringArray = AAnsiStringArray;
-  ERawByteStringArray = EAnsiStringArray;
+  ARawByteStringArray = class(AArray)
+  protected
+    function  GetItem(const Idx: Integer): RawByteString; virtual; abstract;
+    procedure SetItem(const Idx: Integer; const Value: RawByteString); virtual; abstract;
+
+    function  GetItemAsString(const Idx: Integer): String; override;
+    procedure SetItemAsString(const Idx: Integer; const Value: String); override;
+
+    function  GetRange(const LoIdx, HiIdx: Integer): RawByteStringArray; virtual;
+    procedure SetRange(const LoIdx, HiIdx: Integer; const V: RawByteStringArray); virtual;
+
+  public
+    { AType                                                                    }
+    procedure Assign(const Source: TObject); override;
+    function  IsEqual(const V: TObject): Boolean; override;
+
+    { AArray                                                                   }
+    procedure ExchangeItems(const Idx1, Idx2: Integer); override;
+    function  CompareItems(const Idx1, Idx2: Integer): TCompareResult; override;
+    function  AppendArray(const V: AArray): Integer; overload; override;
+    function  DuplicateRange(const LoIdx, HiIdx: Integer): AArray; override;
+    procedure Delete(const Idx: Integer; const Count: Integer = 1); override;
+    procedure Insert(const Idx: Integer; const Count: Integer = 1); override;
+
+    { ARawByteStringArray interface                                                }
+    property  Item[const Idx: Integer]: RawByteString read GetItem write SetItem; default;
+    property  Range[const LoIdx, HiIdx: Integer]: RawByteStringArray read GetRange write SetRange;
+    procedure Fill(const Idx, Count: Integer; const Value: RawByteString); virtual;
+    function  AppendItem(const Value: RawByteString): Integer; virtual;
+    function  AppendArray(const V: RawByteStringArray): Integer; overload; virtual;
+    function  PosNext(const Find: RawByteString; const PrevPos: Integer = -1;
+              const IsSortedAscending: Boolean = False): Integer;
+  end;
+  ERawByteStringArray = class(EArray);
 
 
 
-{                                                                              }
-{ AUTF8StringArray                                                             }
-{                                                                              }
 type
-  AUTF8StringArray = AAnsiStringArray;
-  EUTF8StringArray = EAnsiStringArray;
+  AUTF8StringArray = ARawByteStringArray;
+  EUTF8StringArray = ERawByteStringArray;
 
 
 
@@ -1323,9 +1354,47 @@ type
 
 {                                                                              }
 { TRawByteStringArray                                                          }
+{   ARawByteStringArray implemented using a dynamic array.                     }
 {                                                                              }
 type
-  TRawByteString = TAnsiStringArray;
+  TRawByteStringArray = class(ARawByteStringArray)
+  protected
+    FData     : RawByteStringArray;
+    FCapacity : Integer;
+    FCount    : Integer;
+
+    { ACollection                                                              }
+    function  GetCount: Integer; override;
+    procedure SetCount(const NewCount: Integer); override;
+
+    { ARawByteStringArray                                                            }
+    function  GetItem(const Idx: Integer): RawByteString; override;
+    procedure SetItem(const Idx: Integer; const Value: RawByteString); override;
+    function  GetRange(const LoIdx, HiIdx: Integer): RawByteStringArray; override;
+    procedure SetRange(const LoIdx, HiIdx: Integer; const V: RawByteStringArray); override;
+    procedure SetData(const Data: RawByteStringArray); virtual;
+
+  public
+    constructor Create(const V: RawByteStringArray = nil); overload;
+
+    { AType                                                                    }
+    procedure Assign(const Source: TObject); overload; override;
+
+    { AArray                                                                   }
+    procedure ExchangeItems(const Idx1, Idx2: Integer); override;
+    function  DuplicateRange(const LoIdx, HiIdx: Integer): AArray; override;
+    procedure Delete(const Idx: Integer; const Count: Integer = 1); override;
+    procedure Insert(const Idx: Integer; const Count: Integer = 1); override;
+
+    { ARawByteStringArray                                                            }
+    procedure Assign(const V: RawByteStringArray); overload;
+    procedure Assign(const V: Array of RawByteString); overload;
+    function  AppendItem(const Value: RawByteString): Integer; override;
+
+    { TRawByteStringArray                                                            }
+    property  Data: RawByteStringArray read FData write SetData;
+    property  Count: Integer read FCount write SetCount;
+  end;
 
 
 
@@ -1333,7 +1402,7 @@ type
 { TUTF8StringArray                                                             }
 {                                                                              }
 type
-  TUTF8StringArray = TAnsiStringArray;
+  TUTF8StringArray = TRawByteStringArray;
 
 
 
@@ -1747,6 +1816,33 @@ type
 
 
 {                                                                              }
+{ ADictionaryB                                                                 }
+{   Base class for a dictionary with RawByteString keys.                       }
+{                                                                              }
+type
+  ADictionaryB = class(ADictionaryBase)
+  protected
+    procedure RaiseKeyNotFoundError(const Key: RawByteString);
+    procedure RaiseDuplicateKeyError(const Key: RawByteString);
+
+    function  GetKeysCaseSensitive: Boolean; virtual; abstract;
+
+  public
+    { ADictionary                                                              }
+    procedure Delete(const Key: RawByteString); virtual; abstract;
+    function  HasKey(const Key: RawByteString): Boolean; virtual; abstract;
+    procedure Rename(const Key, NewKey: RawByteString); virtual; abstract;
+
+    function  GetKeyByIndex(const Idx: Integer): RawByteString; virtual; abstract;
+    function  GetKeyStrByIndex(const Idx: Integer): String; override;
+    procedure DeleteItemByIndex(const Idx: Integer); virtual; abstract;
+
+    property  KeysCaseSensitive: Boolean read GetKeysCaseSensitive;
+  end;
+
+
+
+{                                                                              }
 { ADictionaryW                                                                 }
 {   Base class for a dictionary with WideString keys.                          }
 {                                                                              }
@@ -1859,6 +1955,37 @@ type
 
 
 {                                                                              }
+{ ALongIntDictionaryB                                                          }
+{   A Dictionary with LongInt values and RawByteString keys.                   }
+{                                                                              }
+type
+  ALongIntDictionaryB = class(ADictionaryB)
+  protected
+    function  GetAsString: String; override;
+
+    function  GetItemStrByIndex(const Idx: Integer): String; override;
+
+    function  GetItem(const Key: RawByteString): LongInt; virtual;
+    procedure SetItem(const Key: RawByteString; const Value: LongInt); virtual; abstract;
+
+  public
+    { AType                                                                    }
+    procedure Assign(const Source: TObject); override;
+
+    { ALongIntDictionary                                                      }
+    property  Item[const Key: RawByteString]: LongInt read GetItem write SetItem; default;
+    procedure Add(const Key: RawByteString; const Value: LongInt); virtual; abstract;
+
+    function  GetItemByIndex(const Idx: Integer): LongInt; virtual; abstract;
+    function  LocateItem(const Key: RawByteString; var Value: LongInt): Integer; virtual; abstract;
+    function  LocateNext(const Key: RawByteString; const Idx: Integer;
+              var Value: LongInt): Integer; virtual; abstract;
+  end;
+  ELongIntDictionaryB = class(EDictionary);
+
+
+
+{                                                                              }
 { ALongIntDictionaryW                                                          }
 {   A Dictionary with LongInt values and WideString keys.                      }
 {                                                                              }
@@ -1956,6 +2083,7 @@ type
 {                                                                              }
 type
   AIntegerDictionaryA = ALongIntDictionaryA;
+  AIntegerDictionaryB = ALongIntDictionaryB;
   AIntegerDictionaryW = ALongIntDictionaryW;
   AIntegerDictionaryU = ALongIntDictionaryU;
   AIntegerDictionary  = ALongIntDictionary;
@@ -1990,6 +2118,37 @@ type
               var Value: LongWord): Integer; virtual; abstract;
   end;
   ELongWordDictionaryA = class(EDictionary);
+
+
+
+{                                                                              }
+{ ALongWordDictionaryB                                                         }
+{   A Dictionary with LongWord values and RawByteString keys.                  }
+{                                                                              }
+type
+  ALongWordDictionaryB = class(ADictionaryB)
+  protected
+    function  GetAsString: String; override;
+
+    function  GetItemStrByIndex(const Idx: Integer): String; override;
+
+    function  GetItem(const Key: RawByteString): LongWord; virtual;
+    procedure SetItem(const Key: RawByteString; const Value: LongWord); virtual; abstract;
+
+  public
+    { AType                                                                    }
+    procedure Assign(const Source: TObject); override;
+
+    { ALongWordDictionary                                                      }
+    property  Item[const Key: RawByteString]: LongWord read GetItem write SetItem; default;
+    procedure Add(const Key: RawByteString; const Value: LongWord); virtual; abstract;
+
+    function  GetItemByIndex(const Idx: Integer): LongWord; virtual; abstract;
+    function  LocateItem(const Key: RawByteString; var Value: LongWord): Integer; virtual; abstract;
+    function  LocateNext(const Key: RawByteString; const Idx: Integer;
+              var Value: LongWord): Integer; virtual; abstract;
+  end;
+  ELongWordDictionaryB = class(EDictionary);
 
 
 
@@ -2091,6 +2250,7 @@ type
 {                                                                              }
 type
   ACardinalDictionaryA = ALongWordDictionaryA;
+  ACardinalDictionaryB = ALongWordDictionaryB;
   ACardinalDictionaryW = ALongWordDictionaryW;
   ACardinalDictionaryU = ALongWordDictionaryU;
   ACardinalDictionary  = ALongWordDictionary;
@@ -2125,6 +2285,37 @@ type
               var Value: Int64): Integer; virtual; abstract;
   end;
   EInt64DictionaryA = class(EDictionary);
+
+
+
+{                                                                              }
+{ AInt64DictionaryB                                                            }
+{   A Dictionary with Int64 values and RawByteString keys.                     }
+{                                                                              }
+type
+  AInt64DictionaryB = class(ADictionaryB)
+  protected
+    function  GetAsString: String; override;
+
+    function  GetItemStrByIndex(const Idx: Integer): String; override;
+
+    function  GetItem(const Key: RawByteString): Int64; virtual;
+    procedure SetItem(const Key: RawByteString; const Value: Int64); virtual; abstract;
+
+  public
+    { AType                                                                    }
+    procedure Assign(const Source: TObject); override;
+
+    { AInt64Dictionary                                                      }
+    property  Item[const Key: RawByteString]: Int64 read GetItem write SetItem; default;
+    procedure Add(const Key: RawByteString; const Value: Int64); virtual; abstract;
+
+    function  GetItemByIndex(const Idx: Integer): Int64; virtual; abstract;
+    function  LocateItem(const Key: RawByteString; var Value: Int64): Integer; virtual; abstract;
+    function  LocateNext(const Key: RawByteString; const Idx: Integer;
+              var Value: Int64): Integer; virtual; abstract;
+  end;
+  EInt64DictionaryB = class(EDictionary);
 
 
 
@@ -2253,6 +2444,37 @@ type
 
 
 {                                                                              }
+{ ASingleDictionaryB                                                           }
+{   A Dictionary with Single values and RawByteString keys.                    }
+{                                                                              }
+type
+  ASingleDictionaryB = class(ADictionaryB)
+  protected
+    function  GetAsString: String; override;
+
+    function  GetItemStrByIndex(const Idx: Integer): String; override;
+
+    function  GetItem(const Key: RawByteString): Single; virtual;
+    procedure SetItem(const Key: RawByteString; const Value: Single); virtual; abstract;
+
+  public
+    { AType                                                                    }
+    procedure Assign(const Source: TObject); override;
+
+    { ASingleDictionary                                                      }
+    property  Item[const Key: RawByteString]: Single read GetItem write SetItem; default;
+    procedure Add(const Key: RawByteString; const Value: Single); virtual; abstract;
+
+    function  GetItemByIndex(const Idx: Integer): Single; virtual; abstract;
+    function  LocateItem(const Key: RawByteString; var Value: Single): Integer; virtual; abstract;
+    function  LocateNext(const Key: RawByteString; const Idx: Integer;
+              var Value: Single): Integer; virtual; abstract;
+  end;
+  ESingleDictionaryB = class(EDictionary);
+
+
+
+{                                                                              }
 { ASingleDictionaryW                                                           }
 {   A Dictionary with Single values and WideString keys.                       }
 {                                                                              }
@@ -2377,6 +2599,37 @@ type
 
 
 {                                                                              }
+{ ADoubleDictionaryB                                                           }
+{   A Dictionary with Double values and RawByteString keys.                    }
+{                                                                              }
+type
+  ADoubleDictionaryB = class(ADictionaryB)
+  protected
+    function  GetAsString: String; override;
+
+    function  GetItemStrByIndex(const Idx: Integer): String; override;
+
+    function  GetItem(const Key: RawByteString): Double; virtual;
+    procedure SetItem(const Key: RawByteString; const Value: Double); virtual; abstract;
+
+  public
+    { AType                                                                    }
+    procedure Assign(const Source: TObject); override;
+
+    { ADoubleDictionary                                                      }
+    property  Item[const Key: RawByteString]: Double read GetItem write SetItem; default;
+    procedure Add(const Key: RawByteString; const Value: Double); virtual; abstract;
+
+    function  GetItemByIndex(const Idx: Integer): Double; virtual; abstract;
+    function  LocateItem(const Key: RawByteString; var Value: Double): Integer; virtual; abstract;
+    function  LocateNext(const Key: RawByteString; const Idx: Integer;
+              var Value: Double): Integer; virtual; abstract;
+  end;
+  EDoubleDictionaryB = class(EDictionary);
+
+
+
+{                                                                              }
 { ADoubleDictionaryW                                                           }
 {   A Dictionary with Double values and WideString keys.                       }
 {                                                                              }
@@ -2497,6 +2750,37 @@ type
               var Value: Extended): Integer; virtual; abstract;
   end;
   EExtendedDictionaryA = class(EDictionary);
+
+
+
+{                                                                              }
+{ AExtendedDictionaryB                                                         }
+{   A Dictionary with Extended values and RawByteString keys.                  }
+{                                                                              }
+type
+  AExtendedDictionaryB = class(ADictionaryB)
+  protected
+    function  GetAsString: String; override;
+
+    function  GetItemStrByIndex(const Idx: Integer): String; override;
+
+    function  GetItem(const Key: RawByteString): Extended; virtual;
+    procedure SetItem(const Key: RawByteString; const Value: Extended); virtual; abstract;
+
+  public
+    { AType                                                                    }
+    procedure Assign(const Source: TObject); override;
+
+    { AExtendedDictionary                                                      }
+    property  Item[const Key: RawByteString]: Extended read GetItem write SetItem; default;
+    procedure Add(const Key: RawByteString; const Value: Extended); virtual; abstract;
+
+    function  GetItemByIndex(const Idx: Integer): Extended; virtual; abstract;
+    function  LocateItem(const Key: RawByteString; var Value: Extended): Integer; virtual; abstract;
+    function  LocateNext(const Key: RawByteString; const Idx: Integer;
+              var Value: Extended): Integer; virtual; abstract;
+  end;
+  EExtendedDictionaryB = class(EDictionary);
 
 
 
@@ -2726,6 +3010,176 @@ type
     function  GetTotalLength: Int64; virtual;
   end;
   EAnsiStringDictionary = class(EDictionary);
+
+
+
+{                                                                              }
+{ ARawByteStringDictionaryA                                                    }
+{   A Dictionary with RawByteString values and AnsiString keys.                }
+{                                                                              }
+type
+  ARawByteStringDictionaryA = class(ADictionaryA)
+  protected
+    function  GetAsString: String; override;
+
+    function  GetItemStrByIndex(const Idx: Integer): String; override;
+
+    function  GetItem(const Key: AnsiString): RawByteString; virtual;
+    procedure SetItem(const Key: AnsiString; const Value: RawByteString); virtual; abstract;
+
+  public
+    { AType                                                                    }
+    procedure Assign(const Source: TObject); override;
+
+    { ARawByteStringDictionary                                                      }
+    property  Item[const Key: AnsiString]: RawByteString read GetItem write SetItem; default;
+    procedure Add(const Key: AnsiString; const Value: RawByteString); virtual; abstract;
+
+    function  GetItemByIndex(const Idx: Integer): RawByteString; virtual; abstract;
+    function  LocateItem(const Key: AnsiString; var Value: RawByteString): Integer; virtual; abstract;
+    function  LocateNext(const Key: AnsiString; const Idx: Integer;
+              var Value: RawByteString): Integer; virtual; abstract;
+
+    function  GetItemLength(const Key: AnsiString): Integer; virtual;
+    function  GetTotalLength: Int64; virtual;
+  end;
+  ERawByteStringDictionaryA = class(EDictionary);
+
+
+
+{                                                                              }
+{ ARawByteStringDictionaryB                                                    }
+{   A Dictionary with RawByteString values and RawByteString keys.             }
+{                                                                              }
+type
+  ARawByteStringDictionaryB = class(ADictionaryB)
+  protected
+    function  GetAsString: String; override;
+
+    function  GetItemStrByIndex(const Idx: Integer): String; override;
+
+    function  GetItem(const Key: RawByteString): RawByteString; virtual;
+    procedure SetItem(const Key: RawByteString; const Value: RawByteString); virtual; abstract;
+
+  public
+    { AType                                                                    }
+    procedure Assign(const Source: TObject); override;
+
+    { ARawByteStringDictionary                                                      }
+    property  Item[const Key: RawByteString]: RawByteString read GetItem write SetItem; default;
+    procedure Add(const Key: RawByteString; const Value: RawByteString); virtual; abstract;
+
+    function  GetItemByIndex(const Idx: Integer): RawByteString; virtual; abstract;
+    function  LocateItem(const Key: RawByteString; var Value: RawByteString): Integer; virtual; abstract;
+    function  LocateNext(const Key: RawByteString; const Idx: Integer;
+              var Value: RawByteString): Integer; virtual; abstract;
+
+    function  GetItemLength(const Key: RawByteString): Integer; virtual;
+    function  GetTotalLength: Int64; virtual;
+  end;
+  ERawByteStringDictionaryB = class(EDictionary);
+
+
+
+{                                                                              }
+{ ARawByteStringDictionaryW                                                    }
+{   A Dictionary with RawByteString values and WideString keys.                }
+{                                                                              }
+type
+  ARawByteStringDictionaryW = class(ADictionaryW)
+  protected
+    function  GetAsString: String; override;
+
+    function  GetItemStrByIndex(const Idx: Integer): String; override;
+
+    function  GetItem(const Key: WideString): RawByteString; virtual;
+    procedure SetItem(const Key: WideString; const Value: RawByteString); virtual; abstract;
+
+  public
+    { AType                                                                    }
+    procedure Assign(const Source: TObject); override;
+
+    { ARawByteStringDictionary                                                      }
+    property  Item[const Key: WideString]: RawByteString read GetItem write SetItem; default;
+    procedure Add(const Key: WideString; const Value: RawByteString); virtual; abstract;
+
+    function  GetItemByIndex(const Idx: Integer): RawByteString; virtual; abstract;
+    function  LocateItem(const Key: WideString; var Value: RawByteString): Integer; virtual; abstract;
+    function  LocateNext(const Key: WideString; const Idx: Integer;
+              var Value: RawByteString): Integer; virtual; abstract;
+
+    function  GetItemLength(const Key: WideString): Integer; virtual;
+    function  GetTotalLength: Int64; virtual;
+  end;
+  ERawByteStringDictionaryW = class(EDictionary);
+
+
+
+{                                                                              }
+{ ARawByteStringDictionaryU                                                    }
+{   A Dictionary with RawByteString values and UnicodeString keys.             }
+{                                                                              }
+type
+  ARawByteStringDictionaryU = class(ADictionaryU)
+  protected
+    function  GetAsString: String; override;
+
+    function  GetItemStrByIndex(const Idx: Integer): String; override;
+
+    function  GetItem(const Key: UnicodeString): RawByteString; virtual;
+    procedure SetItem(const Key: UnicodeString; const Value: RawByteString); virtual; abstract;
+
+  public
+    { AType                                                                    }
+    procedure Assign(const Source: TObject); override;
+
+    { ARawByteStringDictionary                                                      }
+    property  Item[const Key: UnicodeString]: RawByteString read GetItem write SetItem; default;
+    procedure Add(const Key: UnicodeString; const Value: RawByteString); virtual; abstract;
+
+    function  GetItemByIndex(const Idx: Integer): RawByteString; virtual; abstract;
+    function  LocateItem(const Key: UnicodeString; var Value: RawByteString): Integer; virtual; abstract;
+    function  LocateNext(const Key: UnicodeString; const Idx: Integer;
+              var Value: RawByteString): Integer; virtual; abstract;
+
+    function  GetItemLength(const Key: UnicodeString): Integer; virtual;
+    function  GetTotalLength: Int64; virtual;
+  end;
+  ERawByteStringDictionaryU = class(EDictionary);
+
+
+
+{                                                                              }
+{ ARawByteStringDictionary                                                     }
+{   A Dictionary with RawByteString values and String keys.                    }
+{                                                                              }
+type
+  ARawByteStringDictionary = class(ADictionary)
+  protected
+    function  GetAsString: String; override;
+
+    function  GetItemStrByIndex(const Idx: Integer): String; override;
+
+    function  GetItem(const Key: String): RawByteString; virtual;
+    procedure SetItem(const Key: String; const Value: RawByteString); virtual; abstract;
+
+  public
+    { AType                                                                    }
+    procedure Assign(const Source: TObject); override;
+
+    { ARawByteStringDictionary                                                      }
+    property  Item[const Key: String]: RawByteString read GetItem write SetItem; default;
+    procedure Add(const Key: String; const Value: RawByteString); virtual; abstract;
+
+    function  GetItemByIndex(const Idx: Integer): RawByteString; virtual; abstract;
+    function  LocateItem(const Key: String; var Value: RawByteString): Integer; virtual; abstract;
+    function  LocateNext(const Key: String; const Idx: Integer;
+              var Value: RawByteString): Integer; virtual; abstract;
+
+    function  GetItemLength(const Key: String): Integer; virtual;
+    function  GetTotalLength: Int64; virtual;
+  end;
+  ERawByteStringDictionary = class(EDictionary);
 
 
 
@@ -3161,6 +3615,37 @@ type
 
 
 {                                                                              }
+{ APointerDictionaryB                                                          }
+{   A Dictionary with Pointer values and RawByteString keys.                   }
+{                                                                              }
+type
+  APointerDictionaryB = class(ADictionaryB)
+  protected
+    function  GetAsString: String; override;
+
+    function  GetItemStrByIndex(const Idx: Integer): String; override;
+
+    function  GetItem(const Key: RawByteString): Pointer; virtual;
+    procedure SetItem(const Key: RawByteString; const Value: Pointer); virtual; abstract;
+
+  public
+    { AType                                                                    }
+    procedure Assign(const Source: TObject); override;
+
+    { APointerDictionary                                                      }
+    property  Item[const Key: RawByteString]: Pointer read GetItem write SetItem; default;
+    procedure Add(const Key: RawByteString; const Value: Pointer); virtual; abstract;
+
+    function  GetItemByIndex(const Idx: Integer): Pointer; virtual; abstract;
+    function  LocateItem(const Key: RawByteString; var Value: Pointer): Integer; virtual; abstract;
+    function  LocateNext(const Key: RawByteString; const Idx: Integer;
+              var Value: Pointer): Integer; virtual; abstract;
+  end;
+  EPointerDictionaryB = class(EDictionary);
+
+
+
+{                                                                              }
 { APointerDictionaryW                                                          }
 {   A Dictionary with Pointer values and WideString keys.                      }
 {                                                                              }
@@ -3410,6 +3895,46 @@ type
 
 
 {                                                                              }
+{ AObjectDictionaryB                                                           }
+{   A Dictionary with Object values and RawByteString keys.                    }
+{                                                                              }
+type
+  AObjectDictionaryB = class(ADictionaryB)
+  protected
+    function  GetAsString: String; override;
+
+    function  GetItemStrByIndex(const Idx: Integer): String; override;
+
+    function  GetItem(const Key: RawByteString): TObject; virtual;
+    procedure SetItem(const Key: RawByteString; const Value: TObject); virtual; abstract;
+
+    function  GetIsItemOwner: Boolean; virtual; abstract;
+    procedure SetIsItemOwner(const IsItemOwner: Boolean); virtual; abstract;
+
+  public
+    { AType                                                                    }
+    procedure Assign(const Source: TObject); override;
+    procedure Clear; override;
+
+    { AObjectDictionary                                                      }
+    property  Item[const Key: RawByteString]: TObject read GetItem write SetItem; default;
+    procedure Add(const Key: RawByteString; const Value: TObject); virtual; abstract;
+
+    function  GetItemByIndex(const Idx: Integer): TObject; virtual; abstract;
+    function  LocateItem(const Key: RawByteString; var Value: TObject): Integer; virtual; abstract;
+    function  LocateNext(const Key: RawByteString; const Idx: Integer;
+              var Value: TObject): Integer; virtual; abstract;
+
+    property  IsItemOwner: Boolean read GetIsItemOwner write SetIsItemOwner;
+    function  ReleaseItem(const Key: RawByteString): TObject; virtual; abstract;
+    procedure ReleaseItems; virtual; abstract;
+    procedure FreeItems; virtual; abstract;
+  end;
+  EObjectDictionaryB = class(EDictionary);
+
+
+
+{                                                                              }
 { AObjectDictionaryW                                                           }
 {   A Dictionary with Object values and WideString keys.                       }
 {                                                                              }
@@ -3619,6 +4144,91 @@ type
                 const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
 
     function  LocateItem(const Key: AnsiString; var Value: LongInt): Integer; override;
+  end;
+
+
+
+{                                                                              }
+{ TLongIntDictionary                                                           }
+{   Implements ALongIntDictionary using arrays.                                }
+{   A 'chained-hash' lookup table is used for quick access.                    }
+{                                                                              }
+type
+  TGeneralLongIntDictionaryB = class(ALongIntDictionaryB)
+  protected
+    FKeys             : ARawByteStringArray;
+    FValues           : ALongIntArray;
+    FLookup           : Array of IntegerArray;
+    FHashSize         : Integer;
+    FCaseSensitive    : Boolean;
+    FAddOnSet         : Boolean;
+    FDuplicatesAction : TDictionaryDuplicatesAction;
+
+    function  LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; virtual;
+    procedure DeleteByIndex(const Idx: Integer; const Hash: Integer = -1);
+    procedure Rehash;
+    function  GetHashTableSize: Integer;
+    procedure RaiseIndexError;
+
+    { ADictionary                                                              }
+    function  GetKeysCaseSensitive: Boolean; override;
+    function  GetAddOnSet: Boolean; override;
+    procedure SetAddOnSet(const AddOnSet: Boolean); override;
+    function  GetDuplicatesAction: TDictionaryDuplicatesAction; override;
+    procedure SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction); override;
+
+    { ALongIntDictionary                                                    }
+    procedure SetItem(const Key: RawByteString; const Value: LongInt); override;
+
+  public
+    { TGeneralLongIntDictionary                                               }
+    constructor Create;
+    constructor CreateEx(const Keys: ARawByteStringArray = nil;
+                const Values: ALongIntArray = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+    destructor Destroy; override;
+
+    property  Keys: ARawByteStringArray read FKeys;
+    property  Values: ALongIntArray read FValues;
+    property  HashTableSize: Integer read GetHashTableSize;
+
+    { AType                                                                    }
+    procedure Clear; override;
+
+    { ADictionary                                                              }
+    procedure Delete(const Key: RawByteString); override;
+    function  HasKey(const Key: RawByteString): Boolean; override;
+    procedure Rename(const Key: RawByteString; const NewKey: RawByteString); override;
+    function  Count: Integer; override;
+    function  GetKeyByIndex(const Idx: Integer): RawByteString; override;
+    procedure DeleteItemByIndex(const Idx: Integer); override;
+
+    { ALongIntDictionary                                                    }
+    procedure Add(const Key: RawByteString; const Value: LongInt); override;
+    function  GetItemByIndex(const Idx: Integer): LongInt; override;
+    procedure SetItemByIndex(const Idx: Integer; const Value: LongInt);
+    function  LocateItem(const Key: RawByteString; var Value: LongInt): Integer; override;
+    function  LocateNext(const Key: RawByteString; const Idx: Integer;
+              var Value: LongInt): Integer; override;
+  end;
+
+  TLongIntDictionaryB = class(TGeneralLongIntDictionaryB)
+  protected
+    function  GetItem(const Key: RawByteString): LongInt; override;
+    function  LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; override;
+
+  public
+    constructor CreateEx(const Keys: TRawByteStringArray = nil;
+                const Values: TLongIntArray = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+
+    function  LocateItem(const Key: RawByteString; var Value: LongInt): Integer; override;
   end;
 
 
@@ -3972,6 +4582,91 @@ type
                 const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
 
     function  LocateItem(const Key: AnsiString; var Value: LongWord): Integer; override;
+  end;
+
+
+
+{                                                                              }
+{ TLongWordDictionary                                                          }
+{   Implements ALongWordDictionary using arrays.                               }
+{   A 'chained-hash' lookup table is used for quick access.                    }
+{                                                                              }
+type
+  TGeneralLongWordDictionaryB = class(ALongWordDictionaryB)
+  protected
+    FKeys             : ARawByteStringArray;
+    FValues           : ALongWordArray;
+    FLookup           : Array of IntegerArray;
+    FHashSize         : Integer;
+    FCaseSensitive    : Boolean;
+    FAddOnSet         : Boolean;
+    FDuplicatesAction : TDictionaryDuplicatesAction;
+
+    function  LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; virtual;
+    procedure DeleteByIndex(const Idx: Integer; const Hash: Integer = -1);
+    procedure Rehash;
+    function  GetHashTableSize: Integer;
+    procedure RaiseIndexError;
+
+    { ADictionary                                                              }
+    function  GetKeysCaseSensitive: Boolean; override;
+    function  GetAddOnSet: Boolean; override;
+    procedure SetAddOnSet(const AddOnSet: Boolean); override;
+    function  GetDuplicatesAction: TDictionaryDuplicatesAction; override;
+    procedure SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction); override;
+
+    { ALongWordDictionary                                                    }
+    procedure SetItem(const Key: RawByteString; const Value: LongWord); override;
+
+  public
+    { TGeneralLongWordDictionary                                               }
+    constructor Create;
+    constructor CreateEx(const Keys: ARawByteStringArray = nil;
+                const Values: ALongWordArray = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+    destructor Destroy; override;
+
+    property  Keys: ARawByteStringArray read FKeys;
+    property  Values: ALongWordArray read FValues;
+    property  HashTableSize: Integer read GetHashTableSize;
+
+    { AType                                                                    }
+    procedure Clear; override;
+
+    { ADictionary                                                              }
+    procedure Delete(const Key: RawByteString); override;
+    function  HasKey(const Key: RawByteString): Boolean; override;
+    procedure Rename(const Key: RawByteString; const NewKey: RawByteString); override;
+    function  Count: Integer; override;
+    function  GetKeyByIndex(const Idx: Integer): RawByteString; override;
+    procedure DeleteItemByIndex(const Idx: Integer); override;
+
+    { ALongWordDictionary                                                    }
+    procedure Add(const Key: RawByteString; const Value: LongWord); override;
+    function  GetItemByIndex(const Idx: Integer): LongWord; override;
+    procedure SetItemByIndex(const Idx: Integer; const Value: LongWord);
+    function  LocateItem(const Key: RawByteString; var Value: LongWord): Integer; override;
+    function  LocateNext(const Key: RawByteString; const Idx: Integer;
+              var Value: LongWord): Integer; override;
+  end;
+
+  TLongWordDictionaryB = class(TGeneralLongWordDictionaryB)
+  protected
+    function  GetItem(const Key: RawByteString): LongWord; override;
+    function  LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; override;
+
+  public
+    constructor CreateEx(const Keys: TRawByteStringArray = nil;
+                const Values: TLongWordArray = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+
+    function  LocateItem(const Key: RawByteString; var Value: LongWord): Integer; override;
   end;
 
 
@@ -4337,6 +5032,91 @@ type
 {   A 'chained-hash' lookup table is used for quick access.                    }
 {                                                                              }
 type
+  TGeneralInt64DictionaryB = class(AInt64DictionaryB)
+  protected
+    FKeys             : ARawByteStringArray;
+    FValues           : AInt64Array;
+    FLookup           : Array of IntegerArray;
+    FHashSize         : Integer;
+    FCaseSensitive    : Boolean;
+    FAddOnSet         : Boolean;
+    FDuplicatesAction : TDictionaryDuplicatesAction;
+
+    function  LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; virtual;
+    procedure DeleteByIndex(const Idx: Integer; const Hash: Integer = -1);
+    procedure Rehash;
+    function  GetHashTableSize: Integer;
+    procedure RaiseIndexError;
+
+    { ADictionary                                                              }
+    function  GetKeysCaseSensitive: Boolean; override;
+    function  GetAddOnSet: Boolean; override;
+    procedure SetAddOnSet(const AddOnSet: Boolean); override;
+    function  GetDuplicatesAction: TDictionaryDuplicatesAction; override;
+    procedure SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction); override;
+
+    { AInt64Dictionary                                                    }
+    procedure SetItem(const Key: RawByteString; const Value: Int64); override;
+
+  public
+    { TGeneralInt64Dictionary                                               }
+    constructor Create;
+    constructor CreateEx(const Keys: ARawByteStringArray = nil;
+                const Values: AInt64Array = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+    destructor Destroy; override;
+
+    property  Keys: ARawByteStringArray read FKeys;
+    property  Values: AInt64Array read FValues;
+    property  HashTableSize: Integer read GetHashTableSize;
+
+    { AType                                                                    }
+    procedure Clear; override;
+
+    { ADictionary                                                              }
+    procedure Delete(const Key: RawByteString); override;
+    function  HasKey(const Key: RawByteString): Boolean; override;
+    procedure Rename(const Key: RawByteString; const NewKey: RawByteString); override;
+    function  Count: Integer; override;
+    function  GetKeyByIndex(const Idx: Integer): RawByteString; override;
+    procedure DeleteItemByIndex(const Idx: Integer); override;
+
+    { AInt64Dictionary                                                    }
+    procedure Add(const Key: RawByteString; const Value: Int64); override;
+    function  GetItemByIndex(const Idx: Integer): Int64; override;
+    procedure SetItemByIndex(const Idx: Integer; const Value: Int64);
+    function  LocateItem(const Key: RawByteString; var Value: Int64): Integer; override;
+    function  LocateNext(const Key: RawByteString; const Idx: Integer;
+              var Value: Int64): Integer; override;
+  end;
+
+  TInt64DictionaryB = class(TGeneralInt64DictionaryB)
+  protected
+    function  GetItem(const Key: RawByteString): Int64; override;
+    function  LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; override;
+
+  public
+    constructor CreateEx(const Keys: TRawByteStringArray = nil;
+                const Values: TInt64Array = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+
+    function  LocateItem(const Key: RawByteString; var Value: Int64): Integer; override;
+  end;
+
+
+
+{                                                                              }
+{ TInt64Dictionary                                                             }
+{   Implements AInt64Dictionary using arrays.                                  }
+{   A 'chained-hash' lookup table is used for quick access.                    }
+{                                                                              }
+type
   TGeneralInt64DictionaryW = class(AInt64DictionaryW)
   protected
     FKeys             : AWideStringArray;
@@ -4667,6 +5447,91 @@ type
                 const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
 
     function  LocateItem(const Key: AnsiString; var Value: Single): Integer; override;
+  end;
+
+
+
+{                                                                              }
+{ TSingleDictionary                                                            }
+{   Implements ASingleDictionary using arrays.                                 }
+{   A 'chained-hash' lookup table is used for quick access.                    }
+{                                                                              }
+type
+  TGeneralSingleDictionaryB = class(ASingleDictionaryB)
+  protected
+    FKeys             : ARawByteStringArray;
+    FValues           : ASingleArray;
+    FLookup           : Array of IntegerArray;
+    FHashSize         : Integer;
+    FCaseSensitive    : Boolean;
+    FAddOnSet         : Boolean;
+    FDuplicatesAction : TDictionaryDuplicatesAction;
+
+    function  LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; virtual;
+    procedure DeleteByIndex(const Idx: Integer; const Hash: Integer = -1);
+    procedure Rehash;
+    function  GetHashTableSize: Integer;
+    procedure RaiseIndexError;
+
+    { ADictionary                                                              }
+    function  GetKeysCaseSensitive: Boolean; override;
+    function  GetAddOnSet: Boolean; override;
+    procedure SetAddOnSet(const AddOnSet: Boolean); override;
+    function  GetDuplicatesAction: TDictionaryDuplicatesAction; override;
+    procedure SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction); override;
+
+    { ASingleDictionary                                                    }
+    procedure SetItem(const Key: RawByteString; const Value: Single); override;
+
+  public
+    { TGeneralSingleDictionary                                               }
+    constructor Create;
+    constructor CreateEx(const Keys: ARawByteStringArray = nil;
+                const Values: ASingleArray = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+    destructor Destroy; override;
+
+    property  Keys: ARawByteStringArray read FKeys;
+    property  Values: ASingleArray read FValues;
+    property  HashTableSize: Integer read GetHashTableSize;
+
+    { AType                                                                    }
+    procedure Clear; override;
+
+    { ADictionary                                                              }
+    procedure Delete(const Key: RawByteString); override;
+    function  HasKey(const Key: RawByteString): Boolean; override;
+    procedure Rename(const Key: RawByteString; const NewKey: RawByteString); override;
+    function  Count: Integer; override;
+    function  GetKeyByIndex(const Idx: Integer): RawByteString; override;
+    procedure DeleteItemByIndex(const Idx: Integer); override;
+
+    { ASingleDictionary                                                    }
+    procedure Add(const Key: RawByteString; const Value: Single); override;
+    function  GetItemByIndex(const Idx: Integer): Single; override;
+    procedure SetItemByIndex(const Idx: Integer; const Value: Single);
+    function  LocateItem(const Key: RawByteString; var Value: Single): Integer; override;
+    function  LocateNext(const Key: RawByteString; const Idx: Integer;
+              var Value: Single): Integer; override;
+  end;
+
+  TSingleDictionaryB = class(TGeneralSingleDictionaryB)
+  protected
+    function  GetItem(const Key: RawByteString): Single; override;
+    function  LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; override;
+
+  public
+    constructor CreateEx(const Keys: TRawByteStringArray = nil;
+                const Values: TSingleArray = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+
+    function  LocateItem(const Key: RawByteString; var Value: Single): Integer; override;
   end;
 
 
@@ -5017,6 +5882,91 @@ type
 {   A 'chained-hash' lookup table is used for quick access.                    }
 {                                                                              }
 type
+  TGeneralDoubleDictionaryB = class(ADoubleDictionaryB)
+  protected
+    FKeys             : ARawByteStringArray;
+    FValues           : ADoubleArray;
+    FLookup           : Array of IntegerArray;
+    FHashSize         : Integer;
+    FCaseSensitive    : Boolean;
+    FAddOnSet         : Boolean;
+    FDuplicatesAction : TDictionaryDuplicatesAction;
+
+    function  LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; virtual;
+    procedure DeleteByIndex(const Idx: Integer; const Hash: Integer = -1);
+    procedure Rehash;
+    function  GetHashTableSize: Integer;
+    procedure RaiseIndexError;
+
+    { ADictionary                                                              }
+    function  GetKeysCaseSensitive: Boolean; override;
+    function  GetAddOnSet: Boolean; override;
+    procedure SetAddOnSet(const AddOnSet: Boolean); override;
+    function  GetDuplicatesAction: TDictionaryDuplicatesAction; override;
+    procedure SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction); override;
+
+    { ADoubleDictionary                                                    }
+    procedure SetItem(const Key: RawByteString; const Value: Double); override;
+
+  public
+    { TGeneralDoubleDictionary                                               }
+    constructor Create;
+    constructor CreateEx(const Keys: ARawByteStringArray = nil;
+                const Values: ADoubleArray = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+    destructor Destroy; override;
+
+    property  Keys: ARawByteStringArray read FKeys;
+    property  Values: ADoubleArray read FValues;
+    property  HashTableSize: Integer read GetHashTableSize;
+
+    { AType                                                                    }
+    procedure Clear; override;
+
+    { ADictionary                                                              }
+    procedure Delete(const Key: RawByteString); override;
+    function  HasKey(const Key: RawByteString): Boolean; override;
+    procedure Rename(const Key: RawByteString; const NewKey: RawByteString); override;
+    function  Count: Integer; override;
+    function  GetKeyByIndex(const Idx: Integer): RawByteString; override;
+    procedure DeleteItemByIndex(const Idx: Integer); override;
+
+    { ADoubleDictionary                                                    }
+    procedure Add(const Key: RawByteString; const Value: Double); override;
+    function  GetItemByIndex(const Idx: Integer): Double; override;
+    procedure SetItemByIndex(const Idx: Integer; const Value: Double);
+    function  LocateItem(const Key: RawByteString; var Value: Double): Integer; override;
+    function  LocateNext(const Key: RawByteString; const Idx: Integer;
+              var Value: Double): Integer; override;
+  end;
+
+  TDoubleDictionaryB = class(TGeneralDoubleDictionaryB)
+  protected
+    function  GetItem(const Key: RawByteString): Double; override;
+    function  LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; override;
+
+  public
+    constructor CreateEx(const Keys: TRawByteStringArray = nil;
+                const Values: TDoubleArray = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+
+    function  LocateItem(const Key: RawByteString; var Value: Double): Integer; override;
+  end;
+
+
+
+{                                                                              }
+{ TDoubleDictionary                                                            }
+{   Implements ADoubleDictionary using arrays.                                 }
+{   A 'chained-hash' lookup table is used for quick access.                    }
+{                                                                              }
+type
   TGeneralDoubleDictionaryW = class(ADoubleDictionaryW)
   protected
     FKeys             : AWideStringArray;
@@ -5347,6 +6297,91 @@ type
                 const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
 
     function  LocateItem(const Key: AnsiString; var Value: Extended): Integer; override;
+  end;
+
+
+
+{                                                                              }
+{ TExtendedDictionary                                                          }
+{   Implements AExtendedDictionary using arrays.                               }
+{   A 'chained-hash' lookup table is used for quick access.                    }
+{                                                                              }
+type
+  TGeneralExtendedDictionaryB = class(AExtendedDictionaryB)
+  protected
+    FKeys             : ARawByteStringArray;
+    FValues           : AExtendedArray;
+    FLookup           : Array of IntegerArray;
+    FHashSize         : Integer;
+    FCaseSensitive    : Boolean;
+    FAddOnSet         : Boolean;
+    FDuplicatesAction : TDictionaryDuplicatesAction;
+
+    function  LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; virtual;
+    procedure DeleteByIndex(const Idx: Integer; const Hash: Integer = -1);
+    procedure Rehash;
+    function  GetHashTableSize: Integer;
+    procedure RaiseIndexError;
+
+    { ADictionary                                                              }
+    function  GetKeysCaseSensitive: Boolean; override;
+    function  GetAddOnSet: Boolean; override;
+    procedure SetAddOnSet(const AddOnSet: Boolean); override;
+    function  GetDuplicatesAction: TDictionaryDuplicatesAction; override;
+    procedure SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction); override;
+
+    { AExtendedDictionary                                                    }
+    procedure SetItem(const Key: RawByteString; const Value: Extended); override;
+
+  public
+    { TGeneralExtendedDictionary                                               }
+    constructor Create;
+    constructor CreateEx(const Keys: ARawByteStringArray = nil;
+                const Values: AExtendedArray = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+    destructor Destroy; override;
+
+    property  Keys: ARawByteStringArray read FKeys;
+    property  Values: AExtendedArray read FValues;
+    property  HashTableSize: Integer read GetHashTableSize;
+
+    { AType                                                                    }
+    procedure Clear; override;
+
+    { ADictionary                                                              }
+    procedure Delete(const Key: RawByteString); override;
+    function  HasKey(const Key: RawByteString): Boolean; override;
+    procedure Rename(const Key: RawByteString; const NewKey: RawByteString); override;
+    function  Count: Integer; override;
+    function  GetKeyByIndex(const Idx: Integer): RawByteString; override;
+    procedure DeleteItemByIndex(const Idx: Integer); override;
+
+    { AExtendedDictionary                                                    }
+    procedure Add(const Key: RawByteString; const Value: Extended); override;
+    function  GetItemByIndex(const Idx: Integer): Extended; override;
+    procedure SetItemByIndex(const Idx: Integer; const Value: Extended);
+    function  LocateItem(const Key: RawByteString; var Value: Extended): Integer; override;
+    function  LocateNext(const Key: RawByteString; const Idx: Integer;
+              var Value: Extended): Integer; override;
+  end;
+
+  TExtendedDictionaryB = class(TGeneralExtendedDictionaryB)
+  protected
+    function  GetItem(const Key: RawByteString): Extended; override;
+    function  LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; override;
+
+  public
+    constructor CreateEx(const Keys: TRawByteStringArray = nil;
+                const Values: TExtendedArray = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+
+    function  LocateItem(const Key: RawByteString; var Value: Extended): Integer; override;
   end;
 
 
@@ -5942,6 +6977,431 @@ type
                 const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
 
     function  LocateItem(const Key: String; var Value: AnsiString): Integer; override;
+  end;
+
+
+
+{                                                                              }
+{ TRawByteStringDictionary                                                     }
+{   Implements ARawByteStringDictionary using arrays.                          }
+{   A 'chained-hash' lookup table is used for quick access.                    }
+{                                                                              }
+type
+  TGeneralRawByteStringDictionaryA = class(ARawByteStringDictionaryA)
+  protected
+    FKeys             : AAnsiStringArray;
+    FValues           : ARawByteStringArray;
+    FLookup           : Array of IntegerArray;
+    FHashSize         : Integer;
+    FCaseSensitive    : Boolean;
+    FAddOnSet         : Boolean;
+    FDuplicatesAction : TDictionaryDuplicatesAction;
+
+    function  LocateKey(const Key: AnsiString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; virtual;
+    procedure DeleteByIndex(const Idx: Integer; const Hash: Integer = -1);
+    procedure Rehash;
+    function  GetHashTableSize: Integer;
+    procedure RaiseIndexError;
+
+    { ADictionary                                                              }
+    function  GetKeysCaseSensitive: Boolean; override;
+    function  GetAddOnSet: Boolean; override;
+    procedure SetAddOnSet(const AddOnSet: Boolean); override;
+    function  GetDuplicatesAction: TDictionaryDuplicatesAction; override;
+    procedure SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction); override;
+
+    { ARawByteStringDictionary                                                    }
+    procedure SetItem(const Key: AnsiString; const Value: RawByteString); override;
+
+  public
+    { TGeneralRawByteStringDictionary                                               }
+    constructor Create;
+    constructor CreateEx(const Keys: AAnsiStringArray = nil;
+                const Values: ARawByteStringArray = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+    destructor Destroy; override;
+
+    property  Keys: AAnsiStringArray read FKeys;
+    property  Values: ARawByteStringArray read FValues;
+    property  HashTableSize: Integer read GetHashTableSize;
+
+    { AType                                                                    }
+    procedure Clear; override;
+
+    { ADictionary                                                              }
+    procedure Delete(const Key: AnsiString); override;
+    function  HasKey(const Key: AnsiString): Boolean; override;
+    procedure Rename(const Key: AnsiString; const NewKey: AnsiString); override;
+    function  Count: Integer; override;
+    function  GetKeyByIndex(const Idx: Integer): AnsiString; override;
+    procedure DeleteItemByIndex(const Idx: Integer); override;
+
+    { ARawByteStringDictionary                                                    }
+    procedure Add(const Key: AnsiString; const Value: RawByteString); override;
+    function  GetItemByIndex(const Idx: Integer): RawByteString; override;
+    procedure SetItemByIndex(const Idx: Integer; const Value: RawByteString);
+    function  LocateItem(const Key: AnsiString; var Value: RawByteString): Integer; override;
+    function  LocateNext(const Key: AnsiString; const Idx: Integer;
+              var Value: RawByteString): Integer; override;
+  end;
+
+  TRawByteStringDictionaryA = class(TGeneralRawByteStringDictionaryA)
+  protected
+    function  GetItem(const Key: AnsiString): RawByteString; override;
+    function  LocateKey(const Key: AnsiString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; override;
+
+  public
+    constructor CreateEx(const Keys: TAnsiStringArray = nil;
+                const Values: TRawByteStringArray = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+
+    function  LocateItem(const Key: AnsiString; var Value: RawByteString): Integer; override;
+  end;
+
+
+
+{                                                                              }
+{ TRawByteStringDictionary                                                     }
+{   Implements ARawByteStringDictionary using arrays.                          }
+{   A 'chained-hash' lookup table is used for quick access.                    }
+{                                                                              }
+type
+  TGeneralRawByteStringDictionaryB = class(ARawByteStringDictionaryB)
+  protected
+    FKeys             : ARawByteStringArray;
+    FValues           : ARawByteStringArray;
+    FLookup           : Array of IntegerArray;
+    FHashSize         : Integer;
+    FCaseSensitive    : Boolean;
+    FAddOnSet         : Boolean;
+    FDuplicatesAction : TDictionaryDuplicatesAction;
+
+    function  LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; virtual;
+    procedure DeleteByIndex(const Idx: Integer; const Hash: Integer = -1);
+    procedure Rehash;
+    function  GetHashTableSize: Integer;
+    procedure RaiseIndexError;
+
+    { ADictionary                                                              }
+    function  GetKeysCaseSensitive: Boolean; override;
+    function  GetAddOnSet: Boolean; override;
+    procedure SetAddOnSet(const AddOnSet: Boolean); override;
+    function  GetDuplicatesAction: TDictionaryDuplicatesAction; override;
+    procedure SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction); override;
+
+    { ARawByteStringDictionary                                                    }
+    procedure SetItem(const Key: RawByteString; const Value: RawByteString); override;
+
+  public
+    { TGeneralRawByteStringDictionary                                               }
+    constructor Create;
+    constructor CreateEx(const Keys: ARawByteStringArray = nil;
+                const Values: ARawByteStringArray = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+    destructor Destroy; override;
+
+    property  Keys: ARawByteStringArray read FKeys;
+    property  Values: ARawByteStringArray read FValues;
+    property  HashTableSize: Integer read GetHashTableSize;
+
+    { AType                                                                    }
+    procedure Clear; override;
+
+    { ADictionary                                                              }
+    procedure Delete(const Key: RawByteString); override;
+    function  HasKey(const Key: RawByteString): Boolean; override;
+    procedure Rename(const Key: RawByteString; const NewKey: RawByteString); override;
+    function  Count: Integer; override;
+    function  GetKeyByIndex(const Idx: Integer): RawByteString; override;
+    procedure DeleteItemByIndex(const Idx: Integer); override;
+
+    { ARawByteStringDictionary                                                    }
+    procedure Add(const Key: RawByteString; const Value: RawByteString); override;
+    function  GetItemByIndex(const Idx: Integer): RawByteString; override;
+    procedure SetItemByIndex(const Idx: Integer; const Value: RawByteString);
+    function  LocateItem(const Key: RawByteString; var Value: RawByteString): Integer; override;
+    function  LocateNext(const Key: RawByteString; const Idx: Integer;
+              var Value: RawByteString): Integer; override;
+  end;
+
+  TRawByteStringDictionaryB = class(TGeneralRawByteStringDictionaryB)
+  protected
+    function  GetItem(const Key: RawByteString): RawByteString; override;
+    function  LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; override;
+
+  public
+    constructor CreateEx(const Keys: TRawByteStringArray = nil;
+                const Values: TRawByteStringArray = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+
+    function  LocateItem(const Key: RawByteString; var Value: RawByteString): Integer; override;
+  end;
+
+
+
+{                                                                              }
+{ TRawByteStringDictionary                                                     }
+{   Implements ARawByteStringDictionary using arrays.                          }
+{   A 'chained-hash' lookup table is used for quick access.                    }
+{                                                                              }
+type
+  TGeneralRawByteStringDictionaryW = class(ARawByteStringDictionaryW)
+  protected
+    FKeys             : AWideStringArray;
+    FValues           : ARawByteStringArray;
+    FLookup           : Array of IntegerArray;
+    FHashSize         : Integer;
+    FCaseSensitive    : Boolean;
+    FAddOnSet         : Boolean;
+    FDuplicatesAction : TDictionaryDuplicatesAction;
+
+    function  LocateKey(const Key: WideString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; virtual;
+    procedure DeleteByIndex(const Idx: Integer; const Hash: Integer = -1);
+    procedure Rehash;
+    function  GetHashTableSize: Integer;
+    procedure RaiseIndexError;
+
+    { ADictionary                                                              }
+    function  GetKeysCaseSensitive: Boolean; override;
+    function  GetAddOnSet: Boolean; override;
+    procedure SetAddOnSet(const AddOnSet: Boolean); override;
+    function  GetDuplicatesAction: TDictionaryDuplicatesAction; override;
+    procedure SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction); override;
+
+    { ARawByteStringDictionary                                                    }
+    procedure SetItem(const Key: WideString; const Value: RawByteString); override;
+
+  public
+    { TGeneralRawByteStringDictionary                                               }
+    constructor Create;
+    constructor CreateEx(const Keys: AWideStringArray = nil;
+                const Values: ARawByteStringArray = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+    destructor Destroy; override;
+
+    property  Keys: AWideStringArray read FKeys;
+    property  Values: ARawByteStringArray read FValues;
+    property  HashTableSize: Integer read GetHashTableSize;
+
+    { AType                                                                    }
+    procedure Clear; override;
+
+    { ADictionary                                                              }
+    procedure Delete(const Key: WideString); override;
+    function  HasKey(const Key: WideString): Boolean; override;
+    procedure Rename(const Key: WideString; const NewKey: WideString); override;
+    function  Count: Integer; override;
+    function  GetKeyByIndex(const Idx: Integer): WideString; override;
+    procedure DeleteItemByIndex(const Idx: Integer); override;
+
+    { ARawByteStringDictionary                                                    }
+    procedure Add(const Key: WideString; const Value: RawByteString); override;
+    function  GetItemByIndex(const Idx: Integer): RawByteString; override;
+    procedure SetItemByIndex(const Idx: Integer; const Value: RawByteString);
+    function  LocateItem(const Key: WideString; var Value: RawByteString): Integer; override;
+    function  LocateNext(const Key: WideString; const Idx: Integer;
+              var Value: RawByteString): Integer; override;
+  end;
+
+  TRawByteStringDictionaryW = class(TGeneralRawByteStringDictionaryW)
+  protected
+    function  GetItem(const Key: WideString): RawByteString; override;
+    function  LocateKey(const Key: WideString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; override;
+
+  public
+    constructor CreateEx(const Keys: TWideStringArray = nil;
+                const Values: TRawByteStringArray = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+
+    function  LocateItem(const Key: WideString; var Value: RawByteString): Integer; override;
+  end;
+
+
+
+{                                                                              }
+{ TRawByteStringDictionary                                                     }
+{   Implements ARawByteStringDictionary using arrays.                          }
+{   A 'chained-hash' lookup table is used for quick access.                    }
+{                                                                              }
+type
+  TGeneralRawByteStringDictionaryU = class(ARawByteStringDictionaryU)
+  protected
+    FKeys             : AUnicodeStringArray;
+    FValues           : ARawByteStringArray;
+    FLookup           : Array of IntegerArray;
+    FHashSize         : Integer;
+    FCaseSensitive    : Boolean;
+    FAddOnSet         : Boolean;
+    FDuplicatesAction : TDictionaryDuplicatesAction;
+
+    function  LocateKey(const Key: UnicodeString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; virtual;
+    procedure DeleteByIndex(const Idx: Integer; const Hash: Integer = -1);
+    procedure Rehash;
+    function  GetHashTableSize: Integer;
+    procedure RaiseIndexError;
+
+    { ADictionary                                                              }
+    function  GetKeysCaseSensitive: Boolean; override;
+    function  GetAddOnSet: Boolean; override;
+    procedure SetAddOnSet(const AddOnSet: Boolean); override;
+    function  GetDuplicatesAction: TDictionaryDuplicatesAction; override;
+    procedure SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction); override;
+
+    { ARawByteStringDictionary                                                    }
+    procedure SetItem(const Key: UnicodeString; const Value: RawByteString); override;
+
+  public
+    { TGeneralRawByteStringDictionary                                               }
+    constructor Create;
+    constructor CreateEx(const Keys: AUnicodeStringArray = nil;
+                const Values: ARawByteStringArray = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+    destructor Destroy; override;
+
+    property  Keys: AUnicodeStringArray read FKeys;
+    property  Values: ARawByteStringArray read FValues;
+    property  HashTableSize: Integer read GetHashTableSize;
+
+    { AType                                                                    }
+    procedure Clear; override;
+
+    { ADictionary                                                              }
+    procedure Delete(const Key: UnicodeString); override;
+    function  HasKey(const Key: UnicodeString): Boolean; override;
+    procedure Rename(const Key: UnicodeString; const NewKey: UnicodeString); override;
+    function  Count: Integer; override;
+    function  GetKeyByIndex(const Idx: Integer): UnicodeString; override;
+    procedure DeleteItemByIndex(const Idx: Integer); override;
+
+    { ARawByteStringDictionary                                                    }
+    procedure Add(const Key: UnicodeString; const Value: RawByteString); override;
+    function  GetItemByIndex(const Idx: Integer): RawByteString; override;
+    procedure SetItemByIndex(const Idx: Integer; const Value: RawByteString);
+    function  LocateItem(const Key: UnicodeString; var Value: RawByteString): Integer; override;
+    function  LocateNext(const Key: UnicodeString; const Idx: Integer;
+              var Value: RawByteString): Integer; override;
+  end;
+
+  TRawByteStringDictionaryU = class(TGeneralRawByteStringDictionaryU)
+  protected
+    function  GetItem(const Key: UnicodeString): RawByteString; override;
+    function  LocateKey(const Key: UnicodeString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; override;
+
+  public
+    constructor CreateEx(const Keys: TUnicodeStringArray = nil;
+                const Values: TRawByteStringArray = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+
+    function  LocateItem(const Key: UnicodeString; var Value: RawByteString): Integer; override;
+  end;
+
+
+
+{                                                                              }
+{ TRawByteStringDictionary                                                     }
+{   Implements ARawByteStringDictionary using arrays.                          }
+{   A 'chained-hash' lookup table is used for quick access.                    }
+{                                                                              }
+type
+  TGeneralRawByteStringDictionary = class(ARawByteStringDictionary)
+  protected
+    FKeys             : AStringArray;
+    FValues           : ARawByteStringArray;
+    FLookup           : Array of IntegerArray;
+    FHashSize         : Integer;
+    FCaseSensitive    : Boolean;
+    FAddOnSet         : Boolean;
+    FDuplicatesAction : TDictionaryDuplicatesAction;
+
+    function  LocateKey(const Key: String; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; virtual;
+    procedure DeleteByIndex(const Idx: Integer; const Hash: Integer = -1);
+    procedure Rehash;
+    function  GetHashTableSize: Integer;
+    procedure RaiseIndexError;
+
+    { ADictionary                                                              }
+    function  GetKeysCaseSensitive: Boolean; override;
+    function  GetAddOnSet: Boolean; override;
+    procedure SetAddOnSet(const AddOnSet: Boolean); override;
+    function  GetDuplicatesAction: TDictionaryDuplicatesAction; override;
+    procedure SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction); override;
+
+    { ARawByteStringDictionary                                                    }
+    procedure SetItem(const Key: String; const Value: RawByteString); override;
+
+  public
+    { TGeneralRawByteStringDictionary                                               }
+    constructor Create;
+    constructor CreateEx(const Keys: AStringArray = nil;
+                const Values: ARawByteStringArray = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+    destructor Destroy; override;
+
+    property  Keys: AStringArray read FKeys;
+    property  Values: ARawByteStringArray read FValues;
+    property  HashTableSize: Integer read GetHashTableSize;
+
+    { AType                                                                    }
+    procedure Clear; override;
+
+    { ADictionary                                                              }
+    procedure Delete(const Key: String); override;
+    function  HasKey(const Key: String): Boolean; override;
+    procedure Rename(const Key: String; const NewKey: String); override;
+    function  Count: Integer; override;
+    function  GetKeyByIndex(const Idx: Integer): String; override;
+    procedure DeleteItemByIndex(const Idx: Integer); override;
+
+    { ARawByteStringDictionary                                                    }
+    procedure Add(const Key: String; const Value: RawByteString); override;
+    function  GetItemByIndex(const Idx: Integer): RawByteString; override;
+    procedure SetItemByIndex(const Idx: Integer; const Value: RawByteString);
+    function  LocateItem(const Key: String; var Value: RawByteString): Integer; override;
+    function  LocateNext(const Key: String; const Idx: Integer;
+              var Value: RawByteString): Integer; override;
+  end;
+
+  TRawByteStringDictionary = class(TGeneralRawByteStringDictionary)
+  protected
+    function  GetItem(const Key: String): RawByteString; override;
+    function  LocateKey(const Key: String; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; override;
+
+  public
+    constructor CreateEx(const Keys: TStringArray = nil;
+                const Values: TRawByteStringArray = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+
+    function  LocateItem(const Key: String; var Value: RawByteString): Integer; override;
   end;
 
 
@@ -7057,6 +8517,91 @@ type
 {   A 'chained-hash' lookup table is used for quick access.                    }
 {                                                                              }
 type
+  TGeneralPointerDictionaryB = class(APointerDictionaryB)
+  protected
+    FKeys             : ARawByteStringArray;
+    FValues           : APointerArray;
+    FLookup           : Array of IntegerArray;
+    FHashSize         : Integer;
+    FCaseSensitive    : Boolean;
+    FAddOnSet         : Boolean;
+    FDuplicatesAction : TDictionaryDuplicatesAction;
+
+    function  LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; virtual;
+    procedure DeleteByIndex(const Idx: Integer; const Hash: Integer = -1);
+    procedure Rehash;
+    function  GetHashTableSize: Integer;
+    procedure RaiseIndexError;
+
+    { ADictionary                                                              }
+    function  GetKeysCaseSensitive: Boolean; override;
+    function  GetAddOnSet: Boolean; override;
+    procedure SetAddOnSet(const AddOnSet: Boolean); override;
+    function  GetDuplicatesAction: TDictionaryDuplicatesAction; override;
+    procedure SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction); override;
+
+    { APointerDictionary                                                    }
+    procedure SetItem(const Key: RawByteString; const Value: Pointer); override;
+
+  public
+    { TGeneralPointerDictionary                                               }
+    constructor Create;
+    constructor CreateEx(const Keys: ARawByteStringArray = nil;
+                const Values: APointerArray = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+    destructor Destroy; override;
+
+    property  Keys: ARawByteStringArray read FKeys;
+    property  Values: APointerArray read FValues;
+    property  HashTableSize: Integer read GetHashTableSize;
+
+    { AType                                                                    }
+    procedure Clear; override;
+
+    { ADictionary                                                              }
+    procedure Delete(const Key: RawByteString); override;
+    function  HasKey(const Key: RawByteString): Boolean; override;
+    procedure Rename(const Key: RawByteString; const NewKey: RawByteString); override;
+    function  Count: Integer; override;
+    function  GetKeyByIndex(const Idx: Integer): RawByteString; override;
+    procedure DeleteItemByIndex(const Idx: Integer); override;
+
+    { APointerDictionary                                                    }
+    procedure Add(const Key: RawByteString; const Value: Pointer); override;
+    function  GetItemByIndex(const Idx: Integer): Pointer; override;
+    procedure SetItemByIndex(const Idx: Integer; const Value: Pointer);
+    function  LocateItem(const Key: RawByteString; var Value: Pointer): Integer; override;
+    function  LocateNext(const Key: RawByteString; const Idx: Integer;
+              var Value: Pointer): Integer; override;
+  end;
+
+  TPointerDictionaryB = class(TGeneralPointerDictionaryB)
+  protected
+    function  GetItem(const Key: RawByteString): Pointer; override;
+    function  LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; override;
+
+  public
+    constructor CreateEx(const Keys: TRawByteStringArray = nil;
+                const Values: TPointerArray = nil;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+
+    function  LocateItem(const Key: RawByteString; var Value: Pointer): Integer; override;
+  end;
+
+
+
+{                                                                              }
+{ TPointerDictionary                                                           }
+{   Implements APointerDictionary using arrays.                                }
+{   A 'chained-hash' lookup table is used for quick access.                    }
+{                                                                              }
+type
   TGeneralPointerDictionaryW = class(APointerDictionaryW)
   protected
     FKeys             : AWideStringArray;
@@ -7736,6 +9281,100 @@ type
                 const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
 
     function  LocateItem(const Key: AnsiString; var Value: TObject): Integer; override;
+  end;
+
+
+
+{                                                                              }
+{ TObjectDictionary                                                            }
+{   Implements AObjectDictionary using arrays.                                 }
+{   A 'chained-hash' lookup table is used for quick access.                    }
+{                                                                              }
+type
+  TGeneralObjectDictionaryB = class(AObjectDictionaryB)
+  protected
+    FKeys             : ARawByteStringArray;
+    FValues           : AObjectArray;
+    FLookup           : Array of IntegerArray;
+    FHashSize         : Integer;
+    FCaseSensitive    : Boolean;
+    FAddOnSet         : Boolean;
+    FDuplicatesAction : TDictionaryDuplicatesAction;
+
+    function  LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; virtual;
+    procedure DeleteByIndex(const Idx: Integer; const Hash: Integer = -1);
+    procedure Rehash;
+    function  GetHashTableSize: Integer;
+    procedure RaiseIndexError;
+
+    { ADictionary                                                              }
+    function  GetKeysCaseSensitive: Boolean; override;
+    function  GetAddOnSet: Boolean; override;
+    procedure SetAddOnSet(const AddOnSet: Boolean); override;
+    function  GetDuplicatesAction: TDictionaryDuplicatesAction; override;
+    procedure SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction); override;
+
+    { AObjectDictionary                                                    }
+    function  GetIsItemOwner: Boolean; override;
+    procedure SetIsItemOwner(const IsItemOwner: Boolean); override;
+    
+    procedure SetItem(const Key: RawByteString; const Value: TObject); override;
+
+  public
+    { TGeneralObjectDictionary                                               }
+    constructor Create;
+    constructor CreateEx(const Keys: ARawByteStringArray = nil;
+                const Values: AObjectArray = nil;
+                const IsItemOwner: Boolean = False;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+    destructor Destroy; override;
+
+    property  Keys: ARawByteStringArray read FKeys;
+    property  Values: AObjectArray read FValues;
+    property  HashTableSize: Integer read GetHashTableSize;
+
+    { AType                                                                    }
+    procedure Clear; override;
+
+    { ADictionary                                                              }
+    procedure Delete(const Key: RawByteString); override;
+    function  HasKey(const Key: RawByteString): Boolean; override;
+    procedure Rename(const Key: RawByteString; const NewKey: RawByteString); override;
+    function  Count: Integer; override;
+    function  GetKeyByIndex(const Idx: Integer): RawByteString; override;
+    procedure DeleteItemByIndex(const Idx: Integer); override;
+
+    { AObjectDictionary                                                    }
+    procedure Add(const Key: RawByteString; const Value: TObject); override;
+    function  GetItemByIndex(const Idx: Integer): TObject; override;
+    procedure SetItemByIndex(const Idx: Integer; const Value: TObject);
+    function  LocateItem(const Key: RawByteString; var Value: TObject): Integer; override;
+    function  LocateNext(const Key: RawByteString; const Idx: Integer;
+              var Value: TObject): Integer; override;
+
+    function  ReleaseItem(const Key: RawByteString): TObject; override;
+    procedure ReleaseItems; override;
+    procedure FreeItems; override;
+  end;
+
+  TObjectDictionaryB = class(TGeneralObjectDictionaryB)
+  protected
+    function  GetItem(const Key: RawByteString): TObject; override;
+    function  LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+              const ErrorIfNotFound: Boolean): Integer; override;
+
+  public
+    constructor CreateEx(const Keys: TRawByteStringArray = nil;
+                const Values: TObjectArray = nil;
+                const IsItemOwner: Boolean = False;
+                const KeysCaseSensitive: Boolean = True;
+                const AddOnSet: Boolean = True;
+                const DuplicatesAction: TDictionaryDuplicatesAction = ddAccept);
+
+    function  LocateItem(const Key: RawByteString; var Value: TObject): Integer; override;
   end;
 
 
@@ -10347,6 +11986,212 @@ end;
 
 
 {                                                                              }
+{ ARawByteStringArray                                                          }
+{                                                                              }
+procedure ARawByteStringArray.ExchangeItems(const Idx1, Idx2: Integer);
+var I : RawByteString;
+begin
+  I := Item[Idx1];
+  Item[Idx1] := Item[Idx2];
+  Item[Idx2] := I;
+end;
+
+function ARawByteStringArray.AppendItem(const Value: RawByteString): Integer;
+begin
+  Result := Count;
+  Count := Result + 1;
+  Item[Result] := Value;
+end;
+
+function ARawByteStringArray.GetRange(const LoIdx, HiIdx: Integer): RawByteStringArray;
+var I, L, H, C : Integer;
+begin
+  L := MaxI(0, LoIdx);
+  H := MinI(Count - 1, HiIdx);
+  C := H - L + 1;
+  SetLength(Result, C);
+  for I := 0 to C - 1 do
+    Result[I] := Item[L + I];
+end;
+
+function ARawByteStringArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
+var I, L, H, C : Integer;
+begin
+  Result := ARawByteStringArray(CreateInstance);
+  L := MaxI(0, LoIdx);
+  H := MinI(Count - 1, HiIdx);
+  C := H - L + 1;
+  ARawByteStringArray(Result).Count := C;
+  for I := 0 to C - 1 do
+    ARawByteStringArray(Result)[I] := Item[L + I];
+end;
+
+procedure ARawByteStringArray.SetRange(const LoIdx, HiIdx: Integer; const V: RawByteStringArray);
+var I, L, H, C : Integer;
+begin
+  L := MaxI(0, LoIdx);
+  H := MinI(Count - 1, HiIdx);
+  C := MinI(Length(V), H - L + 1);
+  for I := 0 to C - 1 do
+    Item[L + I] := V[I];
+end;
+
+procedure ARawByteStringArray.Fill(const Idx, Count: Integer; const Value: RawByteString);
+var I : Integer;
+begin
+  for I := Idx to Idx + Count - 1 do
+    Item[I] := Value;
+end;
+
+function ARawByteStringArray.AppendArray(const V: RawByteStringArray): Integer;
+begin
+  Result := Count;
+  Count := Result + Length(V);
+  Range[Result, Count - 1] := V;
+end;
+
+function ARawByteStringArray.CompareItems(const Idx1, Idx2: Integer): TCompareResult;
+var I, J : RawByteString;
+begin
+  I := Item[Idx1];
+  J := Item[Idx2];
+  if I < J then
+    Result := crLess else
+  if I > J then
+    Result := crGreater else
+    Result := crEqual;
+end;
+
+function ARawByteStringArray.PosNext(const Find: RawByteString;
+    const PrevPos: Integer; const IsSortedAscending: Boolean): Integer;
+var I, L, H : Integer;
+    D       : RawByteString;
+begin
+  if IsSortedAscending then // binary search
+    begin
+      if MaxI(PrevPos + 1, 0) = 0 then // find first
+        begin
+          L := 0;
+          H := Count - 1;
+          repeat
+            I := (L + H) div 2;
+            D := Item[I];
+            if D = Find then
+              begin
+                while (I > 0) and (Item[I - 1] = Find) do
+                  Dec(I);
+                Result := I;
+                exit;
+              end else
+            if D > Find then
+              H := I - 1 else
+              L := I + 1;
+          until L > H;
+          Result := -1;
+        end else // find next
+        if PrevPos >= Count - 1 then
+          Result := -1 else
+          if Item[PrevPos + 1] = Find then
+            Result := PrevPos + 1 else
+            Result := -1;
+    end else // linear search
+    begin
+      for I := MaxI(PrevPos + 1, 0) to Count - 1 do
+        if Item[I] = Find then
+          begin
+            Result := I;
+            exit;
+          end;
+      Result := -1;
+    end;
+end;
+
+function ARawByteStringArray.GetItemAsString(const Idx: Integer): String;
+begin
+  Result := ToStringB(GetItem(Idx));
+end;
+
+procedure ARawByteStringArray.SetItemAsString(const Idx: Integer; const Value: String);
+begin
+  SetItem(Idx, ToRawByteString(Value));
+end;
+
+procedure ARawByteStringArray.Assign(const Source: TObject);
+var I, L : Integer;
+begin
+  if Source is ARawByteStringArray then
+    begin
+      L := ARawByteStringArray(Source).Count;
+      Count := L;
+      for I := 0 to L - 1 do
+        Item[I] := ARawByteStringArray(Source).Item[I];
+    end else
+    inherited Assign(Source);
+end;
+
+function ARawByteStringArray.IsEqual(const V: TObject): Boolean;
+var I, L : Integer;
+begin
+  if V is ARawByteStringArray then
+    begin
+      L := ARawByteStringArray(V).Count;
+      Result := L = Count;
+      if not Result then
+        exit;
+      for I := 0 to L - 1 do
+        if Item[I] <> ARawByteStringArray(V).Item[I] then
+          begin
+            Result := False;
+            exit;
+          end;
+    end else
+    Result := inherited IsEqual(V);
+end;
+
+function ARawByteStringArray.AppendArray(const V: AArray): Integer;
+var I, L : Integer;
+begin
+  Result := Count;
+  if V is ARawByteStringArray then
+    begin
+      L := V.Count;
+      Count := Result + L;
+      for I := 0 to L - 1 do
+        Item[Result + I] := ARawByteStringArray(V)[I];
+    end
+  else
+    raise ERawByteStringArray.CreateFmt('%s can not append %s', [ClassName, ObjectClassName(V)]);
+end;
+
+procedure ARawByteStringArray.Delete(const Idx: Integer; const Count: Integer);
+var I, C, J, L : Integer;
+begin
+  J := MaxI(Idx, 0);
+  C := GetCount;
+  L := MinI(Count, C - J);
+  if L > 0 then
+    begin
+      for I := J to J + C - 1 do
+        SetItem(I, GetItem(I + Count));
+      SetCount(C - L);
+    end;
+end;
+
+procedure ARawByteStringArray.Insert(const Idx: Integer; const Count: Integer);
+var I, C, J, L : Integer;
+begin
+  if Count <= 0 then
+    exit;
+  C := GetCount;
+  SetCount(C + Count);
+  J := MinI(MaxI(Idx, 0), C);
+  L := C - J;
+  for I := C - 1 downto C - L do
+    SetItem(I + Count, GetItem(I));
+end;
+
+
+{                                                                              }
 { AWideStringArray                                                             }
 {                                                                              }
 procedure AWideStringArray.ExchangeItems(const Idx1, Idx2: Integer);
@@ -11930,10 +13775,7 @@ begin
         SetBit(Result + I, ABitArray(V).GetBit(I));
     end
   else
-    begin
-      raise EBitArray.CreateFmt('%s can not append %s', [ClassName, ObjectClassName(V)]);
-      Result := -1;
-    end;
+    raise EBitArray.CreateFmt('%s can not append %s', [ClassName, ObjectClassName(V)]);
 end;
 
 
@@ -13119,6 +14961,175 @@ begin
     begin
       FCount := TAnsiStringArray(Source).FCount;
       FData := Copy(TAnsiStringArray(Source).FData, 0, FCount);
+    end
+  else
+    inherited Assign(Source);
+end;
+
+
+
+{                                                                              }
+{ TRawByteStringArray                                                          }
+{                                                                              }
+function TRawByteStringArray.GetItem(const Idx: Integer): RawByteString;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FCount) then
+    RaiseIndexError(Idx);
+  {$ENDIF}
+  Result := FData[Idx];
+end;
+
+procedure TRawByteStringArray.SetItem(const Idx: Integer; const Value: RawByteString);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FCount) then
+    RaiseIndexError(Idx);
+  {$ENDIF}
+  FData[Idx] := Value;
+end;
+
+procedure TRawByteStringArray.ExchangeItems(const Idx1, Idx2: Integer);
+var I : RawByteString;
+begin
+  {$IFOPT R+}
+  if (Idx1 < 0) or (Idx1 >= FCount) then
+    RaiseIndexError(Idx1);
+  if (Idx2 < 0) or (Idx2 >= FCount) then
+    RaiseIndexError(Idx2);
+  {$ENDIF}
+  I := FData[Idx1];
+  FData[Idx1] := FData[Idx2];
+  FData[Idx2] := I;
+end;
+
+function TRawByteStringArray.GetCount: Integer;
+begin
+  Result := FCount;
+end;
+
+{ Memory allocation strategy to reduce memory copies:                          }
+{   * For first allocation: allocate the exact size.                           }
+{   * For change to < 16: allocate 16 entries.                                 }
+{   * For growing to >= 16: pre-allocate 1/8th of NewCount.                    }
+{   * For shrinking blocks: shrink actual allocation when Count is less        }
+{     than half of the allocated size.                                         }
+procedure TRawByteStringArray.SetCount(const NewCount: Integer);
+var L, N : Integer;
+begin
+  N := NewCount;
+  if FCount = N then
+    exit;
+  FCount := N;
+  L := FCapacity;
+  if L > 0 then
+    if N < 16 then // pre-allocate first 16 entries
+      N := 16 else
+    if N > L then
+      N := N + N shr 3 else // pre-allocate 1/8th extra if growing
+    if N > L shr 1 then // only reduce capacity if size is at least half
+      exit;
+  if N <> L then
+    begin
+      SetLength(FData, N);
+      FCapacity := N;
+    end;
+end;
+
+function TRawByteStringArray.AppendItem(const Value: RawByteString): Integer;
+begin
+  Result := FCount;
+  if Result >= FCapacity then
+    SetCount(Result + 1)
+  else
+    FCount := Result + 1;
+  FData[Result] := Value;
+end;
+
+procedure TRawByteStringArray.Delete(const Idx: Integer; const Count: Integer = 1);
+var N : Integer;
+begin
+  N := DynArrayRemoveB(FData, Idx, Count);
+  Dec(FCapacity, N);
+  Dec(FCount, N);
+end;
+
+procedure TRawByteStringArray.Insert(const Idx: Integer; const Count: Integer = 1);
+var I : Integer;
+begin
+  I := DynArrayInsertB(FData, Idx, Count);
+  if I >= 0 then
+    begin
+      Inc(FCapacity, Count);
+      Inc(FCount, Count);
+    end;
+end;
+
+function TRawByteStringArray.GetRange(const LoIdx, HiIdx: Integer): RawByteStringArray;
+var L, H : Integer;
+begin
+  L := MaxI(0, LoIdx);
+  H := MinI(HiIdx, FCount);
+  if H >= L then
+    Result := Copy(FData, L, H - L + 1) else
+    Result := nil;
+end;
+
+procedure TRawByteStringArray.SetRange(const LoIdx, HiIdx: Integer; const V: RawByteStringArray);
+var L, H, C : Integer;
+begin
+  L := MaxI(0, LoIdx);
+  H := MinI(HiIdx, FCount);
+  C := MaxI(MinI(Length(V), H - L + 1), 0);
+  if C > 0 then
+    Move(V[0], FData[L], C * Sizeof(RawByteString));
+end;
+
+constructor TRawByteStringArray.Create(const V: RawByteStringArray);
+begin
+  inherited Create;
+  SetData(V);
+end;
+
+procedure TRawByteStringArray.SetData(const Data: RawByteStringArray);
+begin
+  FData := Data;
+  FCount := Length(FData);
+  FCapacity := FCount;
+end;
+
+function TRawByteStringArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
+var L, H, C : Integer;
+begin
+  L := MaxI(0, LoIdx);
+  H := MinI(HiIdx, FCount);
+  C := MaxI(0, H - L + 1);
+  Result := CreateInstance as TRawByteStringArray;
+  TRawByteStringArray(Result).FCount := C;
+  if C > 0 then
+    TRawByteStringArray(Result).FData := Copy(FData, L, C);
+end;
+
+procedure TRawByteStringArray.Assign(const V: RawByteStringArray);
+begin
+  FData := Copy(V);
+  FCount := Length(FData);
+  FCapacity := FCount;
+end;
+
+procedure TRawByteStringArray.Assign(const V: Array of RawByteString);
+begin
+  FData := AsRawByteStringArray(V);
+  FCount := Length(FData);
+  FCapacity := FCount;
+end;
+
+procedure TRawByteStringArray.Assign(const Source: TObject);
+begin
+  if Source is TRawByteStringArray then
+    begin
+      FCount := TRawByteStringArray(Source).FCount;
+      FData := Copy(TRawByteStringArray(Source).FData, 0, FCount);
     end
   else
     inherited Assign(Source);
@@ -14568,6 +16579,26 @@ end;
 
 
 {                                                                              }
+{ ADictionaryB                                                                 }
+{                                                                              }
+procedure ADictionaryB.RaiseKeyNotFoundError(const Key: RawByteString);
+begin
+  raise EDictionary.CreateFmt('Key not found: %s', [Key]);
+end;
+
+procedure ADictionaryB.RaiseDuplicateKeyError(const Key: RawByteString);
+begin
+  raise EDictionary.CreateFmt('Duplicate key: %s', [Key]);
+end;
+
+function ADictionaryB.GetKeyStrByIndex(const Idx: Integer): String;
+begin
+  Result := ToStringB(GetKeyByIndex(Idx));
+end;
+
+
+
+{                                                                              }
 { ADictionaryW                                                                 }
 {                                                                              }
 procedure ADictionaryW.RaiseKeyNotFoundError(const Key: WideString);
@@ -14655,6 +16686,47 @@ begin
 end;
 
 function ALongIntDictionaryA.GetAsString: String;
+var I, L : Integer;
+begin
+  L := Count - 1;
+  for I := 0 to L do
+    begin
+      Result := Result + GetKeyStrByIndex(I) + ':' + GetItemStrByIndex(I);
+      if I < L then
+        Result := Result + ',';
+    end;
+end;
+
+
+
+{                                                                              }
+{ ALongIntDictionaryB                                                          }
+{                                                                              }
+function ALongIntDictionaryB.GetItem(const Key: RawByteString): LongInt;
+begin
+  if LocateItem(Key, Result) < 0 then
+    RaiseKeyNotFoundError(Key);
+end;
+
+function ALongIntDictionaryB.GetItemStrByIndex(const Idx: Integer): String;
+begin
+  Result := IntToStr(GetItemByIndex(Idx));
+end;
+
+procedure ALongIntDictionaryB.Assign(const Source: TObject);
+var I : Integer;
+begin
+  if Source is ALongIntDictionaryB then
+    begin
+      Clear;
+      for I := 0 to ALongIntDictionaryB(Source).Count - 1 do
+        Add(ALongIntDictionaryB(Source).GetKeyByIndex(I),
+             ALongIntDictionaryB(Source).GetItemByIndex(I));
+    end else
+    inherited Assign(Source);
+end;
+
+function ALongIntDictionaryB.GetAsString: String;
 var I, L : Integer;
 begin
   L := Count - 1;
@@ -14833,6 +16905,47 @@ end;
 
 
 {                                                                              }
+{ ALongWordDictionaryB                                                         }
+{                                                                              }
+function ALongWordDictionaryB.GetItem(const Key: RawByteString): LongWord;
+begin
+  if LocateItem(Key, Result) < 0 then
+    RaiseKeyNotFoundError(Key);
+end;
+
+function ALongWordDictionaryB.GetItemStrByIndex(const Idx: Integer): String;
+begin
+  Result := IntToStr(GetItemByIndex(Idx));
+end;
+
+procedure ALongWordDictionaryB.Assign(const Source: TObject);
+var I : Integer;
+begin
+  if Source is ALongWordDictionaryB then
+    begin
+      Clear;
+      for I := 0 to ALongWordDictionaryB(Source).Count - 1 do
+        Add(ALongWordDictionaryB(Source).GetKeyByIndex(I),
+             ALongWordDictionaryB(Source).GetItemByIndex(I));
+    end else
+    inherited Assign(Source);
+end;
+
+function ALongWordDictionaryB.GetAsString: String;
+var I, L : Integer;
+begin
+  L := Count - 1;
+  for I := 0 to L do
+    begin
+      Result := Result + GetKeyStrByIndex(I) + ':' + GetItemStrByIndex(I);
+      if I < L then
+        Result := Result + ',';
+    end;
+end;
+
+
+
+{                                                                              }
 { ALongWordDictionaryW                                                         }
 {                                                                              }
 function ALongWordDictionaryW.GetItem(const Key: WideString): LongWord;
@@ -14983,6 +17096,47 @@ begin
 end;
 
 function AInt64DictionaryA.GetAsString: String;
+var I, L : Integer;
+begin
+  L := Count - 1;
+  for I := 0 to L do
+    begin
+      Result := Result + GetKeyStrByIndex(I) + ':' + GetItemStrByIndex(I);
+      if I < L then
+        Result := Result + ',';
+    end;
+end;
+
+
+
+{                                                                              }
+{ AInt64DictionaryB                                                            }
+{                                                                              }
+function AInt64DictionaryB.GetItem(const Key: RawByteString): Int64;
+begin
+  if LocateItem(Key, Result) < 0 then
+    RaiseKeyNotFoundError(Key);
+end;
+
+function AInt64DictionaryB.GetItemStrByIndex(const Idx: Integer): String;
+begin
+  Result := IntToStr(GetItemByIndex(Idx));
+end;
+
+procedure AInt64DictionaryB.Assign(const Source: TObject);
+var I : Integer;
+begin
+  if Source is AInt64DictionaryB then
+    begin
+      Clear;
+      for I := 0 to AInt64DictionaryB(Source).Count - 1 do
+        Add(AInt64DictionaryB(Source).GetKeyByIndex(I),
+             AInt64DictionaryB(Source).GetItemByIndex(I));
+    end else
+    inherited Assign(Source);
+end;
+
+function AInt64DictionaryB.GetAsString: String;
 var I, L : Integer;
 begin
   L := Count - 1;
@@ -15161,6 +17315,47 @@ end;
 
 
 {                                                                              }
+{ ASingleDictionaryB                                                           }
+{                                                                              }
+function ASingleDictionaryB.GetItem(const Key: RawByteString): Single;
+begin
+  if LocateItem(Key, Result) < 0 then
+    RaiseKeyNotFoundError(Key);
+end;
+
+function ASingleDictionaryB.GetItemStrByIndex(const Idx: Integer): String;
+begin
+  Result := FloatToStr(GetItemByIndex(Idx));
+end;
+
+procedure ASingleDictionaryB.Assign(const Source: TObject);
+var I : Integer;
+begin
+  if Source is ASingleDictionaryB then
+    begin
+      Clear;
+      for I := 0 to ASingleDictionaryB(Source).Count - 1 do
+        Add(ASingleDictionaryB(Source).GetKeyByIndex(I),
+             ASingleDictionaryB(Source).GetItemByIndex(I));
+    end else
+    inherited Assign(Source);
+end;
+
+function ASingleDictionaryB.GetAsString: String;
+var I, L : Integer;
+begin
+  L := Count - 1;
+  for I := 0 to L do
+    begin
+      Result := Result + GetKeyStrByIndex(I) + ':' + GetItemStrByIndex(I);
+      if I < L then
+        Result := Result + ',';
+    end;
+end;
+
+
+
+{                                                                              }
 { ASingleDictionaryW                                                           }
 {                                                                              }
 function ASingleDictionaryW.GetItem(const Key: WideString): Single;
@@ -15325,6 +17520,47 @@ end;
 
 
 {                                                                              }
+{ ADoubleDictionaryB                                                           }
+{                                                                              }
+function ADoubleDictionaryB.GetItem(const Key: RawByteString): Double;
+begin
+  if LocateItem(Key, Result) < 0 then
+    RaiseKeyNotFoundError(Key);
+end;
+
+function ADoubleDictionaryB.GetItemStrByIndex(const Idx: Integer): String;
+begin
+  Result := FloatToStr(GetItemByIndex(Idx));
+end;
+
+procedure ADoubleDictionaryB.Assign(const Source: TObject);
+var I : Integer;
+begin
+  if Source is ADoubleDictionaryB then
+    begin
+      Clear;
+      for I := 0 to ADoubleDictionaryB(Source).Count - 1 do
+        Add(ADoubleDictionaryB(Source).GetKeyByIndex(I),
+             ADoubleDictionaryB(Source).GetItemByIndex(I));
+    end else
+    inherited Assign(Source);
+end;
+
+function ADoubleDictionaryB.GetAsString: String;
+var I, L : Integer;
+begin
+  L := Count - 1;
+  for I := 0 to L do
+    begin
+      Result := Result + GetKeyStrByIndex(I) + ':' + GetItemStrByIndex(I);
+      if I < L then
+        Result := Result + ',';
+    end;
+end;
+
+
+
+{                                                                              }
 { ADoubleDictionaryW                                                           }
 {                                                                              }
 function ADoubleDictionaryW.GetItem(const Key: WideString): Double;
@@ -15475,6 +17711,47 @@ begin
 end;
 
 function AExtendedDictionaryA.GetAsString: String;
+var I, L : Integer;
+begin
+  L := Count - 1;
+  for I := 0 to L do
+    begin
+      Result := Result + GetKeyStrByIndex(I) + ':' + GetItemStrByIndex(I);
+      if I < L then
+        Result := Result + ',';
+    end;
+end;
+
+
+
+{                                                                              }
+{ AExtendedDictionaryB                                                         }
+{                                                                              }
+function AExtendedDictionaryB.GetItem(const Key: RawByteString): Extended;
+begin
+  if LocateItem(Key, Result) < 0 then
+    RaiseKeyNotFoundError(Key);
+end;
+
+function AExtendedDictionaryB.GetItemStrByIndex(const Idx: Integer): String;
+begin
+  Result := FloatToStr(GetItemByIndex(Idx));
+end;
+
+procedure AExtendedDictionaryB.Assign(const Source: TObject);
+var I : Integer;
+begin
+  if Source is AExtendedDictionaryB then
+    begin
+      Clear;
+      for I := 0 to AExtendedDictionaryB(Source).Count - 1 do
+        Add(AExtendedDictionaryB(Source).GetKeyByIndex(I),
+             AExtendedDictionaryB(Source).GetItemByIndex(I));
+    end else
+    inherited Assign(Source);
+end;
+
+function AExtendedDictionaryB.GetAsString: String;
 var I, L : Integer;
 begin
   L := Count - 1;
@@ -15818,6 +18095,276 @@ begin
 end;
 
 function AAnsiStringDictionary.GetTotalLength: Int64;
+var I : Integer;
+begin
+  Result := 0;
+  for I := 0 to Count - 1 do
+    Inc(Result, Length(GetItemByIndex(I)));
+end;
+
+
+
+{                                                                              }
+{ ARawByteStringDictionaryA                                                    }
+{                                                                              }
+function ARawByteStringDictionaryA.GetItem(const Key: AnsiString): RawByteString;
+begin
+  if LocateItem(Key, Result) < 0 then
+    RaiseKeyNotFoundError(Key);
+end;
+
+function ARawByteStringDictionaryA.GetItemStrByIndex(const Idx: Integer): String;
+begin
+  Result := ToStringB(GetItemByIndex(Idx));
+end;
+
+procedure ARawByteStringDictionaryA.Assign(const Source: TObject);
+var I : Integer;
+begin
+  if Source is ARawByteStringDictionaryA then
+    begin
+      Clear;
+      for I := 0 to ARawByteStringDictionaryA(Source).Count - 1 do
+        Add(ARawByteStringDictionaryA(Source).GetKeyByIndex(I),
+             ARawByteStringDictionaryA(Source).GetItemByIndex(I));
+    end else
+    inherited Assign(Source);
+end;
+
+function ARawByteStringDictionaryA.GetAsString: String;
+var I, L : Integer;
+begin
+  L := Count - 1;
+  for I := 0 to L do
+    begin
+      Result := Result + GetKeyStrByIndex(I) + ':' + GetItemStrByIndex(I);
+      if I < L then
+        Result := Result + ',';
+    end;
+end;
+
+function ARawByteStringDictionaryA.GetItemLength(const Key: AnsiString): Integer;
+begin
+  Result := Length(GetItem(Key));
+end;
+
+function ARawByteStringDictionaryA.GetTotalLength: Int64;
+var I : Integer;
+begin
+  Result := 0;
+  for I := 0 to Count - 1 do
+    Inc(Result, Length(GetItemByIndex(I)));
+end;
+
+
+
+{                                                                              }
+{ ARawByteStringDictionaryB                                                    }
+{                                                                              }
+function ARawByteStringDictionaryB.GetItem(const Key: RawByteString): RawByteString;
+begin
+  if LocateItem(Key, Result) < 0 then
+    RaiseKeyNotFoundError(Key);
+end;
+
+function ARawByteStringDictionaryB.GetItemStrByIndex(const Idx: Integer): String;
+begin
+  Result := ToStringB(GetItemByIndex(Idx));
+end;
+
+procedure ARawByteStringDictionaryB.Assign(const Source: TObject);
+var I : Integer;
+begin
+  if Source is ARawByteStringDictionaryB then
+    begin
+      Clear;
+      for I := 0 to ARawByteStringDictionaryB(Source).Count - 1 do
+        Add(ARawByteStringDictionaryB(Source).GetKeyByIndex(I),
+             ARawByteStringDictionaryB(Source).GetItemByIndex(I));
+    end else
+    inherited Assign(Source);
+end;
+
+function ARawByteStringDictionaryB.GetAsString: String;
+var I, L : Integer;
+begin
+  L := Count - 1;
+  for I := 0 to L do
+    begin
+      Result := Result + GetKeyStrByIndex(I) + ':' + GetItemStrByIndex(I);
+      if I < L then
+        Result := Result + ',';
+    end;
+end;
+
+function ARawByteStringDictionaryB.GetItemLength(const Key: RawByteString): Integer;
+begin
+  Result := Length(GetItem(Key));
+end;
+
+function ARawByteStringDictionaryB.GetTotalLength: Int64;
+var I : Integer;
+begin
+  Result := 0;
+  for I := 0 to Count - 1 do
+    Inc(Result, Length(GetItemByIndex(I)));
+end;
+
+
+
+{                                                                              }
+{ ARawByteStringDictionaryW                                                    }
+{                                                                              }
+function ARawByteStringDictionaryW.GetItem(const Key: WideString): RawByteString;
+begin
+  if LocateItem(Key, Result) < 0 then
+    RaiseKeyNotFoundError(Key);
+end;
+
+function ARawByteStringDictionaryW.GetItemStrByIndex(const Idx: Integer): String;
+begin
+  Result := ToStringB(GetItemByIndex(Idx));
+end;
+
+procedure ARawByteStringDictionaryW.Assign(const Source: TObject);
+var I : Integer;
+begin
+  if Source is ARawByteStringDictionaryW then
+    begin
+      Clear;
+      for I := 0 to ARawByteStringDictionaryW(Source).Count - 1 do
+        Add(ARawByteStringDictionaryW(Source).GetKeyByIndex(I),
+             ARawByteStringDictionaryW(Source).GetItemByIndex(I));
+    end else
+    inherited Assign(Source);
+end;
+
+function ARawByteStringDictionaryW.GetAsString: String;
+var I, L : Integer;
+begin
+  L := Count - 1;
+  for I := 0 to L do
+    begin
+      Result := Result + GetKeyStrByIndex(I) + ':' + GetItemStrByIndex(I);
+      if I < L then
+        Result := Result + ',';
+    end;
+end;
+
+function ARawByteStringDictionaryW.GetItemLength(const Key: WideString): Integer;
+begin
+  Result := Length(GetItem(Key));
+end;
+
+function ARawByteStringDictionaryW.GetTotalLength: Int64;
+var I : Integer;
+begin
+  Result := 0;
+  for I := 0 to Count - 1 do
+    Inc(Result, Length(GetItemByIndex(I)));
+end;
+
+
+
+{                                                                              }
+{ ARawByteStringDictionaryU                                                    }
+{                                                                              }
+function ARawByteStringDictionaryU.GetItem(const Key: UnicodeString): RawByteString;
+begin
+  if LocateItem(Key, Result) < 0 then
+    RaiseKeyNotFoundError(Key);
+end;
+
+function ARawByteStringDictionaryU.GetItemStrByIndex(const Idx: Integer): String;
+begin
+  Result := ToStringB(GetItemByIndex(Idx));
+end;
+
+procedure ARawByteStringDictionaryU.Assign(const Source: TObject);
+var I : Integer;
+begin
+  if Source is ARawByteStringDictionaryU then
+    begin
+      Clear;
+      for I := 0 to ARawByteStringDictionaryU(Source).Count - 1 do
+        Add(ARawByteStringDictionaryU(Source).GetKeyByIndex(I),
+             ARawByteStringDictionaryU(Source).GetItemByIndex(I));
+    end else
+    inherited Assign(Source);
+end;
+
+function ARawByteStringDictionaryU.GetAsString: String;
+var I, L : Integer;
+begin
+  L := Count - 1;
+  for I := 0 to L do
+    begin
+      Result := Result + GetKeyStrByIndex(I) + ':' + GetItemStrByIndex(I);
+      if I < L then
+        Result := Result + ',';
+    end;
+end;
+
+function ARawByteStringDictionaryU.GetItemLength(const Key: UnicodeString): Integer;
+begin
+  Result := Length(GetItem(Key));
+end;
+
+function ARawByteStringDictionaryU.GetTotalLength: Int64;
+var I : Integer;
+begin
+  Result := 0;
+  for I := 0 to Count - 1 do
+    Inc(Result, Length(GetItemByIndex(I)));
+end;
+
+
+
+{                                                                              }
+{ ARawByteStringDictionary                                                     }
+{                                                                              }
+function ARawByteStringDictionary.GetItem(const Key: String): RawByteString;
+begin
+  if LocateItem(Key, Result) < 0 then
+    RaiseKeyNotFoundError(Key);
+end;
+
+function ARawByteStringDictionary.GetItemStrByIndex(const Idx: Integer): String;
+begin
+  Result := ToStringB(GetItemByIndex(Idx));
+end;
+
+procedure ARawByteStringDictionary.Assign(const Source: TObject);
+var I : Integer;
+begin
+  if Source is ARawByteStringDictionary then
+    begin
+      Clear;
+      for I := 0 to ARawByteStringDictionary(Source).Count - 1 do
+        Add(ARawByteStringDictionary(Source).GetKeyByIndex(I),
+             ARawByteStringDictionary(Source).GetItemByIndex(I));
+    end else
+    inherited Assign(Source);
+end;
+
+function ARawByteStringDictionary.GetAsString: String;
+var I, L : Integer;
+begin
+  L := Count - 1;
+  for I := 0 to L do
+    begin
+      Result := Result + GetKeyStrByIndex(I) + ':' + GetItemStrByIndex(I);
+      if I < L then
+        Result := Result + ',';
+    end;
+end;
+
+function ARawByteStringDictionary.GetItemLength(const Key: String): Integer;
+begin
+  Result := Length(GetItem(Key));
+end;
+
+function ARawByteStringDictionary.GetTotalLength: Int64;
 var I : Integer;
 begin
   Result := 0;
@@ -16497,6 +19044,47 @@ end;
 
 
 {                                                                              }
+{ APointerDictionaryB                                                          }
+{                                                                              }
+function APointerDictionaryB.GetItem(const Key: RawByteString): Pointer;
+begin
+  if LocateItem(Key, Result) < 0 then
+    RaiseKeyNotFoundError(Key);
+end;
+
+function APointerDictionaryB.GetItemStrByIndex(const Idx: Integer): String;
+begin
+  Result := PointerToStr(GetItemByIndex(Idx));
+end;
+
+procedure APointerDictionaryB.Assign(const Source: TObject);
+var I : Integer;
+begin
+  if Source is APointerDictionaryB then
+    begin
+      Clear;
+      for I := 0 to APointerDictionaryB(Source).Count - 1 do
+        Add(APointerDictionaryB(Source).GetKeyByIndex(I),
+             APointerDictionaryB(Source).GetItemByIndex(I));
+    end else
+    inherited Assign(Source);
+end;
+
+function APointerDictionaryB.GetAsString: String;
+var I, L : Integer;
+begin
+  L := Count - 1;
+  for I := 0 to L do
+    begin
+      Result := Result + GetKeyStrByIndex(I) + ':' + GetItemStrByIndex(I);
+      if I < L then
+        Result := Result + ',';
+    end;
+end;
+
+
+
+{                                                                              }
 { APointerDictionaryW                                                          }
 {                                                                              }
 function APointerDictionaryW.GetItem(const Key: WideString): Pointer;
@@ -16803,6 +19391,54 @@ begin
 end;
 
 procedure AObjectDictionaryA.Clear;
+begin
+  if IsItemOwner then
+    FreeItems else
+    ReleaseItems;
+end;
+
+
+
+{                                                                              }
+{ AObjectDictionaryB                                                           }
+{                                                                              }
+function AObjectDictionaryB.GetItem(const Key: RawByteString): TObject;
+begin
+  if LocateItem(Key, Result) < 0 then
+    RaiseKeyNotFoundError(Key);
+end;
+
+function AObjectDictionaryB.GetItemStrByIndex(const Idx: Integer): String;
+begin
+  Result := ObjectClassName(GetItemByIndex(Idx));
+end;
+
+procedure AObjectDictionaryB.Assign(const Source: TObject);
+var I : Integer;
+begin
+  if Source is AObjectDictionaryB then
+    begin
+      Clear;
+      for I := 0 to AObjectDictionaryB(Source).Count - 1 do
+        Add(AObjectDictionaryB(Source).GetKeyByIndex(I),
+             AObjectDictionaryB(Source).GetItemByIndex(I));
+    end else
+    inherited Assign(Source);
+end;
+
+function AObjectDictionaryB.GetAsString: String;
+var I, L : Integer;
+begin
+  L := Count - 1;
+  for I := 0 to L do
+    begin
+      Result := Result + GetKeyStrByIndex(I) + ':' + GetItemStrByIndex(I);
+      if I < L then
+        Result := Result + ',';
+    end;
+end;
+
+procedure AObjectDictionaryB.Clear;
 begin
   if IsItemOwner then
     FreeItems else
@@ -17322,6 +19958,358 @@ begin
 end;
 
 function TLongIntDictionaryA.LocateItem(const Key: AnsiString; var Value: LongInt): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := TLongIntArray(FValues).Data[Result]
+  else
+    Value := 0;
+end;
+
+
+
+{                                                                              }
+{ TGeneralLongIntDictionaryB                                                   }
+{                                                                              }
+constructor TGeneralLongIntDictionaryB.Create;
+begin
+  inherited Create;
+  FCaseSensitive := True;
+  FDuplicatesAction := ddAccept;
+  FAddOnSet := True;
+  FKeys := TRawByteStringArray.Create;
+  FValues := TLongIntArray.Create;
+end;
+
+constructor TGeneralLongIntDictionaryB.CreateEx(
+    const Keys: ARawByteStringArray;
+    const Values: ALongIntArray; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+var L : Integer;
+begin
+  inherited Create;
+  if Assigned(Keys) then
+    begin
+      FKeys := Keys;
+      L := FKeys.Count;
+    end
+  else
+    begin
+      FKeys := TRawByteStringArray.Create;
+      L := 0;
+    end;
+  if Assigned(Values) then
+    FValues := Values
+  else
+    FValues := TLongIntArray.Create;
+  FCaseSensitive := KeysCaseSensitive;
+  FValues.Count := L;
+  FAddOnSet := AddOnSet;
+  FDuplicatesAction := DuplicatesAction;
+  if L > 0 then
+    Rehash;
+end;
+
+constructor TLongIntDictionaryB.CreateEx(
+    const Keys: TRawByteStringArray;
+    const Values: TLongIntArray; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  inherited CreateEx(Keys, Values, KeysCaseSensitive, AddOnSet,
+      DuplicatesAction);
+end;
+
+destructor TGeneralLongIntDictionaryB.Destroy;
+begin
+  FreeAndNil(FValues);
+  FreeAndNil(FKeys);
+  inherited Destroy;
+end;
+
+function TGeneralLongIntDictionaryB.GetKeysCaseSensitive: Boolean;
+begin
+  Result := FCaseSensitive;
+end;
+
+function TGeneralLongIntDictionaryB.GetAddOnSet: Boolean;
+begin
+  Result := FAddOnSet;
+end;
+
+procedure TGeneralLongIntDictionaryB.SetAddOnSet(const AddOnSet: Boolean);
+begin
+  FAddOnSet := AddOnSet;
+end;
+
+function TGeneralLongIntDictionaryB.GetHashTableSize: Integer;
+begin
+  Result := Length(FLookup);
+end;
+
+procedure TGeneralLongIntDictionaryB.Rehash;
+var I, C, L : Integer;
+begin
+  C := FKeys.Count;
+  L := DictionaryRehashSize(C);
+  FLookup := nil;
+  SetLength(FLookup, L);
+  FHashSize := L;
+  Assert(L > 0);
+  Dec(L);
+  for I := 0 to C - 1 do
+    DynArrayAppend(FLookup[HashStrB(FKeys[I], 1, -1, FCaseSensitive, 0) and L], I);
+end;
+
+function TGeneralLongIntDictionaryB.LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, J, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      H := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          J := FLookup[H, I];
+          if StrEqualB(Key, FKeys[J], FCaseSensitive) then
+            begin
+              Result := J;
+              exit;
+            end;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+procedure TGeneralLongIntDictionaryB.Add(const Key: RawByteString; const Value: LongInt);
+var H, L, I : Integer;
+begin
+  if FDuplicatesAction in [ddIgnore, ddError] then
+    if LocateKey(Key, H, False) >= 0 then
+      if FDuplicatesAction = ddIgnore then
+        exit
+      else
+        RaiseDuplicateKeyError(Key);
+  L := FHashSize;
+  if L = 0 then
+    begin
+      Rehash;
+      L := FHashSize;
+      Assert(L > 0);
+    end;
+  H := Integer(HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1));
+  I := FKeys.AppendItem(Key);
+  DynArrayAppend(FLookup[H], I);
+  FValues.AppendItem(Value);
+  if (I + 1) div DictionaryAverageHashChainSize > L then
+    Rehash;
+end;
+
+procedure TGeneralLongIntDictionaryB.DeleteByIndex(const Idx: Integer; const Hash: Integer);
+var I, J, H : Integer;
+begin
+  if Hash = -1 then
+    H := HashStrB(FKeys[Idx], 1, -1, FCaseSensitive, 0) and (FHashSize - 1)
+  else
+    H := Hash;
+  FKeys.Delete(Idx);
+  FValues.Delete(Idx);
+  J := DynArrayPosNext(Idx, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+
+  for I := 0 to FHashSize - 1 do
+    for J := 0 to Length(FLookup[I]) - 1 do
+      if FLookup[I][J] > Idx then
+        Dec(FLookup[I][J]);
+end;
+
+procedure TGeneralLongIntDictionaryB.Delete(const Key: RawByteString);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  DeleteByIndex(I, H);
+end;
+
+function TGeneralLongIntDictionaryB.HasKey(const Key: RawByteString): Boolean;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False) >= 0;
+end;
+
+procedure TGeneralLongIntDictionaryB.Rename(const Key, NewKey: RawByteString);
+var I, J, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  FKeys[I] := NewKey;
+  J := DynArrayPosNext(I, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+  DynArrayAppend(FLookup[HashStrB(NewKey, 1, -1, FCaseSensitive, 0) and (FHashSize - 1)], I);
+end;
+
+function TGeneralLongIntDictionaryB.GetDuplicatesAction: TDictionaryDuplicatesAction;
+begin
+  Result := FDuplicatesAction;
+end;
+
+procedure TGeneralLongIntDictionaryB.SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  FDuplicatesAction := DuplicatesAction;
+end;
+
+function TGeneralLongIntDictionaryB.LocateItem(const Key: RawByteString; var Value: LongInt): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := FValues[Result]
+  else
+    Value := 0;
+end;
+
+function TGeneralLongIntDictionaryB.LocateNext(const Key: RawByteString; const Idx: Integer; var Value: LongInt): Integer;
+var L, H, I, J, K : Integer;
+begin
+  Result := -1;
+  L := FHashSize;
+  if L = 0 then
+    RaiseKeyNotFoundError(Key);
+  H := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+  for I := 0 to Length(FLookup[H]) - 1 do
+    begin
+      J := FLookup[H, I];
+      if J = Idx then
+        begin
+          if not StrEqualB(Key, FKeys[J], FCaseSensitive) then
+            RaiseKeyNotFoundError(Key);
+          for K := I + 1 to Length(FLookup[H]) - 1 do
+            begin
+              J := FLookup[H, K];
+              if StrEqualB(Key, FKeys[J], FCaseSensitive) then
+                begin
+                  Value := FValues[J];
+                  Result := J;
+                  exit;
+                end;
+            end;
+          Result := -1;
+          exit;
+        end;
+    end;
+  RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralLongIntDictionaryB.SetItem(const Key: RawByteString; const Value: LongInt);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    FValues[I] := Value else
+    if AddOnSet then
+      Add(Key, Value) else
+      RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralLongIntDictionaryB.RaiseIndexError;
+begin
+  raise EDictionary.Create('Index out of range');
+end;
+
+function TGeneralLongIntDictionaryB.Count: Integer;
+begin
+  Result := FKeys.Count;
+  Assert(FValues.Count = Result, 'Key/Value count mismatch');
+end;
+
+function TGeneralLongIntDictionaryB.GetKeyByIndex(const Idx: Integer): RawByteString;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FKeys.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FKeys[Idx];
+end;
+
+procedure TGeneralLongIntDictionaryB.DeleteItemByIndex(const Idx: Integer);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  DeleteByIndex(Idx, -1);
+end;
+
+function TGeneralLongIntDictionaryB.GetItemByIndex(const Idx: Integer): LongInt;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FValues[Idx];
+end;
+
+procedure TGeneralLongIntDictionaryB.SetItemByIndex(const Idx: Integer; const Value: LongInt);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  FValues[Idx] := Value;
+end;
+
+procedure TGeneralLongIntDictionaryB.Clear;
+begin
+  FKeys.Clear;
+  FValues.Clear;
+  FHashSize := 0;
+  FLookup := nil;
+end;
+
+
+
+{                                                                              }
+{ TLongIntDictionaryB                                                          }
+{                                                                              }
+function TLongIntDictionaryB.LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      LongWord(H) := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          Result := FLookup[H][I];
+          if StrEqualB(Key, TRawByteStringArray(FKeys).Data[Result],
+              FCaseSensitive) then
+            exit;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+function TLongIntDictionaryB.GetItem(const Key: RawByteString): LongInt;
+var H, I : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    Result := TLongIntArray(FValues).Data[I]
+  else
+    Result := 0;
+end;
+
+function TLongIntDictionaryB.LocateItem(const Key: RawByteString; var Value: LongInt): Integer;
 var H : Integer;
 begin
   Result := LocateKey(Key, H, False);
@@ -18742,6 +21730,358 @@ end;
 
 
 {                                                                              }
+{ TGeneralLongWordDictionaryB                                                  }
+{                                                                              }
+constructor TGeneralLongWordDictionaryB.Create;
+begin
+  inherited Create;
+  FCaseSensitive := True;
+  FDuplicatesAction := ddAccept;
+  FAddOnSet := True;
+  FKeys := TRawByteStringArray.Create;
+  FValues := TLongWordArray.Create;
+end;
+
+constructor TGeneralLongWordDictionaryB.CreateEx(
+    const Keys: ARawByteStringArray;
+    const Values: ALongWordArray; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+var L : Integer;
+begin
+  inherited Create;
+  if Assigned(Keys) then
+    begin
+      FKeys := Keys;
+      L := FKeys.Count;
+    end
+  else
+    begin
+      FKeys := TRawByteStringArray.Create;
+      L := 0;
+    end;
+  if Assigned(Values) then
+    FValues := Values
+  else
+    FValues := TLongWordArray.Create;
+  FCaseSensitive := KeysCaseSensitive;
+  FValues.Count := L;
+  FAddOnSet := AddOnSet;
+  FDuplicatesAction := DuplicatesAction;
+  if L > 0 then
+    Rehash;
+end;
+
+constructor TLongWordDictionaryB.CreateEx(
+    const Keys: TRawByteStringArray;
+    const Values: TLongWordArray; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  inherited CreateEx(Keys, Values, KeysCaseSensitive, AddOnSet,
+      DuplicatesAction);
+end;
+
+destructor TGeneralLongWordDictionaryB.Destroy;
+begin
+  FreeAndNil(FValues);
+  FreeAndNil(FKeys);
+  inherited Destroy;
+end;
+
+function TGeneralLongWordDictionaryB.GetKeysCaseSensitive: Boolean;
+begin
+  Result := FCaseSensitive;
+end;
+
+function TGeneralLongWordDictionaryB.GetAddOnSet: Boolean;
+begin
+  Result := FAddOnSet;
+end;
+
+procedure TGeneralLongWordDictionaryB.SetAddOnSet(const AddOnSet: Boolean);
+begin
+  FAddOnSet := AddOnSet;
+end;
+
+function TGeneralLongWordDictionaryB.GetHashTableSize: Integer;
+begin
+  Result := Length(FLookup);
+end;
+
+procedure TGeneralLongWordDictionaryB.Rehash;
+var I, C, L : Integer;
+begin
+  C := FKeys.Count;
+  L := DictionaryRehashSize(C);
+  FLookup := nil;
+  SetLength(FLookup, L);
+  FHashSize := L;
+  Assert(L > 0);
+  Dec(L);
+  for I := 0 to C - 1 do
+    DynArrayAppend(FLookup[HashStrB(FKeys[I], 1, -1, FCaseSensitive, 0) and L], I);
+end;
+
+function TGeneralLongWordDictionaryB.LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, J, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      H := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          J := FLookup[H, I];
+          if StrEqualB(Key, FKeys[J], FCaseSensitive) then
+            begin
+              Result := J;
+              exit;
+            end;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+procedure TGeneralLongWordDictionaryB.Add(const Key: RawByteString; const Value: LongWord);
+var H, L, I : Integer;
+begin
+  if FDuplicatesAction in [ddIgnore, ddError] then
+    if LocateKey(Key, H, False) >= 0 then
+      if FDuplicatesAction = ddIgnore then
+        exit
+      else
+        RaiseDuplicateKeyError(Key);
+  L := FHashSize;
+  if L = 0 then
+    begin
+      Rehash;
+      L := FHashSize;
+      Assert(L > 0);
+    end;
+  H := Integer(HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1));
+  I := FKeys.AppendItem(Key);
+  DynArrayAppend(FLookup[H], I);
+  FValues.AppendItem(Value);
+  if (I + 1) div DictionaryAverageHashChainSize > L then
+    Rehash;
+end;
+
+procedure TGeneralLongWordDictionaryB.DeleteByIndex(const Idx: Integer; const Hash: Integer);
+var I, J, H : Integer;
+begin
+  if Hash = -1 then
+    H := HashStrB(FKeys[Idx], 1, -1, FCaseSensitive, 0) and (FHashSize - 1)
+  else
+    H := Hash;
+  FKeys.Delete(Idx);
+  FValues.Delete(Idx);
+  J := DynArrayPosNext(Idx, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+
+  for I := 0 to FHashSize - 1 do
+    for J := 0 to Length(FLookup[I]) - 1 do
+      if FLookup[I][J] > Idx then
+        Dec(FLookup[I][J]);
+end;
+
+procedure TGeneralLongWordDictionaryB.Delete(const Key: RawByteString);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  DeleteByIndex(I, H);
+end;
+
+function TGeneralLongWordDictionaryB.HasKey(const Key: RawByteString): Boolean;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False) >= 0;
+end;
+
+procedure TGeneralLongWordDictionaryB.Rename(const Key, NewKey: RawByteString);
+var I, J, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  FKeys[I] := NewKey;
+  J := DynArrayPosNext(I, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+  DynArrayAppend(FLookup[HashStrB(NewKey, 1, -1, FCaseSensitive, 0) and (FHashSize - 1)], I);
+end;
+
+function TGeneralLongWordDictionaryB.GetDuplicatesAction: TDictionaryDuplicatesAction;
+begin
+  Result := FDuplicatesAction;
+end;
+
+procedure TGeneralLongWordDictionaryB.SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  FDuplicatesAction := DuplicatesAction;
+end;
+
+function TGeneralLongWordDictionaryB.LocateItem(const Key: RawByteString; var Value: LongWord): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := FValues[Result]
+  else
+    Value := 0;
+end;
+
+function TGeneralLongWordDictionaryB.LocateNext(const Key: RawByteString; const Idx: Integer; var Value: LongWord): Integer;
+var L, H, I, J, K : Integer;
+begin
+  Result := -1;
+  L := FHashSize;
+  if L = 0 then
+    RaiseKeyNotFoundError(Key);
+  H := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+  for I := 0 to Length(FLookup[H]) - 1 do
+    begin
+      J := FLookup[H, I];
+      if J = Idx then
+        begin
+          if not StrEqualB(Key, FKeys[J], FCaseSensitive) then
+            RaiseKeyNotFoundError(Key);
+          for K := I + 1 to Length(FLookup[H]) - 1 do
+            begin
+              J := FLookup[H, K];
+              if StrEqualB(Key, FKeys[J], FCaseSensitive) then
+                begin
+                  Value := FValues[J];
+                  Result := J;
+                  exit;
+                end;
+            end;
+          Result := -1;
+          exit;
+        end;
+    end;
+  RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralLongWordDictionaryB.SetItem(const Key: RawByteString; const Value: LongWord);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    FValues[I] := Value else
+    if AddOnSet then
+      Add(Key, Value) else
+      RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralLongWordDictionaryB.RaiseIndexError;
+begin
+  raise EDictionary.Create('Index out of range');
+end;
+
+function TGeneralLongWordDictionaryB.Count: Integer;
+begin
+  Result := FKeys.Count;
+  Assert(FValues.Count = Result, 'Key/Value count mismatch');
+end;
+
+function TGeneralLongWordDictionaryB.GetKeyByIndex(const Idx: Integer): RawByteString;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FKeys.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FKeys[Idx];
+end;
+
+procedure TGeneralLongWordDictionaryB.DeleteItemByIndex(const Idx: Integer);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  DeleteByIndex(Idx, -1);
+end;
+
+function TGeneralLongWordDictionaryB.GetItemByIndex(const Idx: Integer): LongWord;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FValues[Idx];
+end;
+
+procedure TGeneralLongWordDictionaryB.SetItemByIndex(const Idx: Integer; const Value: LongWord);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  FValues[Idx] := Value;
+end;
+
+procedure TGeneralLongWordDictionaryB.Clear;
+begin
+  FKeys.Clear;
+  FValues.Clear;
+  FHashSize := 0;
+  FLookup := nil;
+end;
+
+
+
+{                                                                              }
+{ TLongWordDictionaryB                                                         }
+{                                                                              }
+function TLongWordDictionaryB.LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      LongWord(H) := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          Result := FLookup[H][I];
+          if StrEqualB(Key, TRawByteStringArray(FKeys).Data[Result],
+              FCaseSensitive) then
+            exit;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+function TLongWordDictionaryB.GetItem(const Key: RawByteString): LongWord;
+var H, I : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    Result := TLongWordArray(FValues).Data[I]
+  else
+    Result := 0;
+end;
+
+function TLongWordDictionaryB.LocateItem(const Key: RawByteString; var Value: LongWord): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := TLongWordArray(FValues).Data[Result]
+  else
+    Value := 0;
+end;
+
+
+
+{                                                                              }
 { TGeneralLongWordDictionaryW                                                  }
 {                                                                              }
 constructor TGeneralLongWordDictionaryW.Create;
@@ -20138,6 +23478,358 @@ begin
 end;
 
 function TInt64DictionaryA.LocateItem(const Key: AnsiString; var Value: Int64): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := TInt64Array(FValues).Data[Result]
+  else
+    Value := 0;
+end;
+
+
+
+{                                                                              }
+{ TGeneralInt64DictionaryB                                                     }
+{                                                                              }
+constructor TGeneralInt64DictionaryB.Create;
+begin
+  inherited Create;
+  FCaseSensitive := True;
+  FDuplicatesAction := ddAccept;
+  FAddOnSet := True;
+  FKeys := TRawByteStringArray.Create;
+  FValues := TInt64Array.Create;
+end;
+
+constructor TGeneralInt64DictionaryB.CreateEx(
+    const Keys: ARawByteStringArray;
+    const Values: AInt64Array; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+var L : Integer;
+begin
+  inherited Create;
+  if Assigned(Keys) then
+    begin
+      FKeys := Keys;
+      L := FKeys.Count;
+    end
+  else
+    begin
+      FKeys := TRawByteStringArray.Create;
+      L := 0;
+    end;
+  if Assigned(Values) then
+    FValues := Values
+  else
+    FValues := TInt64Array.Create;
+  FCaseSensitive := KeysCaseSensitive;
+  FValues.Count := L;
+  FAddOnSet := AddOnSet;
+  FDuplicatesAction := DuplicatesAction;
+  if L > 0 then
+    Rehash;
+end;
+
+constructor TInt64DictionaryB.CreateEx(
+    const Keys: TRawByteStringArray;
+    const Values: TInt64Array; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  inherited CreateEx(Keys, Values, KeysCaseSensitive, AddOnSet,
+      DuplicatesAction);
+end;
+
+destructor TGeneralInt64DictionaryB.Destroy;
+begin
+  FreeAndNil(FValues);
+  FreeAndNil(FKeys);
+  inherited Destroy;
+end;
+
+function TGeneralInt64DictionaryB.GetKeysCaseSensitive: Boolean;
+begin
+  Result := FCaseSensitive;
+end;
+
+function TGeneralInt64DictionaryB.GetAddOnSet: Boolean;
+begin
+  Result := FAddOnSet;
+end;
+
+procedure TGeneralInt64DictionaryB.SetAddOnSet(const AddOnSet: Boolean);
+begin
+  FAddOnSet := AddOnSet;
+end;
+
+function TGeneralInt64DictionaryB.GetHashTableSize: Integer;
+begin
+  Result := Length(FLookup);
+end;
+
+procedure TGeneralInt64DictionaryB.Rehash;
+var I, C, L : Integer;
+begin
+  C := FKeys.Count;
+  L := DictionaryRehashSize(C);
+  FLookup := nil;
+  SetLength(FLookup, L);
+  FHashSize := L;
+  Assert(L > 0);
+  Dec(L);
+  for I := 0 to C - 1 do
+    DynArrayAppend(FLookup[HashStrB(FKeys[I], 1, -1, FCaseSensitive, 0) and L], I);
+end;
+
+function TGeneralInt64DictionaryB.LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, J, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      H := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          J := FLookup[H, I];
+          if StrEqualB(Key, FKeys[J], FCaseSensitive) then
+            begin
+              Result := J;
+              exit;
+            end;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+procedure TGeneralInt64DictionaryB.Add(const Key: RawByteString; const Value: Int64);
+var H, L, I : Integer;
+begin
+  if FDuplicatesAction in [ddIgnore, ddError] then
+    if LocateKey(Key, H, False) >= 0 then
+      if FDuplicatesAction = ddIgnore then
+        exit
+      else
+        RaiseDuplicateKeyError(Key);
+  L := FHashSize;
+  if L = 0 then
+    begin
+      Rehash;
+      L := FHashSize;
+      Assert(L > 0);
+    end;
+  H := Integer(HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1));
+  I := FKeys.AppendItem(Key);
+  DynArrayAppend(FLookup[H], I);
+  FValues.AppendItem(Value);
+  if (I + 1) div DictionaryAverageHashChainSize > L then
+    Rehash;
+end;
+
+procedure TGeneralInt64DictionaryB.DeleteByIndex(const Idx: Integer; const Hash: Integer);
+var I, J, H : Integer;
+begin
+  if Hash = -1 then
+    H := HashStrB(FKeys[Idx], 1, -1, FCaseSensitive, 0) and (FHashSize - 1)
+  else
+    H := Hash;
+  FKeys.Delete(Idx);
+  FValues.Delete(Idx);
+  J := DynArrayPosNext(Idx, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+
+  for I := 0 to FHashSize - 1 do
+    for J := 0 to Length(FLookup[I]) - 1 do
+      if FLookup[I][J] > Idx then
+        Dec(FLookup[I][J]);
+end;
+
+procedure TGeneralInt64DictionaryB.Delete(const Key: RawByteString);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  DeleteByIndex(I, H);
+end;
+
+function TGeneralInt64DictionaryB.HasKey(const Key: RawByteString): Boolean;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False) >= 0;
+end;
+
+procedure TGeneralInt64DictionaryB.Rename(const Key, NewKey: RawByteString);
+var I, J, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  FKeys[I] := NewKey;
+  J := DynArrayPosNext(I, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+  DynArrayAppend(FLookup[HashStrB(NewKey, 1, -1, FCaseSensitive, 0) and (FHashSize - 1)], I);
+end;
+
+function TGeneralInt64DictionaryB.GetDuplicatesAction: TDictionaryDuplicatesAction;
+begin
+  Result := FDuplicatesAction;
+end;
+
+procedure TGeneralInt64DictionaryB.SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  FDuplicatesAction := DuplicatesAction;
+end;
+
+function TGeneralInt64DictionaryB.LocateItem(const Key: RawByteString; var Value: Int64): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := FValues[Result]
+  else
+    Value := 0;
+end;
+
+function TGeneralInt64DictionaryB.LocateNext(const Key: RawByteString; const Idx: Integer; var Value: Int64): Integer;
+var L, H, I, J, K : Integer;
+begin
+  Result := -1;
+  L := FHashSize;
+  if L = 0 then
+    RaiseKeyNotFoundError(Key);
+  H := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+  for I := 0 to Length(FLookup[H]) - 1 do
+    begin
+      J := FLookup[H, I];
+      if J = Idx then
+        begin
+          if not StrEqualB(Key, FKeys[J], FCaseSensitive) then
+            RaiseKeyNotFoundError(Key);
+          for K := I + 1 to Length(FLookup[H]) - 1 do
+            begin
+              J := FLookup[H, K];
+              if StrEqualB(Key, FKeys[J], FCaseSensitive) then
+                begin
+                  Value := FValues[J];
+                  Result := J;
+                  exit;
+                end;
+            end;
+          Result := -1;
+          exit;
+        end;
+    end;
+  RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralInt64DictionaryB.SetItem(const Key: RawByteString; const Value: Int64);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    FValues[I] := Value else
+    if AddOnSet then
+      Add(Key, Value) else
+      RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralInt64DictionaryB.RaiseIndexError;
+begin
+  raise EDictionary.Create('Index out of range');
+end;
+
+function TGeneralInt64DictionaryB.Count: Integer;
+begin
+  Result := FKeys.Count;
+  Assert(FValues.Count = Result, 'Key/Value count mismatch');
+end;
+
+function TGeneralInt64DictionaryB.GetKeyByIndex(const Idx: Integer): RawByteString;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FKeys.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FKeys[Idx];
+end;
+
+procedure TGeneralInt64DictionaryB.DeleteItemByIndex(const Idx: Integer);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  DeleteByIndex(Idx, -1);
+end;
+
+function TGeneralInt64DictionaryB.GetItemByIndex(const Idx: Integer): Int64;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FValues[Idx];
+end;
+
+procedure TGeneralInt64DictionaryB.SetItemByIndex(const Idx: Integer; const Value: Int64);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  FValues[Idx] := Value;
+end;
+
+procedure TGeneralInt64DictionaryB.Clear;
+begin
+  FKeys.Clear;
+  FValues.Clear;
+  FHashSize := 0;
+  FLookup := nil;
+end;
+
+
+
+{                                                                              }
+{ TInt64DictionaryB                                                            }
+{                                                                              }
+function TInt64DictionaryB.LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      LongWord(H) := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          Result := FLookup[H][I];
+          if StrEqualB(Key, TRawByteStringArray(FKeys).Data[Result],
+              FCaseSensitive) then
+            exit;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+function TInt64DictionaryB.GetItem(const Key: RawByteString): Int64;
+var H, I : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    Result := TInt64Array(FValues).Data[I]
+  else
+    Result := 0;
+end;
+
+function TInt64DictionaryB.LocateItem(const Key: RawByteString; var Value: Int64): Integer;
 var H : Integer;
 begin
   Result := LocateKey(Key, H, False);
@@ -21558,6 +25250,358 @@ end;
 
 
 {                                                                              }
+{ TGeneralSingleDictionaryB                                                    }
+{                                                                              }
+constructor TGeneralSingleDictionaryB.Create;
+begin
+  inherited Create;
+  FCaseSensitive := True;
+  FDuplicatesAction := ddAccept;
+  FAddOnSet := True;
+  FKeys := TRawByteStringArray.Create;
+  FValues := TSingleArray.Create;
+end;
+
+constructor TGeneralSingleDictionaryB.CreateEx(
+    const Keys: ARawByteStringArray;
+    const Values: ASingleArray; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+var L : Integer;
+begin
+  inherited Create;
+  if Assigned(Keys) then
+    begin
+      FKeys := Keys;
+      L := FKeys.Count;
+    end
+  else
+    begin
+      FKeys := TRawByteStringArray.Create;
+      L := 0;
+    end;
+  if Assigned(Values) then
+    FValues := Values
+  else
+    FValues := TSingleArray.Create;
+  FCaseSensitive := KeysCaseSensitive;
+  FValues.Count := L;
+  FAddOnSet := AddOnSet;
+  FDuplicatesAction := DuplicatesAction;
+  if L > 0 then
+    Rehash;
+end;
+
+constructor TSingleDictionaryB.CreateEx(
+    const Keys: TRawByteStringArray;
+    const Values: TSingleArray; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  inherited CreateEx(Keys, Values, KeysCaseSensitive, AddOnSet,
+      DuplicatesAction);
+end;
+
+destructor TGeneralSingleDictionaryB.Destroy;
+begin
+  FreeAndNil(FValues);
+  FreeAndNil(FKeys);
+  inherited Destroy;
+end;
+
+function TGeneralSingleDictionaryB.GetKeysCaseSensitive: Boolean;
+begin
+  Result := FCaseSensitive;
+end;
+
+function TGeneralSingleDictionaryB.GetAddOnSet: Boolean;
+begin
+  Result := FAddOnSet;
+end;
+
+procedure TGeneralSingleDictionaryB.SetAddOnSet(const AddOnSet: Boolean);
+begin
+  FAddOnSet := AddOnSet;
+end;
+
+function TGeneralSingleDictionaryB.GetHashTableSize: Integer;
+begin
+  Result := Length(FLookup);
+end;
+
+procedure TGeneralSingleDictionaryB.Rehash;
+var I, C, L : Integer;
+begin
+  C := FKeys.Count;
+  L := DictionaryRehashSize(C);
+  FLookup := nil;
+  SetLength(FLookup, L);
+  FHashSize := L;
+  Assert(L > 0);
+  Dec(L);
+  for I := 0 to C - 1 do
+    DynArrayAppend(FLookup[HashStrB(FKeys[I], 1, -1, FCaseSensitive, 0) and L], I);
+end;
+
+function TGeneralSingleDictionaryB.LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, J, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      H := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          J := FLookup[H, I];
+          if StrEqualB(Key, FKeys[J], FCaseSensitive) then
+            begin
+              Result := J;
+              exit;
+            end;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+procedure TGeneralSingleDictionaryB.Add(const Key: RawByteString; const Value: Single);
+var H, L, I : Integer;
+begin
+  if FDuplicatesAction in [ddIgnore, ddError] then
+    if LocateKey(Key, H, False) >= 0 then
+      if FDuplicatesAction = ddIgnore then
+        exit
+      else
+        RaiseDuplicateKeyError(Key);
+  L := FHashSize;
+  if L = 0 then
+    begin
+      Rehash;
+      L := FHashSize;
+      Assert(L > 0);
+    end;
+  H := Integer(HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1));
+  I := FKeys.AppendItem(Key);
+  DynArrayAppend(FLookup[H], I);
+  FValues.AppendItem(Value);
+  if (I + 1) div DictionaryAverageHashChainSize > L then
+    Rehash;
+end;
+
+procedure TGeneralSingleDictionaryB.DeleteByIndex(const Idx: Integer; const Hash: Integer);
+var I, J, H : Integer;
+begin
+  if Hash = -1 then
+    H := HashStrB(FKeys[Idx], 1, -1, FCaseSensitive, 0) and (FHashSize - 1)
+  else
+    H := Hash;
+  FKeys.Delete(Idx);
+  FValues.Delete(Idx);
+  J := DynArrayPosNext(Idx, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+
+  for I := 0 to FHashSize - 1 do
+    for J := 0 to Length(FLookup[I]) - 1 do
+      if FLookup[I][J] > Idx then
+        Dec(FLookup[I][J]);
+end;
+
+procedure TGeneralSingleDictionaryB.Delete(const Key: RawByteString);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  DeleteByIndex(I, H);
+end;
+
+function TGeneralSingleDictionaryB.HasKey(const Key: RawByteString): Boolean;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False) >= 0;
+end;
+
+procedure TGeneralSingleDictionaryB.Rename(const Key, NewKey: RawByteString);
+var I, J, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  FKeys[I] := NewKey;
+  J := DynArrayPosNext(I, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+  DynArrayAppend(FLookup[HashStrB(NewKey, 1, -1, FCaseSensitive, 0) and (FHashSize - 1)], I);
+end;
+
+function TGeneralSingleDictionaryB.GetDuplicatesAction: TDictionaryDuplicatesAction;
+begin
+  Result := FDuplicatesAction;
+end;
+
+procedure TGeneralSingleDictionaryB.SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  FDuplicatesAction := DuplicatesAction;
+end;
+
+function TGeneralSingleDictionaryB.LocateItem(const Key: RawByteString; var Value: Single): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := FValues[Result]
+  else
+    Value := 0.0;
+end;
+
+function TGeneralSingleDictionaryB.LocateNext(const Key: RawByteString; const Idx: Integer; var Value: Single): Integer;
+var L, H, I, J, K : Integer;
+begin
+  Result := -1;
+  L := FHashSize;
+  if L = 0 then
+    RaiseKeyNotFoundError(Key);
+  H := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+  for I := 0 to Length(FLookup[H]) - 1 do
+    begin
+      J := FLookup[H, I];
+      if J = Idx then
+        begin
+          if not StrEqualB(Key, FKeys[J], FCaseSensitive) then
+            RaiseKeyNotFoundError(Key);
+          for K := I + 1 to Length(FLookup[H]) - 1 do
+            begin
+              J := FLookup[H, K];
+              if StrEqualB(Key, FKeys[J], FCaseSensitive) then
+                begin
+                  Value := FValues[J];
+                  Result := J;
+                  exit;
+                end;
+            end;
+          Result := -1;
+          exit;
+        end;
+    end;
+  RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralSingleDictionaryB.SetItem(const Key: RawByteString; const Value: Single);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    FValues[I] := Value else
+    if AddOnSet then
+      Add(Key, Value) else
+      RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralSingleDictionaryB.RaiseIndexError;
+begin
+  raise EDictionary.Create('Index out of range');
+end;
+
+function TGeneralSingleDictionaryB.Count: Integer;
+begin
+  Result := FKeys.Count;
+  Assert(FValues.Count = Result, 'Key/Value count mismatch');
+end;
+
+function TGeneralSingleDictionaryB.GetKeyByIndex(const Idx: Integer): RawByteString;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FKeys.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FKeys[Idx];
+end;
+
+procedure TGeneralSingleDictionaryB.DeleteItemByIndex(const Idx: Integer);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  DeleteByIndex(Idx, -1);
+end;
+
+function TGeneralSingleDictionaryB.GetItemByIndex(const Idx: Integer): Single;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FValues[Idx];
+end;
+
+procedure TGeneralSingleDictionaryB.SetItemByIndex(const Idx: Integer; const Value: Single);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  FValues[Idx] := Value;
+end;
+
+procedure TGeneralSingleDictionaryB.Clear;
+begin
+  FKeys.Clear;
+  FValues.Clear;
+  FHashSize := 0;
+  FLookup := nil;
+end;
+
+
+
+{                                                                              }
+{ TSingleDictionaryB                                                           }
+{                                                                              }
+function TSingleDictionaryB.LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      LongWord(H) := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          Result := FLookup[H][I];
+          if StrEqualB(Key, TRawByteStringArray(FKeys).Data[Result],
+              FCaseSensitive) then
+            exit;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+function TSingleDictionaryB.GetItem(const Key: RawByteString): Single;
+var H, I : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    Result := TSingleArray(FValues).Data[I]
+  else
+    Result := 0.0;
+end;
+
+function TSingleDictionaryB.LocateItem(const Key: RawByteString; var Value: Single): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := TSingleArray(FValues).Data[Result]
+  else
+    Value := 0.0;
+end;
+
+
+
+{                                                                              }
 { TGeneralSingleDictionaryW                                                    }
 {                                                                              }
 constructor TGeneralSingleDictionaryW.Create;
@@ -22966,6 +27010,358 @@ end;
 
 
 {                                                                              }
+{ TGeneralDoubleDictionaryB                                                    }
+{                                                                              }
+constructor TGeneralDoubleDictionaryB.Create;
+begin
+  inherited Create;
+  FCaseSensitive := True;
+  FDuplicatesAction := ddAccept;
+  FAddOnSet := True;
+  FKeys := TRawByteStringArray.Create;
+  FValues := TDoubleArray.Create;
+end;
+
+constructor TGeneralDoubleDictionaryB.CreateEx(
+    const Keys: ARawByteStringArray;
+    const Values: ADoubleArray; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+var L : Integer;
+begin
+  inherited Create;
+  if Assigned(Keys) then
+    begin
+      FKeys := Keys;
+      L := FKeys.Count;
+    end
+  else
+    begin
+      FKeys := TRawByteStringArray.Create;
+      L := 0;
+    end;
+  if Assigned(Values) then
+    FValues := Values
+  else
+    FValues := TDoubleArray.Create;
+  FCaseSensitive := KeysCaseSensitive;
+  FValues.Count := L;
+  FAddOnSet := AddOnSet;
+  FDuplicatesAction := DuplicatesAction;
+  if L > 0 then
+    Rehash;
+end;
+
+constructor TDoubleDictionaryB.CreateEx(
+    const Keys: TRawByteStringArray;
+    const Values: TDoubleArray; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  inherited CreateEx(Keys, Values, KeysCaseSensitive, AddOnSet,
+      DuplicatesAction);
+end;
+
+destructor TGeneralDoubleDictionaryB.Destroy;
+begin
+  FreeAndNil(FValues);
+  FreeAndNil(FKeys);
+  inherited Destroy;
+end;
+
+function TGeneralDoubleDictionaryB.GetKeysCaseSensitive: Boolean;
+begin
+  Result := FCaseSensitive;
+end;
+
+function TGeneralDoubleDictionaryB.GetAddOnSet: Boolean;
+begin
+  Result := FAddOnSet;
+end;
+
+procedure TGeneralDoubleDictionaryB.SetAddOnSet(const AddOnSet: Boolean);
+begin
+  FAddOnSet := AddOnSet;
+end;
+
+function TGeneralDoubleDictionaryB.GetHashTableSize: Integer;
+begin
+  Result := Length(FLookup);
+end;
+
+procedure TGeneralDoubleDictionaryB.Rehash;
+var I, C, L : Integer;
+begin
+  C := FKeys.Count;
+  L := DictionaryRehashSize(C);
+  FLookup := nil;
+  SetLength(FLookup, L);
+  FHashSize := L;
+  Assert(L > 0);
+  Dec(L);
+  for I := 0 to C - 1 do
+    DynArrayAppend(FLookup[HashStrB(FKeys[I], 1, -1, FCaseSensitive, 0) and L], I);
+end;
+
+function TGeneralDoubleDictionaryB.LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, J, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      H := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          J := FLookup[H, I];
+          if StrEqualB(Key, FKeys[J], FCaseSensitive) then
+            begin
+              Result := J;
+              exit;
+            end;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+procedure TGeneralDoubleDictionaryB.Add(const Key: RawByteString; const Value: Double);
+var H, L, I : Integer;
+begin
+  if FDuplicatesAction in [ddIgnore, ddError] then
+    if LocateKey(Key, H, False) >= 0 then
+      if FDuplicatesAction = ddIgnore then
+        exit
+      else
+        RaiseDuplicateKeyError(Key);
+  L := FHashSize;
+  if L = 0 then
+    begin
+      Rehash;
+      L := FHashSize;
+      Assert(L > 0);
+    end;
+  H := Integer(HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1));
+  I := FKeys.AppendItem(Key);
+  DynArrayAppend(FLookup[H], I);
+  FValues.AppendItem(Value);
+  if (I + 1) div DictionaryAverageHashChainSize > L then
+    Rehash;
+end;
+
+procedure TGeneralDoubleDictionaryB.DeleteByIndex(const Idx: Integer; const Hash: Integer);
+var I, J, H : Integer;
+begin
+  if Hash = -1 then
+    H := HashStrB(FKeys[Idx], 1, -1, FCaseSensitive, 0) and (FHashSize - 1)
+  else
+    H := Hash;
+  FKeys.Delete(Idx);
+  FValues.Delete(Idx);
+  J := DynArrayPosNext(Idx, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+
+  for I := 0 to FHashSize - 1 do
+    for J := 0 to Length(FLookup[I]) - 1 do
+      if FLookup[I][J] > Idx then
+        Dec(FLookup[I][J]);
+end;
+
+procedure TGeneralDoubleDictionaryB.Delete(const Key: RawByteString);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  DeleteByIndex(I, H);
+end;
+
+function TGeneralDoubleDictionaryB.HasKey(const Key: RawByteString): Boolean;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False) >= 0;
+end;
+
+procedure TGeneralDoubleDictionaryB.Rename(const Key, NewKey: RawByteString);
+var I, J, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  FKeys[I] := NewKey;
+  J := DynArrayPosNext(I, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+  DynArrayAppend(FLookup[HashStrB(NewKey, 1, -1, FCaseSensitive, 0) and (FHashSize - 1)], I);
+end;
+
+function TGeneralDoubleDictionaryB.GetDuplicatesAction: TDictionaryDuplicatesAction;
+begin
+  Result := FDuplicatesAction;
+end;
+
+procedure TGeneralDoubleDictionaryB.SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  FDuplicatesAction := DuplicatesAction;
+end;
+
+function TGeneralDoubleDictionaryB.LocateItem(const Key: RawByteString; var Value: Double): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := FValues[Result]
+  else
+    Value := 0.0;
+end;
+
+function TGeneralDoubleDictionaryB.LocateNext(const Key: RawByteString; const Idx: Integer; var Value: Double): Integer;
+var L, H, I, J, K : Integer;
+begin
+  Result := -1;
+  L := FHashSize;
+  if L = 0 then
+    RaiseKeyNotFoundError(Key);
+  H := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+  for I := 0 to Length(FLookup[H]) - 1 do
+    begin
+      J := FLookup[H, I];
+      if J = Idx then
+        begin
+          if not StrEqualB(Key, FKeys[J], FCaseSensitive) then
+            RaiseKeyNotFoundError(Key);
+          for K := I + 1 to Length(FLookup[H]) - 1 do
+            begin
+              J := FLookup[H, K];
+              if StrEqualB(Key, FKeys[J], FCaseSensitive) then
+                begin
+                  Value := FValues[J];
+                  Result := J;
+                  exit;
+                end;
+            end;
+          Result := -1;
+          exit;
+        end;
+    end;
+  RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralDoubleDictionaryB.SetItem(const Key: RawByteString; const Value: Double);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    FValues[I] := Value else
+    if AddOnSet then
+      Add(Key, Value) else
+      RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralDoubleDictionaryB.RaiseIndexError;
+begin
+  raise EDictionary.Create('Index out of range');
+end;
+
+function TGeneralDoubleDictionaryB.Count: Integer;
+begin
+  Result := FKeys.Count;
+  Assert(FValues.Count = Result, 'Key/Value count mismatch');
+end;
+
+function TGeneralDoubleDictionaryB.GetKeyByIndex(const Idx: Integer): RawByteString;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FKeys.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FKeys[Idx];
+end;
+
+procedure TGeneralDoubleDictionaryB.DeleteItemByIndex(const Idx: Integer);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  DeleteByIndex(Idx, -1);
+end;
+
+function TGeneralDoubleDictionaryB.GetItemByIndex(const Idx: Integer): Double;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FValues[Idx];
+end;
+
+procedure TGeneralDoubleDictionaryB.SetItemByIndex(const Idx: Integer; const Value: Double);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  FValues[Idx] := Value;
+end;
+
+procedure TGeneralDoubleDictionaryB.Clear;
+begin
+  FKeys.Clear;
+  FValues.Clear;
+  FHashSize := 0;
+  FLookup := nil;
+end;
+
+
+
+{                                                                              }
+{ TDoubleDictionaryB                                                           }
+{                                                                              }
+function TDoubleDictionaryB.LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      LongWord(H) := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          Result := FLookup[H][I];
+          if StrEqualB(Key, TRawByteStringArray(FKeys).Data[Result],
+              FCaseSensitive) then
+            exit;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+function TDoubleDictionaryB.GetItem(const Key: RawByteString): Double;
+var H, I : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    Result := TDoubleArray(FValues).Data[I]
+  else
+    Result := 0.0;
+end;
+
+function TDoubleDictionaryB.LocateItem(const Key: RawByteString; var Value: Double): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := TDoubleArray(FValues).Data[Result]
+  else
+    Value := 0.0;
+end;
+
+
+
+{                                                                              }
 { TGeneralDoubleDictionaryW                                                    }
 {                                                                              }
 constructor TGeneralDoubleDictionaryW.Create;
@@ -24362,6 +28758,358 @@ begin
 end;
 
 function TExtendedDictionaryA.LocateItem(const Key: AnsiString; var Value: Extended): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := TExtendedArray(FValues).Data[Result]
+  else
+    Value := 0.0;
+end;
+
+
+
+{                                                                              }
+{ TGeneralExtendedDictionaryB                                                  }
+{                                                                              }
+constructor TGeneralExtendedDictionaryB.Create;
+begin
+  inherited Create;
+  FCaseSensitive := True;
+  FDuplicatesAction := ddAccept;
+  FAddOnSet := True;
+  FKeys := TRawByteStringArray.Create;
+  FValues := TExtendedArray.Create;
+end;
+
+constructor TGeneralExtendedDictionaryB.CreateEx(
+    const Keys: ARawByteStringArray;
+    const Values: AExtendedArray; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+var L : Integer;
+begin
+  inherited Create;
+  if Assigned(Keys) then
+    begin
+      FKeys := Keys;
+      L := FKeys.Count;
+    end
+  else
+    begin
+      FKeys := TRawByteStringArray.Create;
+      L := 0;
+    end;
+  if Assigned(Values) then
+    FValues := Values
+  else
+    FValues := TExtendedArray.Create;
+  FCaseSensitive := KeysCaseSensitive;
+  FValues.Count := L;
+  FAddOnSet := AddOnSet;
+  FDuplicatesAction := DuplicatesAction;
+  if L > 0 then
+    Rehash;
+end;
+
+constructor TExtendedDictionaryB.CreateEx(
+    const Keys: TRawByteStringArray;
+    const Values: TExtendedArray; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  inherited CreateEx(Keys, Values, KeysCaseSensitive, AddOnSet,
+      DuplicatesAction);
+end;
+
+destructor TGeneralExtendedDictionaryB.Destroy;
+begin
+  FreeAndNil(FValues);
+  FreeAndNil(FKeys);
+  inherited Destroy;
+end;
+
+function TGeneralExtendedDictionaryB.GetKeysCaseSensitive: Boolean;
+begin
+  Result := FCaseSensitive;
+end;
+
+function TGeneralExtendedDictionaryB.GetAddOnSet: Boolean;
+begin
+  Result := FAddOnSet;
+end;
+
+procedure TGeneralExtendedDictionaryB.SetAddOnSet(const AddOnSet: Boolean);
+begin
+  FAddOnSet := AddOnSet;
+end;
+
+function TGeneralExtendedDictionaryB.GetHashTableSize: Integer;
+begin
+  Result := Length(FLookup);
+end;
+
+procedure TGeneralExtendedDictionaryB.Rehash;
+var I, C, L : Integer;
+begin
+  C := FKeys.Count;
+  L := DictionaryRehashSize(C);
+  FLookup := nil;
+  SetLength(FLookup, L);
+  FHashSize := L;
+  Assert(L > 0);
+  Dec(L);
+  for I := 0 to C - 1 do
+    DynArrayAppend(FLookup[HashStrB(FKeys[I], 1, -1, FCaseSensitive, 0) and L], I);
+end;
+
+function TGeneralExtendedDictionaryB.LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, J, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      H := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          J := FLookup[H, I];
+          if StrEqualB(Key, FKeys[J], FCaseSensitive) then
+            begin
+              Result := J;
+              exit;
+            end;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+procedure TGeneralExtendedDictionaryB.Add(const Key: RawByteString; const Value: Extended);
+var H, L, I : Integer;
+begin
+  if FDuplicatesAction in [ddIgnore, ddError] then
+    if LocateKey(Key, H, False) >= 0 then
+      if FDuplicatesAction = ddIgnore then
+        exit
+      else
+        RaiseDuplicateKeyError(Key);
+  L := FHashSize;
+  if L = 0 then
+    begin
+      Rehash;
+      L := FHashSize;
+      Assert(L > 0);
+    end;
+  H := Integer(HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1));
+  I := FKeys.AppendItem(Key);
+  DynArrayAppend(FLookup[H], I);
+  FValues.AppendItem(Value);
+  if (I + 1) div DictionaryAverageHashChainSize > L then
+    Rehash;
+end;
+
+procedure TGeneralExtendedDictionaryB.DeleteByIndex(const Idx: Integer; const Hash: Integer);
+var I, J, H : Integer;
+begin
+  if Hash = -1 then
+    H := HashStrB(FKeys[Idx], 1, -1, FCaseSensitive, 0) and (FHashSize - 1)
+  else
+    H := Hash;
+  FKeys.Delete(Idx);
+  FValues.Delete(Idx);
+  J := DynArrayPosNext(Idx, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+
+  for I := 0 to FHashSize - 1 do
+    for J := 0 to Length(FLookup[I]) - 1 do
+      if FLookup[I][J] > Idx then
+        Dec(FLookup[I][J]);
+end;
+
+procedure TGeneralExtendedDictionaryB.Delete(const Key: RawByteString);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  DeleteByIndex(I, H);
+end;
+
+function TGeneralExtendedDictionaryB.HasKey(const Key: RawByteString): Boolean;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False) >= 0;
+end;
+
+procedure TGeneralExtendedDictionaryB.Rename(const Key, NewKey: RawByteString);
+var I, J, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  FKeys[I] := NewKey;
+  J := DynArrayPosNext(I, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+  DynArrayAppend(FLookup[HashStrB(NewKey, 1, -1, FCaseSensitive, 0) and (FHashSize - 1)], I);
+end;
+
+function TGeneralExtendedDictionaryB.GetDuplicatesAction: TDictionaryDuplicatesAction;
+begin
+  Result := FDuplicatesAction;
+end;
+
+procedure TGeneralExtendedDictionaryB.SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  FDuplicatesAction := DuplicatesAction;
+end;
+
+function TGeneralExtendedDictionaryB.LocateItem(const Key: RawByteString; var Value: Extended): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := FValues[Result]
+  else
+    Value := 0.0;
+end;
+
+function TGeneralExtendedDictionaryB.LocateNext(const Key: RawByteString; const Idx: Integer; var Value: Extended): Integer;
+var L, H, I, J, K : Integer;
+begin
+  Result := -1;
+  L := FHashSize;
+  if L = 0 then
+    RaiseKeyNotFoundError(Key);
+  H := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+  for I := 0 to Length(FLookup[H]) - 1 do
+    begin
+      J := FLookup[H, I];
+      if J = Idx then
+        begin
+          if not StrEqualB(Key, FKeys[J], FCaseSensitive) then
+            RaiseKeyNotFoundError(Key);
+          for K := I + 1 to Length(FLookup[H]) - 1 do
+            begin
+              J := FLookup[H, K];
+              if StrEqualB(Key, FKeys[J], FCaseSensitive) then
+                begin
+                  Value := FValues[J];
+                  Result := J;
+                  exit;
+                end;
+            end;
+          Result := -1;
+          exit;
+        end;
+    end;
+  RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralExtendedDictionaryB.SetItem(const Key: RawByteString; const Value: Extended);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    FValues[I] := Value else
+    if AddOnSet then
+      Add(Key, Value) else
+      RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralExtendedDictionaryB.RaiseIndexError;
+begin
+  raise EDictionary.Create('Index out of range');
+end;
+
+function TGeneralExtendedDictionaryB.Count: Integer;
+begin
+  Result := FKeys.Count;
+  Assert(FValues.Count = Result, 'Key/Value count mismatch');
+end;
+
+function TGeneralExtendedDictionaryB.GetKeyByIndex(const Idx: Integer): RawByteString;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FKeys.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FKeys[Idx];
+end;
+
+procedure TGeneralExtendedDictionaryB.DeleteItemByIndex(const Idx: Integer);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  DeleteByIndex(Idx, -1);
+end;
+
+function TGeneralExtendedDictionaryB.GetItemByIndex(const Idx: Integer): Extended;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FValues[Idx];
+end;
+
+procedure TGeneralExtendedDictionaryB.SetItemByIndex(const Idx: Integer; const Value: Extended);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  FValues[Idx] := Value;
+end;
+
+procedure TGeneralExtendedDictionaryB.Clear;
+begin
+  FKeys.Clear;
+  FValues.Clear;
+  FHashSize := 0;
+  FLookup := nil;
+end;
+
+
+
+{                                                                              }
+{ TExtendedDictionaryB                                                         }
+{                                                                              }
+function TExtendedDictionaryB.LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      LongWord(H) := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          Result := FLookup[H][I];
+          if StrEqualB(Key, TRawByteStringArray(FKeys).Data[Result],
+              FCaseSensitive) then
+            exit;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+function TExtendedDictionaryB.GetItem(const Key: RawByteString): Extended;
+var H, I : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    Result := TExtendedArray(FValues).Data[I]
+  else
+    Result := 0.0;
+end;
+
+function TExtendedDictionaryB.LocateItem(const Key: RawByteString; var Value: Extended): Integer;
 var H : Integer;
 begin
   Result := LocateKey(Key, H, False);
@@ -26831,6 +31579,1766 @@ begin
   Result := LocateKey(Key, H, False);
   if Result >= 0 then
     Value := TAnsiStringArray(FValues).Data[Result]
+  else
+    Value := '';
+end;
+
+
+
+{                                                                              }
+{ TGeneralRawByteStringDictionaryA                                             }
+{                                                                              }
+constructor TGeneralRawByteStringDictionaryA.Create;
+begin
+  inherited Create;
+  FCaseSensitive := True;
+  FDuplicatesAction := ddAccept;
+  FAddOnSet := True;
+  FKeys := TAnsiStringArray.Create;
+  FValues := TRawByteStringArray.Create;
+end;
+
+constructor TGeneralRawByteStringDictionaryA.CreateEx(
+    const Keys: AAnsiStringArray;
+    const Values: ARawByteStringArray; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+var L : Integer;
+begin
+  inherited Create;
+  if Assigned(Keys) then
+    begin
+      FKeys := Keys;
+      L := FKeys.Count;
+    end
+  else
+    begin
+      FKeys := TAnsiStringArray.Create;
+      L := 0;
+    end;
+  if Assigned(Values) then
+    FValues := Values
+  else
+    FValues := TRawByteStringArray.Create;
+  FCaseSensitive := KeysCaseSensitive;
+  FValues.Count := L;
+  FAddOnSet := AddOnSet;
+  FDuplicatesAction := DuplicatesAction;
+  if L > 0 then
+    Rehash;
+end;
+
+constructor TRawByteStringDictionaryA.CreateEx(
+    const Keys: TAnsiStringArray;
+    const Values: TRawByteStringArray; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  inherited CreateEx(Keys, Values, KeysCaseSensitive, AddOnSet,
+      DuplicatesAction);
+end;
+
+destructor TGeneralRawByteStringDictionaryA.Destroy;
+begin
+  FreeAndNil(FValues);
+  FreeAndNil(FKeys);
+  inherited Destroy;
+end;
+
+function TGeneralRawByteStringDictionaryA.GetKeysCaseSensitive: Boolean;
+begin
+  Result := FCaseSensitive;
+end;
+
+function TGeneralRawByteStringDictionaryA.GetAddOnSet: Boolean;
+begin
+  Result := FAddOnSet;
+end;
+
+procedure TGeneralRawByteStringDictionaryA.SetAddOnSet(const AddOnSet: Boolean);
+begin
+  FAddOnSet := AddOnSet;
+end;
+
+function TGeneralRawByteStringDictionaryA.GetHashTableSize: Integer;
+begin
+  Result := Length(FLookup);
+end;
+
+procedure TGeneralRawByteStringDictionaryA.Rehash;
+var I, C, L : Integer;
+begin
+  C := FKeys.Count;
+  L := DictionaryRehashSize(C);
+  FLookup := nil;
+  SetLength(FLookup, L);
+  FHashSize := L;
+  Assert(L > 0);
+  Dec(L);
+  for I := 0 to C - 1 do
+    DynArrayAppend(FLookup[HashStrA(FKeys[I], 1, -1, FCaseSensitive, 0) and L], I);
+end;
+
+function TGeneralRawByteStringDictionaryA.LocateKey(const Key: AnsiString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, J, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      H := HashStrA(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          J := FLookup[H, I];
+          if StrEqualA(Key, FKeys[J], FCaseSensitive) then
+            begin
+              Result := J;
+              exit;
+            end;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+procedure TGeneralRawByteStringDictionaryA.Add(const Key: AnsiString; const Value: RawByteString);
+var H, L, I : Integer;
+begin
+  if FDuplicatesAction in [ddIgnore, ddError] then
+    if LocateKey(Key, H, False) >= 0 then
+      if FDuplicatesAction = ddIgnore then
+        exit
+      else
+        RaiseDuplicateKeyError(Key);
+  L := FHashSize;
+  if L = 0 then
+    begin
+      Rehash;
+      L := FHashSize;
+      Assert(L > 0);
+    end;
+  H := Integer(HashStrA(Key, 1, -1, FCaseSensitive, 0) and (L - 1));
+  I := FKeys.AppendItem(Key);
+  DynArrayAppend(FLookup[H], I);
+  FValues.AppendItem(Value);
+  if (I + 1) div DictionaryAverageHashChainSize > L then
+    Rehash;
+end;
+
+procedure TGeneralRawByteStringDictionaryA.DeleteByIndex(const Idx: Integer; const Hash: Integer);
+var I, J, H : Integer;
+begin
+  if Hash = -1 then
+    H := HashStrA(FKeys[Idx], 1, -1, FCaseSensitive, 0) and (FHashSize - 1)
+  else
+    H := Hash;
+  FKeys.Delete(Idx);
+  FValues.Delete(Idx);
+  J := DynArrayPosNext(Idx, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+
+  for I := 0 to FHashSize - 1 do
+    for J := 0 to Length(FLookup[I]) - 1 do
+      if FLookup[I][J] > Idx then
+        Dec(FLookup[I][J]);
+end;
+
+procedure TGeneralRawByteStringDictionaryA.Delete(const Key: AnsiString);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  DeleteByIndex(I, H);
+end;
+
+function TGeneralRawByteStringDictionaryA.HasKey(const Key: AnsiString): Boolean;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False) >= 0;
+end;
+
+procedure TGeneralRawByteStringDictionaryA.Rename(const Key, NewKey: AnsiString);
+var I, J, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  FKeys[I] := NewKey;
+  J := DynArrayPosNext(I, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+  DynArrayAppend(FLookup[HashStrA(NewKey, 1, -1, FCaseSensitive, 0) and (FHashSize - 1)], I);
+end;
+
+function TGeneralRawByteStringDictionaryA.GetDuplicatesAction: TDictionaryDuplicatesAction;
+begin
+  Result := FDuplicatesAction;
+end;
+
+procedure TGeneralRawByteStringDictionaryA.SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  FDuplicatesAction := DuplicatesAction;
+end;
+
+function TGeneralRawByteStringDictionaryA.LocateItem(const Key: AnsiString; var Value: RawByteString): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := FValues[Result]
+  else
+    Value := '';
+end;
+
+function TGeneralRawByteStringDictionaryA.LocateNext(const Key: AnsiString; const Idx: Integer; var Value: RawByteString): Integer;
+var L, H, I, J, K : Integer;
+begin
+  Result := -1;
+  L := FHashSize;
+  if L = 0 then
+    RaiseKeyNotFoundError(Key);
+  H := HashStrA(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+  for I := 0 to Length(FLookup[H]) - 1 do
+    begin
+      J := FLookup[H, I];
+      if J = Idx then
+        begin
+          if not StrEqualA(Key, FKeys[J], FCaseSensitive) then
+            RaiseKeyNotFoundError(Key);
+          for K := I + 1 to Length(FLookup[H]) - 1 do
+            begin
+              J := FLookup[H, K];
+              if StrEqualA(Key, FKeys[J], FCaseSensitive) then
+                begin
+                  Value := FValues[J];
+                  Result := J;
+                  exit;
+                end;
+            end;
+          Result := -1;
+          exit;
+        end;
+    end;
+  RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralRawByteStringDictionaryA.SetItem(const Key: AnsiString; const Value: RawByteString);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    FValues[I] := Value else
+    if AddOnSet then
+      Add(Key, Value) else
+      RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralRawByteStringDictionaryA.RaiseIndexError;
+begin
+  raise EDictionary.Create('Index out of range');
+end;
+
+function TGeneralRawByteStringDictionaryA.Count: Integer;
+begin
+  Result := FKeys.Count;
+  Assert(FValues.Count = Result, 'Key/Value count mismatch');
+end;
+
+function TGeneralRawByteStringDictionaryA.GetKeyByIndex(const Idx: Integer): AnsiString;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FKeys.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FKeys[Idx];
+end;
+
+procedure TGeneralRawByteStringDictionaryA.DeleteItemByIndex(const Idx: Integer);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  DeleteByIndex(Idx, -1);
+end;
+
+function TGeneralRawByteStringDictionaryA.GetItemByIndex(const Idx: Integer): RawByteString;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FValues[Idx];
+end;
+
+procedure TGeneralRawByteStringDictionaryA.SetItemByIndex(const Idx: Integer; const Value: RawByteString);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  FValues[Idx] := Value;
+end;
+
+procedure TGeneralRawByteStringDictionaryA.Clear;
+begin
+  FKeys.Clear;
+  FValues.Clear;
+  FHashSize := 0;
+  FLookup := nil;
+end;
+
+
+
+{                                                                              }
+{ TRawByteStringDictionaryA                                                    }
+{                                                                              }
+function TRawByteStringDictionaryA.LocateKey(const Key: AnsiString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      LongWord(H) := HashStrA(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          Result := FLookup[H][I];
+          if StrEqualA(Key, TAnsiStringArray(FKeys).Data[Result],
+              FCaseSensitive) then
+            exit;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+function TRawByteStringDictionaryA.GetItem(const Key: AnsiString): RawByteString;
+var H, I : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    Result := TRawByteStringArray(FValues).Data[I]
+  else
+    Result := '';
+end;
+
+function TRawByteStringDictionaryA.LocateItem(const Key: AnsiString; var Value: RawByteString): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := TRawByteStringArray(FValues).Data[Result]
+  else
+    Value := '';
+end;
+
+
+
+{                                                                              }
+{ TGeneralRawByteStringDictionaryB                                             }
+{                                                                              }
+constructor TGeneralRawByteStringDictionaryB.Create;
+begin
+  inherited Create;
+  FCaseSensitive := True;
+  FDuplicatesAction := ddAccept;
+  FAddOnSet := True;
+  FKeys := TRawByteStringArray.Create;
+  FValues := TRawByteStringArray.Create;
+end;
+
+constructor TGeneralRawByteStringDictionaryB.CreateEx(
+    const Keys: ARawByteStringArray;
+    const Values: ARawByteStringArray; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+var L : Integer;
+begin
+  inherited Create;
+  if Assigned(Keys) then
+    begin
+      FKeys := Keys;
+      L := FKeys.Count;
+    end
+  else
+    begin
+      FKeys := TRawByteStringArray.Create;
+      L := 0;
+    end;
+  if Assigned(Values) then
+    FValues := Values
+  else
+    FValues := TRawByteStringArray.Create;
+  FCaseSensitive := KeysCaseSensitive;
+  FValues.Count := L;
+  FAddOnSet := AddOnSet;
+  FDuplicatesAction := DuplicatesAction;
+  if L > 0 then
+    Rehash;
+end;
+
+constructor TRawByteStringDictionaryB.CreateEx(
+    const Keys: TRawByteStringArray;
+    const Values: TRawByteStringArray; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  inherited CreateEx(Keys, Values, KeysCaseSensitive, AddOnSet,
+      DuplicatesAction);
+end;
+
+destructor TGeneralRawByteStringDictionaryB.Destroy;
+begin
+  FreeAndNil(FValues);
+  FreeAndNil(FKeys);
+  inherited Destroy;
+end;
+
+function TGeneralRawByteStringDictionaryB.GetKeysCaseSensitive: Boolean;
+begin
+  Result := FCaseSensitive;
+end;
+
+function TGeneralRawByteStringDictionaryB.GetAddOnSet: Boolean;
+begin
+  Result := FAddOnSet;
+end;
+
+procedure TGeneralRawByteStringDictionaryB.SetAddOnSet(const AddOnSet: Boolean);
+begin
+  FAddOnSet := AddOnSet;
+end;
+
+function TGeneralRawByteStringDictionaryB.GetHashTableSize: Integer;
+begin
+  Result := Length(FLookup);
+end;
+
+procedure TGeneralRawByteStringDictionaryB.Rehash;
+var I, C, L : Integer;
+begin
+  C := FKeys.Count;
+  L := DictionaryRehashSize(C);
+  FLookup := nil;
+  SetLength(FLookup, L);
+  FHashSize := L;
+  Assert(L > 0);
+  Dec(L);
+  for I := 0 to C - 1 do
+    DynArrayAppend(FLookup[HashStrB(FKeys[I], 1, -1, FCaseSensitive, 0) and L], I);
+end;
+
+function TGeneralRawByteStringDictionaryB.LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, J, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      H := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          J := FLookup[H, I];
+          if StrEqualB(Key, FKeys[J], FCaseSensitive) then
+            begin
+              Result := J;
+              exit;
+            end;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+procedure TGeneralRawByteStringDictionaryB.Add(const Key: RawByteString; const Value: RawByteString);
+var H, L, I : Integer;
+begin
+  if FDuplicatesAction in [ddIgnore, ddError] then
+    if LocateKey(Key, H, False) >= 0 then
+      if FDuplicatesAction = ddIgnore then
+        exit
+      else
+        RaiseDuplicateKeyError(Key);
+  L := FHashSize;
+  if L = 0 then
+    begin
+      Rehash;
+      L := FHashSize;
+      Assert(L > 0);
+    end;
+  H := Integer(HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1));
+  I := FKeys.AppendItem(Key);
+  DynArrayAppend(FLookup[H], I);
+  FValues.AppendItem(Value);
+  if (I + 1) div DictionaryAverageHashChainSize > L then
+    Rehash;
+end;
+
+procedure TGeneralRawByteStringDictionaryB.DeleteByIndex(const Idx: Integer; const Hash: Integer);
+var I, J, H : Integer;
+begin
+  if Hash = -1 then
+    H := HashStrB(FKeys[Idx], 1, -1, FCaseSensitive, 0) and (FHashSize - 1)
+  else
+    H := Hash;
+  FKeys.Delete(Idx);
+  FValues.Delete(Idx);
+  J := DynArrayPosNext(Idx, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+
+  for I := 0 to FHashSize - 1 do
+    for J := 0 to Length(FLookup[I]) - 1 do
+      if FLookup[I][J] > Idx then
+        Dec(FLookup[I][J]);
+end;
+
+procedure TGeneralRawByteStringDictionaryB.Delete(const Key: RawByteString);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  DeleteByIndex(I, H);
+end;
+
+function TGeneralRawByteStringDictionaryB.HasKey(const Key: RawByteString): Boolean;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False) >= 0;
+end;
+
+procedure TGeneralRawByteStringDictionaryB.Rename(const Key, NewKey: RawByteString);
+var I, J, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  FKeys[I] := NewKey;
+  J := DynArrayPosNext(I, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+  DynArrayAppend(FLookup[HashStrB(NewKey, 1, -1, FCaseSensitive, 0) and (FHashSize - 1)], I);
+end;
+
+function TGeneralRawByteStringDictionaryB.GetDuplicatesAction: TDictionaryDuplicatesAction;
+begin
+  Result := FDuplicatesAction;
+end;
+
+procedure TGeneralRawByteStringDictionaryB.SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  FDuplicatesAction := DuplicatesAction;
+end;
+
+function TGeneralRawByteStringDictionaryB.LocateItem(const Key: RawByteString; var Value: RawByteString): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := FValues[Result]
+  else
+    Value := '';
+end;
+
+function TGeneralRawByteStringDictionaryB.LocateNext(const Key: RawByteString; const Idx: Integer; var Value: RawByteString): Integer;
+var L, H, I, J, K : Integer;
+begin
+  Result := -1;
+  L := FHashSize;
+  if L = 0 then
+    RaiseKeyNotFoundError(Key);
+  H := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+  for I := 0 to Length(FLookup[H]) - 1 do
+    begin
+      J := FLookup[H, I];
+      if J = Idx then
+        begin
+          if not StrEqualB(Key, FKeys[J], FCaseSensitive) then
+            RaiseKeyNotFoundError(Key);
+          for K := I + 1 to Length(FLookup[H]) - 1 do
+            begin
+              J := FLookup[H, K];
+              if StrEqualB(Key, FKeys[J], FCaseSensitive) then
+                begin
+                  Value := FValues[J];
+                  Result := J;
+                  exit;
+                end;
+            end;
+          Result := -1;
+          exit;
+        end;
+    end;
+  RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralRawByteStringDictionaryB.SetItem(const Key: RawByteString; const Value: RawByteString);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    FValues[I] := Value else
+    if AddOnSet then
+      Add(Key, Value) else
+      RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralRawByteStringDictionaryB.RaiseIndexError;
+begin
+  raise EDictionary.Create('Index out of range');
+end;
+
+function TGeneralRawByteStringDictionaryB.Count: Integer;
+begin
+  Result := FKeys.Count;
+  Assert(FValues.Count = Result, 'Key/Value count mismatch');
+end;
+
+function TGeneralRawByteStringDictionaryB.GetKeyByIndex(const Idx: Integer): RawByteString;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FKeys.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FKeys[Idx];
+end;
+
+procedure TGeneralRawByteStringDictionaryB.DeleteItemByIndex(const Idx: Integer);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  DeleteByIndex(Idx, -1);
+end;
+
+function TGeneralRawByteStringDictionaryB.GetItemByIndex(const Idx: Integer): RawByteString;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FValues[Idx];
+end;
+
+procedure TGeneralRawByteStringDictionaryB.SetItemByIndex(const Idx: Integer; const Value: RawByteString);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  FValues[Idx] := Value;
+end;
+
+procedure TGeneralRawByteStringDictionaryB.Clear;
+begin
+  FKeys.Clear;
+  FValues.Clear;
+  FHashSize := 0;
+  FLookup := nil;
+end;
+
+
+
+{                                                                              }
+{ TRawByteStringDictionaryB                                                    }
+{                                                                              }
+function TRawByteStringDictionaryB.LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      LongWord(H) := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          Result := FLookup[H][I];
+          if StrEqualB(Key, TRawByteStringArray(FKeys).Data[Result],
+              FCaseSensitive) then
+            exit;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+function TRawByteStringDictionaryB.GetItem(const Key: RawByteString): RawByteString;
+var H, I : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    Result := TRawByteStringArray(FValues).Data[I]
+  else
+    Result := '';
+end;
+
+function TRawByteStringDictionaryB.LocateItem(const Key: RawByteString; var Value: RawByteString): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := TRawByteStringArray(FValues).Data[Result]
+  else
+    Value := '';
+end;
+
+
+
+{                                                                              }
+{ TGeneralRawByteStringDictionaryW                                             }
+{                                                                              }
+constructor TGeneralRawByteStringDictionaryW.Create;
+begin
+  inherited Create;
+  FCaseSensitive := True;
+  FDuplicatesAction := ddAccept;
+  FAddOnSet := True;
+  FKeys := TWideStringArray.Create;
+  FValues := TRawByteStringArray.Create;
+end;
+
+constructor TGeneralRawByteStringDictionaryW.CreateEx(
+    const Keys: AWideStringArray;
+    const Values: ARawByteStringArray; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+var L : Integer;
+begin
+  inherited Create;
+  if Assigned(Keys) then
+    begin
+      FKeys := Keys;
+      L := FKeys.Count;
+    end
+  else
+    begin
+      FKeys := TWideStringArray.Create;
+      L := 0;
+    end;
+  if Assigned(Values) then
+    FValues := Values
+  else
+    FValues := TRawByteStringArray.Create;
+  FCaseSensitive := KeysCaseSensitive;
+  FValues.Count := L;
+  FAddOnSet := AddOnSet;
+  FDuplicatesAction := DuplicatesAction;
+  if L > 0 then
+    Rehash;
+end;
+
+constructor TRawByteStringDictionaryW.CreateEx(
+    const Keys: TWideStringArray;
+    const Values: TRawByteStringArray; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  inherited CreateEx(Keys, Values, KeysCaseSensitive, AddOnSet,
+      DuplicatesAction);
+end;
+
+destructor TGeneralRawByteStringDictionaryW.Destroy;
+begin
+  FreeAndNil(FValues);
+  FreeAndNil(FKeys);
+  inherited Destroy;
+end;
+
+function TGeneralRawByteStringDictionaryW.GetKeysCaseSensitive: Boolean;
+begin
+  Result := FCaseSensitive;
+end;
+
+function TGeneralRawByteStringDictionaryW.GetAddOnSet: Boolean;
+begin
+  Result := FAddOnSet;
+end;
+
+procedure TGeneralRawByteStringDictionaryW.SetAddOnSet(const AddOnSet: Boolean);
+begin
+  FAddOnSet := AddOnSet;
+end;
+
+function TGeneralRawByteStringDictionaryW.GetHashTableSize: Integer;
+begin
+  Result := Length(FLookup);
+end;
+
+procedure TGeneralRawByteStringDictionaryW.Rehash;
+var I, C, L : Integer;
+begin
+  C := FKeys.Count;
+  L := DictionaryRehashSize(C);
+  FLookup := nil;
+  SetLength(FLookup, L);
+  FHashSize := L;
+  Assert(L > 0);
+  Dec(L);
+  for I := 0 to C - 1 do
+    DynArrayAppend(FLookup[HashStrW(FKeys[I], 1, -1, FCaseSensitive, 0) and L], I);
+end;
+
+function TGeneralRawByteStringDictionaryW.LocateKey(const Key: WideString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, J, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      H := HashStrW(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          J := FLookup[H, I];
+          if StrEqualW(Key, FKeys[J], FCaseSensitive) then
+            begin
+              Result := J;
+              exit;
+            end;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+procedure TGeneralRawByteStringDictionaryW.Add(const Key: WideString; const Value: RawByteString);
+var H, L, I : Integer;
+begin
+  if FDuplicatesAction in [ddIgnore, ddError] then
+    if LocateKey(Key, H, False) >= 0 then
+      if FDuplicatesAction = ddIgnore then
+        exit
+      else
+        RaiseDuplicateKeyError(Key);
+  L := FHashSize;
+  if L = 0 then
+    begin
+      Rehash;
+      L := FHashSize;
+      Assert(L > 0);
+    end;
+  H := Integer(HashStrW(Key, 1, -1, FCaseSensitive, 0) and (L - 1));
+  I := FKeys.AppendItem(Key);
+  DynArrayAppend(FLookup[H], I);
+  FValues.AppendItem(Value);
+  if (I + 1) div DictionaryAverageHashChainSize > L then
+    Rehash;
+end;
+
+procedure TGeneralRawByteStringDictionaryW.DeleteByIndex(const Idx: Integer; const Hash: Integer);
+var I, J, H : Integer;
+begin
+  if Hash = -1 then
+    H := HashStrW(FKeys[Idx], 1, -1, FCaseSensitive, 0) and (FHashSize - 1)
+  else
+    H := Hash;
+  FKeys.Delete(Idx);
+  FValues.Delete(Idx);
+  J := DynArrayPosNext(Idx, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+
+  for I := 0 to FHashSize - 1 do
+    for J := 0 to Length(FLookup[I]) - 1 do
+      if FLookup[I][J] > Idx then
+        Dec(FLookup[I][J]);
+end;
+
+procedure TGeneralRawByteStringDictionaryW.Delete(const Key: WideString);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  DeleteByIndex(I, H);
+end;
+
+function TGeneralRawByteStringDictionaryW.HasKey(const Key: WideString): Boolean;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False) >= 0;
+end;
+
+procedure TGeneralRawByteStringDictionaryW.Rename(const Key, NewKey: WideString);
+var I, J, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  FKeys[I] := NewKey;
+  J := DynArrayPosNext(I, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+  DynArrayAppend(FLookup[HashStrW(NewKey, 1, -1, FCaseSensitive, 0) and (FHashSize - 1)], I);
+end;
+
+function TGeneralRawByteStringDictionaryW.GetDuplicatesAction: TDictionaryDuplicatesAction;
+begin
+  Result := FDuplicatesAction;
+end;
+
+procedure TGeneralRawByteStringDictionaryW.SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  FDuplicatesAction := DuplicatesAction;
+end;
+
+function TGeneralRawByteStringDictionaryW.LocateItem(const Key: WideString; var Value: RawByteString): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := FValues[Result]
+  else
+    Value := '';
+end;
+
+function TGeneralRawByteStringDictionaryW.LocateNext(const Key: WideString; const Idx: Integer; var Value: RawByteString): Integer;
+var L, H, I, J, K : Integer;
+begin
+  Result := -1;
+  L := FHashSize;
+  if L = 0 then
+    RaiseKeyNotFoundError(Key);
+  H := HashStrW(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+  for I := 0 to Length(FLookup[H]) - 1 do
+    begin
+      J := FLookup[H, I];
+      if J = Idx then
+        begin
+          if not StrEqualW(Key, FKeys[J], FCaseSensitive) then
+            RaiseKeyNotFoundError(Key);
+          for K := I + 1 to Length(FLookup[H]) - 1 do
+            begin
+              J := FLookup[H, K];
+              if StrEqualW(Key, FKeys[J], FCaseSensitive) then
+                begin
+                  Value := FValues[J];
+                  Result := J;
+                  exit;
+                end;
+            end;
+          Result := -1;
+          exit;
+        end;
+    end;
+  RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralRawByteStringDictionaryW.SetItem(const Key: WideString; const Value: RawByteString);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    FValues[I] := Value else
+    if AddOnSet then
+      Add(Key, Value) else
+      RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralRawByteStringDictionaryW.RaiseIndexError;
+begin
+  raise EDictionary.Create('Index out of range');
+end;
+
+function TGeneralRawByteStringDictionaryW.Count: Integer;
+begin
+  Result := FKeys.Count;
+  Assert(FValues.Count = Result, 'Key/Value count mismatch');
+end;
+
+function TGeneralRawByteStringDictionaryW.GetKeyByIndex(const Idx: Integer): WideString;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FKeys.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FKeys[Idx];
+end;
+
+procedure TGeneralRawByteStringDictionaryW.DeleteItemByIndex(const Idx: Integer);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  DeleteByIndex(Idx, -1);
+end;
+
+function TGeneralRawByteStringDictionaryW.GetItemByIndex(const Idx: Integer): RawByteString;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FValues[Idx];
+end;
+
+procedure TGeneralRawByteStringDictionaryW.SetItemByIndex(const Idx: Integer; const Value: RawByteString);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  FValues[Idx] := Value;
+end;
+
+procedure TGeneralRawByteStringDictionaryW.Clear;
+begin
+  FKeys.Clear;
+  FValues.Clear;
+  FHashSize := 0;
+  FLookup := nil;
+end;
+
+
+
+{                                                                              }
+{ TRawByteStringDictionaryW                                                    }
+{                                                                              }
+function TRawByteStringDictionaryW.LocateKey(const Key: WideString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      LongWord(H) := HashStrW(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          Result := FLookup[H][I];
+          if StrEqualW(Key, TWideStringArray(FKeys).Data[Result],
+              FCaseSensitive) then
+            exit;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+function TRawByteStringDictionaryW.GetItem(const Key: WideString): RawByteString;
+var H, I : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    Result := TRawByteStringArray(FValues).Data[I]
+  else
+    Result := '';
+end;
+
+function TRawByteStringDictionaryW.LocateItem(const Key: WideString; var Value: RawByteString): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := TRawByteStringArray(FValues).Data[Result]
+  else
+    Value := '';
+end;
+
+
+
+{                                                                              }
+{ TGeneralRawByteStringDictionaryU                                             }
+{                                                                              }
+constructor TGeneralRawByteStringDictionaryU.Create;
+begin
+  inherited Create;
+  FCaseSensitive := True;
+  FDuplicatesAction := ddAccept;
+  FAddOnSet := True;
+  FKeys := TUnicodeStringArray.Create;
+  FValues := TRawByteStringArray.Create;
+end;
+
+constructor TGeneralRawByteStringDictionaryU.CreateEx(
+    const Keys: AUnicodeStringArray;
+    const Values: ARawByteStringArray; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+var L : Integer;
+begin
+  inherited Create;
+  if Assigned(Keys) then
+    begin
+      FKeys := Keys;
+      L := FKeys.Count;
+    end
+  else
+    begin
+      FKeys := TUnicodeStringArray.Create;
+      L := 0;
+    end;
+  if Assigned(Values) then
+    FValues := Values
+  else
+    FValues := TRawByteStringArray.Create;
+  FCaseSensitive := KeysCaseSensitive;
+  FValues.Count := L;
+  FAddOnSet := AddOnSet;
+  FDuplicatesAction := DuplicatesAction;
+  if L > 0 then
+    Rehash;
+end;
+
+constructor TRawByteStringDictionaryU.CreateEx(
+    const Keys: TUnicodeStringArray;
+    const Values: TRawByteStringArray; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  inherited CreateEx(Keys, Values, KeysCaseSensitive, AddOnSet,
+      DuplicatesAction);
+end;
+
+destructor TGeneralRawByteStringDictionaryU.Destroy;
+begin
+  FreeAndNil(FValues);
+  FreeAndNil(FKeys);
+  inherited Destroy;
+end;
+
+function TGeneralRawByteStringDictionaryU.GetKeysCaseSensitive: Boolean;
+begin
+  Result := FCaseSensitive;
+end;
+
+function TGeneralRawByteStringDictionaryU.GetAddOnSet: Boolean;
+begin
+  Result := FAddOnSet;
+end;
+
+procedure TGeneralRawByteStringDictionaryU.SetAddOnSet(const AddOnSet: Boolean);
+begin
+  FAddOnSet := AddOnSet;
+end;
+
+function TGeneralRawByteStringDictionaryU.GetHashTableSize: Integer;
+begin
+  Result := Length(FLookup);
+end;
+
+procedure TGeneralRawByteStringDictionaryU.Rehash;
+var I, C, L : Integer;
+begin
+  C := FKeys.Count;
+  L := DictionaryRehashSize(C);
+  FLookup := nil;
+  SetLength(FLookup, L);
+  FHashSize := L;
+  Assert(L > 0);
+  Dec(L);
+  for I := 0 to C - 1 do
+    DynArrayAppend(FLookup[HashStrU(FKeys[I], 1, -1, FCaseSensitive, 0) and L], I);
+end;
+
+function TGeneralRawByteStringDictionaryU.LocateKey(const Key: UnicodeString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, J, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      H := HashStrU(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          J := FLookup[H, I];
+          if StrEqualU(Key, FKeys[J], FCaseSensitive) then
+            begin
+              Result := J;
+              exit;
+            end;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+procedure TGeneralRawByteStringDictionaryU.Add(const Key: UnicodeString; const Value: RawByteString);
+var H, L, I : Integer;
+begin
+  if FDuplicatesAction in [ddIgnore, ddError] then
+    if LocateKey(Key, H, False) >= 0 then
+      if FDuplicatesAction = ddIgnore then
+        exit
+      else
+        RaiseDuplicateKeyError(Key);
+  L := FHashSize;
+  if L = 0 then
+    begin
+      Rehash;
+      L := FHashSize;
+      Assert(L > 0);
+    end;
+  H := Integer(HashStrU(Key, 1, -1, FCaseSensitive, 0) and (L - 1));
+  I := FKeys.AppendItem(Key);
+  DynArrayAppend(FLookup[H], I);
+  FValues.AppendItem(Value);
+  if (I + 1) div DictionaryAverageHashChainSize > L then
+    Rehash;
+end;
+
+procedure TGeneralRawByteStringDictionaryU.DeleteByIndex(const Idx: Integer; const Hash: Integer);
+var I, J, H : Integer;
+begin
+  if Hash = -1 then
+    H := HashStrU(FKeys[Idx], 1, -1, FCaseSensitive, 0) and (FHashSize - 1)
+  else
+    H := Hash;
+  FKeys.Delete(Idx);
+  FValues.Delete(Idx);
+  J := DynArrayPosNext(Idx, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+
+  for I := 0 to FHashSize - 1 do
+    for J := 0 to Length(FLookup[I]) - 1 do
+      if FLookup[I][J] > Idx then
+        Dec(FLookup[I][J]);
+end;
+
+procedure TGeneralRawByteStringDictionaryU.Delete(const Key: UnicodeString);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  DeleteByIndex(I, H);
+end;
+
+function TGeneralRawByteStringDictionaryU.HasKey(const Key: UnicodeString): Boolean;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False) >= 0;
+end;
+
+procedure TGeneralRawByteStringDictionaryU.Rename(const Key, NewKey: UnicodeString);
+var I, J, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  FKeys[I] := NewKey;
+  J := DynArrayPosNext(I, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+  DynArrayAppend(FLookup[HashStrU(NewKey, 1, -1, FCaseSensitive, 0) and (FHashSize - 1)], I);
+end;
+
+function TGeneralRawByteStringDictionaryU.GetDuplicatesAction: TDictionaryDuplicatesAction;
+begin
+  Result := FDuplicatesAction;
+end;
+
+procedure TGeneralRawByteStringDictionaryU.SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  FDuplicatesAction := DuplicatesAction;
+end;
+
+function TGeneralRawByteStringDictionaryU.LocateItem(const Key: UnicodeString; var Value: RawByteString): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := FValues[Result]
+  else
+    Value := '';
+end;
+
+function TGeneralRawByteStringDictionaryU.LocateNext(const Key: UnicodeString; const Idx: Integer; var Value: RawByteString): Integer;
+var L, H, I, J, K : Integer;
+begin
+  Result := -1;
+  L := FHashSize;
+  if L = 0 then
+    RaiseKeyNotFoundError(Key);
+  H := HashStrU(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+  for I := 0 to Length(FLookup[H]) - 1 do
+    begin
+      J := FLookup[H, I];
+      if J = Idx then
+        begin
+          if not StrEqualU(Key, FKeys[J], FCaseSensitive) then
+            RaiseKeyNotFoundError(Key);
+          for K := I + 1 to Length(FLookup[H]) - 1 do
+            begin
+              J := FLookup[H, K];
+              if StrEqualU(Key, FKeys[J], FCaseSensitive) then
+                begin
+                  Value := FValues[J];
+                  Result := J;
+                  exit;
+                end;
+            end;
+          Result := -1;
+          exit;
+        end;
+    end;
+  RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralRawByteStringDictionaryU.SetItem(const Key: UnicodeString; const Value: RawByteString);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    FValues[I] := Value else
+    if AddOnSet then
+      Add(Key, Value) else
+      RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralRawByteStringDictionaryU.RaiseIndexError;
+begin
+  raise EDictionary.Create('Index out of range');
+end;
+
+function TGeneralRawByteStringDictionaryU.Count: Integer;
+begin
+  Result := FKeys.Count;
+  Assert(FValues.Count = Result, 'Key/Value count mismatch');
+end;
+
+function TGeneralRawByteStringDictionaryU.GetKeyByIndex(const Idx: Integer): UnicodeString;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FKeys.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FKeys[Idx];
+end;
+
+procedure TGeneralRawByteStringDictionaryU.DeleteItemByIndex(const Idx: Integer);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  DeleteByIndex(Idx, -1);
+end;
+
+function TGeneralRawByteStringDictionaryU.GetItemByIndex(const Idx: Integer): RawByteString;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FValues[Idx];
+end;
+
+procedure TGeneralRawByteStringDictionaryU.SetItemByIndex(const Idx: Integer; const Value: RawByteString);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  FValues[Idx] := Value;
+end;
+
+procedure TGeneralRawByteStringDictionaryU.Clear;
+begin
+  FKeys.Clear;
+  FValues.Clear;
+  FHashSize := 0;
+  FLookup := nil;
+end;
+
+
+
+{                                                                              }
+{ TRawByteStringDictionaryU                                                    }
+{                                                                              }
+function TRawByteStringDictionaryU.LocateKey(const Key: UnicodeString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      LongWord(H) := HashStrU(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          Result := FLookup[H][I];
+          if StrEqualU(Key, TUnicodeStringArray(FKeys).Data[Result],
+              FCaseSensitive) then
+            exit;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+function TRawByteStringDictionaryU.GetItem(const Key: UnicodeString): RawByteString;
+var H, I : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    Result := TRawByteStringArray(FValues).Data[I]
+  else
+    Result := '';
+end;
+
+function TRawByteStringDictionaryU.LocateItem(const Key: UnicodeString; var Value: RawByteString): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := TRawByteStringArray(FValues).Data[Result]
+  else
+    Value := '';
+end;
+
+
+
+{                                                                              }
+{ TGeneralRawByteStringDictionary                                              }
+{                                                                              }
+constructor TGeneralRawByteStringDictionary.Create;
+begin
+  inherited Create;
+  FCaseSensitive := True;
+  FDuplicatesAction := ddAccept;
+  FAddOnSet := True;
+  FKeys := TStringArray.Create;
+  FValues := TRawByteStringArray.Create;
+end;
+
+constructor TGeneralRawByteStringDictionary.CreateEx(
+    const Keys: AStringArray;
+    const Values: ARawByteStringArray; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+var L : Integer;
+begin
+  inherited Create;
+  if Assigned(Keys) then
+    begin
+      FKeys := Keys;
+      L := FKeys.Count;
+    end
+  else
+    begin
+      FKeys := TStringArray.Create;
+      L := 0;
+    end;
+  if Assigned(Values) then
+    FValues := Values
+  else
+    FValues := TRawByteStringArray.Create;
+  FCaseSensitive := KeysCaseSensitive;
+  FValues.Count := L;
+  FAddOnSet := AddOnSet;
+  FDuplicatesAction := DuplicatesAction;
+  if L > 0 then
+    Rehash;
+end;
+
+constructor TRawByteStringDictionary.CreateEx(
+    const Keys: TStringArray;
+    const Values: TRawByteStringArray; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  inherited CreateEx(Keys, Values, KeysCaseSensitive, AddOnSet,
+      DuplicatesAction);
+end;
+
+destructor TGeneralRawByteStringDictionary.Destroy;
+begin
+  FreeAndNil(FValues);
+  FreeAndNil(FKeys);
+  inherited Destroy;
+end;
+
+function TGeneralRawByteStringDictionary.GetKeysCaseSensitive: Boolean;
+begin
+  Result := FCaseSensitive;
+end;
+
+function TGeneralRawByteStringDictionary.GetAddOnSet: Boolean;
+begin
+  Result := FAddOnSet;
+end;
+
+procedure TGeneralRawByteStringDictionary.SetAddOnSet(const AddOnSet: Boolean);
+begin
+  FAddOnSet := AddOnSet;
+end;
+
+function TGeneralRawByteStringDictionary.GetHashTableSize: Integer;
+begin
+  Result := Length(FLookup);
+end;
+
+procedure TGeneralRawByteStringDictionary.Rehash;
+var I, C, L : Integer;
+begin
+  C := FKeys.Count;
+  L := DictionaryRehashSize(C);
+  FLookup := nil;
+  SetLength(FLookup, L);
+  FHashSize := L;
+  Assert(L > 0);
+  Dec(L);
+  for I := 0 to C - 1 do
+    DynArrayAppend(FLookup[HashStr(FKeys[I], 1, -1, FCaseSensitive, 0) and L], I);
+end;
+
+function TGeneralRawByteStringDictionary.LocateKey(const Key: String; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, J, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      H := HashStr(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          J := FLookup[H, I];
+          if StrEqual(Key, FKeys[J], FCaseSensitive) then
+            begin
+              Result := J;
+              exit;
+            end;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+procedure TGeneralRawByteStringDictionary.Add(const Key: String; const Value: RawByteString);
+var H, L, I : Integer;
+begin
+  if FDuplicatesAction in [ddIgnore, ddError] then
+    if LocateKey(Key, H, False) >= 0 then
+      if FDuplicatesAction = ddIgnore then
+        exit
+      else
+        RaiseDuplicateKeyError(Key);
+  L := FHashSize;
+  if L = 0 then
+    begin
+      Rehash;
+      L := FHashSize;
+      Assert(L > 0);
+    end;
+  H := Integer(HashStr(Key, 1, -1, FCaseSensitive, 0) and (L - 1));
+  I := FKeys.AppendItem(Key);
+  DynArrayAppend(FLookup[H], I);
+  FValues.AppendItem(Value);
+  if (I + 1) div DictionaryAverageHashChainSize > L then
+    Rehash;
+end;
+
+procedure TGeneralRawByteStringDictionary.DeleteByIndex(const Idx: Integer; const Hash: Integer);
+var I, J, H : Integer;
+begin
+  if Hash = -1 then
+    H := HashStr(FKeys[Idx], 1, -1, FCaseSensitive, 0) and (FHashSize - 1)
+  else
+    H := Hash;
+  FKeys.Delete(Idx);
+  FValues.Delete(Idx);
+  J := DynArrayPosNext(Idx, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+
+  for I := 0 to FHashSize - 1 do
+    for J := 0 to Length(FLookup[I]) - 1 do
+      if FLookup[I][J] > Idx then
+        Dec(FLookup[I][J]);
+end;
+
+procedure TGeneralRawByteStringDictionary.Delete(const Key: String);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  DeleteByIndex(I, H);
+end;
+
+function TGeneralRawByteStringDictionary.HasKey(const Key: String): Boolean;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False) >= 0;
+end;
+
+procedure TGeneralRawByteStringDictionary.Rename(const Key, NewKey: String);
+var I, J, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  FKeys[I] := NewKey;
+  J := DynArrayPosNext(I, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+  DynArrayAppend(FLookup[HashStr(NewKey, 1, -1, FCaseSensitive, 0) and (FHashSize - 1)], I);
+end;
+
+function TGeneralRawByteStringDictionary.GetDuplicatesAction: TDictionaryDuplicatesAction;
+begin
+  Result := FDuplicatesAction;
+end;
+
+procedure TGeneralRawByteStringDictionary.SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  FDuplicatesAction := DuplicatesAction;
+end;
+
+function TGeneralRawByteStringDictionary.LocateItem(const Key: String; var Value: RawByteString): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := FValues[Result]
+  else
+    Value := '';
+end;
+
+function TGeneralRawByteStringDictionary.LocateNext(const Key: String; const Idx: Integer; var Value: RawByteString): Integer;
+var L, H, I, J, K : Integer;
+begin
+  Result := -1;
+  L := FHashSize;
+  if L = 0 then
+    RaiseKeyNotFoundError(Key);
+  H := HashStr(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+  for I := 0 to Length(FLookup[H]) - 1 do
+    begin
+      J := FLookup[H, I];
+      if J = Idx then
+        begin
+          if not StrEqual(Key, FKeys[J], FCaseSensitive) then
+            RaiseKeyNotFoundError(Key);
+          for K := I + 1 to Length(FLookup[H]) - 1 do
+            begin
+              J := FLookup[H, K];
+              if StrEqual(Key, FKeys[J], FCaseSensitive) then
+                begin
+                  Value := FValues[J];
+                  Result := J;
+                  exit;
+                end;
+            end;
+          Result := -1;
+          exit;
+        end;
+    end;
+  RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralRawByteStringDictionary.SetItem(const Key: String; const Value: RawByteString);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    FValues[I] := Value else
+    if AddOnSet then
+      Add(Key, Value) else
+      RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralRawByteStringDictionary.RaiseIndexError;
+begin
+  raise EDictionary.Create('Index out of range');
+end;
+
+function TGeneralRawByteStringDictionary.Count: Integer;
+begin
+  Result := FKeys.Count;
+  Assert(FValues.Count = Result, 'Key/Value count mismatch');
+end;
+
+function TGeneralRawByteStringDictionary.GetKeyByIndex(const Idx: Integer): String;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FKeys.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FKeys[Idx];
+end;
+
+procedure TGeneralRawByteStringDictionary.DeleteItemByIndex(const Idx: Integer);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  DeleteByIndex(Idx, -1);
+end;
+
+function TGeneralRawByteStringDictionary.GetItemByIndex(const Idx: Integer): RawByteString;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FValues[Idx];
+end;
+
+procedure TGeneralRawByteStringDictionary.SetItemByIndex(const Idx: Integer; const Value: RawByteString);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  FValues[Idx] := Value;
+end;
+
+procedure TGeneralRawByteStringDictionary.Clear;
+begin
+  FKeys.Clear;
+  FValues.Clear;
+  FHashSize := 0;
+  FLookup := nil;
+end;
+
+
+
+{                                                                              }
+{ TRawByteStringDictionary                                                     }
+{                                                                              }
+function TRawByteStringDictionary.LocateKey(const Key: String; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      LongWord(H) := HashStr(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          Result := FLookup[H][I];
+          if StrEqual(Key, TStringArray(FKeys).Data[Result],
+              FCaseSensitive) then
+            exit;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+function TRawByteStringDictionary.GetItem(const Key: String): RawByteString;
+var H, I : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    Result := TRawByteStringArray(FValues).Data[I]
+  else
+    Result := '';
+end;
+
+function TRawByteStringDictionary.LocateItem(const Key: String; var Value: RawByteString): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := TRawByteStringArray(FValues).Data[Result]
   else
     Value := '';
 end;
@@ -31414,6 +37922,358 @@ end;
 
 
 {                                                                              }
+{ TGeneralPointerDictionaryB                                                   }
+{                                                                              }
+constructor TGeneralPointerDictionaryB.Create;
+begin
+  inherited Create;
+  FCaseSensitive := True;
+  FDuplicatesAction := ddAccept;
+  FAddOnSet := True;
+  FKeys := TRawByteStringArray.Create;
+  FValues := TPointerArray.Create;
+end;
+
+constructor TGeneralPointerDictionaryB.CreateEx(
+    const Keys: ARawByteStringArray;
+    const Values: APointerArray; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+var L : Integer;
+begin
+  inherited Create;
+  if Assigned(Keys) then
+    begin
+      FKeys := Keys;
+      L := FKeys.Count;
+    end
+  else
+    begin
+      FKeys := TRawByteStringArray.Create;
+      L := 0;
+    end;
+  if Assigned(Values) then
+    FValues := Values
+  else
+    FValues := TPointerArray.Create;
+  FCaseSensitive := KeysCaseSensitive;
+  FValues.Count := L;
+  FAddOnSet := AddOnSet;
+  FDuplicatesAction := DuplicatesAction;
+  if L > 0 then
+    Rehash;
+end;
+
+constructor TPointerDictionaryB.CreateEx(
+    const Keys: TRawByteStringArray;
+    const Values: TPointerArray; const KeysCaseSensitive: Boolean;
+    const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  inherited CreateEx(Keys, Values, KeysCaseSensitive, AddOnSet,
+      DuplicatesAction);
+end;
+
+destructor TGeneralPointerDictionaryB.Destroy;
+begin
+  FreeAndNil(FValues);
+  FreeAndNil(FKeys);
+  inherited Destroy;
+end;
+
+function TGeneralPointerDictionaryB.GetKeysCaseSensitive: Boolean;
+begin
+  Result := FCaseSensitive;
+end;
+
+function TGeneralPointerDictionaryB.GetAddOnSet: Boolean;
+begin
+  Result := FAddOnSet;
+end;
+
+procedure TGeneralPointerDictionaryB.SetAddOnSet(const AddOnSet: Boolean);
+begin
+  FAddOnSet := AddOnSet;
+end;
+
+function TGeneralPointerDictionaryB.GetHashTableSize: Integer;
+begin
+  Result := Length(FLookup);
+end;
+
+procedure TGeneralPointerDictionaryB.Rehash;
+var I, C, L : Integer;
+begin
+  C := FKeys.Count;
+  L := DictionaryRehashSize(C);
+  FLookup := nil;
+  SetLength(FLookup, L);
+  FHashSize := L;
+  Assert(L > 0);
+  Dec(L);
+  for I := 0 to C - 1 do
+    DynArrayAppend(FLookup[HashStrB(FKeys[I], 1, -1, FCaseSensitive, 0) and L], I);
+end;
+
+function TGeneralPointerDictionaryB.LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, J, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      H := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          J := FLookup[H, I];
+          if StrEqualB(Key, FKeys[J], FCaseSensitive) then
+            begin
+              Result := J;
+              exit;
+            end;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+procedure TGeneralPointerDictionaryB.Add(const Key: RawByteString; const Value: Pointer);
+var H, L, I : Integer;
+begin
+  if FDuplicatesAction in [ddIgnore, ddError] then
+    if LocateKey(Key, H, False) >= 0 then
+      if FDuplicatesAction = ddIgnore then
+        exit
+      else
+        RaiseDuplicateKeyError(Key);
+  L := FHashSize;
+  if L = 0 then
+    begin
+      Rehash;
+      L := FHashSize;
+      Assert(L > 0);
+    end;
+  H := Integer(HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1));
+  I := FKeys.AppendItem(Key);
+  DynArrayAppend(FLookup[H], I);
+  FValues.AppendItem(Value);
+  if (I + 1) div DictionaryAverageHashChainSize > L then
+    Rehash;
+end;
+
+procedure TGeneralPointerDictionaryB.DeleteByIndex(const Idx: Integer; const Hash: Integer);
+var I, J, H : Integer;
+begin
+  if Hash = -1 then
+    H := HashStrB(FKeys[Idx], 1, -1, FCaseSensitive, 0) and (FHashSize - 1)
+  else
+    H := Hash;
+  FKeys.Delete(Idx);
+  FValues.Delete(Idx);
+  J := DynArrayPosNext(Idx, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+
+  for I := 0 to FHashSize - 1 do
+    for J := 0 to Length(FLookup[I]) - 1 do
+      if FLookup[I][J] > Idx then
+        Dec(FLookup[I][J]);
+end;
+
+procedure TGeneralPointerDictionaryB.Delete(const Key: RawByteString);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  DeleteByIndex(I, H);
+end;
+
+function TGeneralPointerDictionaryB.HasKey(const Key: RawByteString): Boolean;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False) >= 0;
+end;
+
+procedure TGeneralPointerDictionaryB.Rename(const Key, NewKey: RawByteString);
+var I, J, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  FKeys[I] := NewKey;
+  J := DynArrayPosNext(I, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+  DynArrayAppend(FLookup[HashStrB(NewKey, 1, -1, FCaseSensitive, 0) and (FHashSize - 1)], I);
+end;
+
+function TGeneralPointerDictionaryB.GetDuplicatesAction: TDictionaryDuplicatesAction;
+begin
+  Result := FDuplicatesAction;
+end;
+
+procedure TGeneralPointerDictionaryB.SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  FDuplicatesAction := DuplicatesAction;
+end;
+
+function TGeneralPointerDictionaryB.LocateItem(const Key: RawByteString; var Value: Pointer): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := FValues[Result]
+  else
+    Value := nil;
+end;
+
+function TGeneralPointerDictionaryB.LocateNext(const Key: RawByteString; const Idx: Integer; var Value: Pointer): Integer;
+var L, H, I, J, K : Integer;
+begin
+  Result := -1;
+  L := FHashSize;
+  if L = 0 then
+    RaiseKeyNotFoundError(Key);
+  H := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+  for I := 0 to Length(FLookup[H]) - 1 do
+    begin
+      J := FLookup[H, I];
+      if J = Idx then
+        begin
+          if not StrEqualB(Key, FKeys[J], FCaseSensitive) then
+            RaiseKeyNotFoundError(Key);
+          for K := I + 1 to Length(FLookup[H]) - 1 do
+            begin
+              J := FLookup[H, K];
+              if StrEqualB(Key, FKeys[J], FCaseSensitive) then
+                begin
+                  Value := FValues[J];
+                  Result := J;
+                  exit;
+                end;
+            end;
+          Result := -1;
+          exit;
+        end;
+    end;
+  RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralPointerDictionaryB.SetItem(const Key: RawByteString; const Value: Pointer);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    FValues[I] := Value else
+    if AddOnSet then
+      Add(Key, Value) else
+      RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralPointerDictionaryB.RaiseIndexError;
+begin
+  raise EDictionary.Create('Index out of range');
+end;
+
+function TGeneralPointerDictionaryB.Count: Integer;
+begin
+  Result := FKeys.Count;
+  Assert(FValues.Count = Result, 'Key/Value count mismatch');
+end;
+
+function TGeneralPointerDictionaryB.GetKeyByIndex(const Idx: Integer): RawByteString;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FKeys.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FKeys[Idx];
+end;
+
+procedure TGeneralPointerDictionaryB.DeleteItemByIndex(const Idx: Integer);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  DeleteByIndex(Idx, -1);
+end;
+
+function TGeneralPointerDictionaryB.GetItemByIndex(const Idx: Integer): Pointer;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FValues[Idx];
+end;
+
+procedure TGeneralPointerDictionaryB.SetItemByIndex(const Idx: Integer; const Value: Pointer);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  FValues[Idx] := Value;
+end;
+
+procedure TGeneralPointerDictionaryB.Clear;
+begin
+  FKeys.Clear;
+  FValues.Clear;
+  FHashSize := 0;
+  FLookup := nil;
+end;
+
+
+
+{                                                                              }
+{ TPointerDictionaryB                                                          }
+{                                                                              }
+function TPointerDictionaryB.LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      LongWord(H) := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          Result := FLookup[H][I];
+          if StrEqualB(Key, TRawByteStringArray(FKeys).Data[Result],
+              FCaseSensitive) then
+            exit;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+function TPointerDictionaryB.GetItem(const Key: RawByteString): Pointer;
+var H, I : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    Result := TPointerArray(FValues).Data[I]
+  else
+    Result := nil;
+end;
+
+function TPointerDictionaryB.LocateItem(const Key: RawByteString; var Value: Pointer): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := TPointerArray(FValues).Data[Result]
+  else
+    Value := nil;
+end;
+
+
+
+{                                                                              }
 { TGeneralPointerDictionaryW                                                   }
 {                                                                              }
 constructor TGeneralPointerDictionaryW.Create;
@@ -34252,6 +41112,392 @@ begin
 end;
 
 function TObjectDictionaryA.LocateItem(const Key: AnsiString; var Value: TObject): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := TObjectArray(FValues).Data[Result]
+  else
+    Value := nil;
+end;
+
+
+
+{                                                                              }
+{ TGeneralObjectDictionaryB                                                    }
+{                                                                              }
+constructor TGeneralObjectDictionaryB.Create;
+begin
+  inherited Create;
+  FCaseSensitive := True;
+  FDuplicatesAction := ddAccept;
+  FAddOnSet := True;
+  FKeys := TRawByteStringArray.Create;
+  FValues := TObjectArray.Create;
+end;
+
+constructor TGeneralObjectDictionaryB.CreateEx(
+    const Keys: ARawByteStringArray;
+    const Values: AObjectArray; const IsItemOwner: Boolean;
+    const KeysCaseSensitive: Boolean; const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+var L : Integer;
+begin
+  inherited Create;
+  if Assigned(Keys) then
+    begin
+      FKeys := Keys;
+      L := FKeys.Count;
+    end
+  else
+    begin
+      FKeys := TRawByteStringArray.Create;
+      L := 0;
+    end;
+  if Assigned(Values) then
+    FValues := Values
+  else
+    FValues := TObjectArray.Create;
+  FValues.Count := L;
+  FAddOnSet := AddOnSet;
+  FValues.IsItemOwner := IsItemOwner;
+  FCaseSensitive := KeysCaseSensitive;
+  FDuplicatesAction := DuplicatesAction;
+  if L > 0 then
+    Rehash;
+end;
+
+constructor TObjectDictionaryB.CreateEx(
+    const Keys: TRawByteStringArray;
+    const Values: TObjectArray; const IsItemOwner: Boolean;
+    const KeysCaseSensitive: Boolean; const AddOnSet: Boolean;
+    const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  inherited CreateEx(Keys, Values, IsItemOwner, KeysCaseSensitive, AddOnSet,
+      DuplicatesAction);
+end;
+
+destructor TGeneralObjectDictionaryB.Destroy;
+begin
+  FreeAndNil(FValues);
+  FreeAndNil(FKeys);
+  inherited Destroy;
+end;
+
+function TGeneralObjectDictionaryB.GetKeysCaseSensitive: Boolean;
+begin
+  Result := FCaseSensitive;
+end;
+
+function TGeneralObjectDictionaryB.GetAddOnSet: Boolean;
+begin
+  Result := FAddOnSet;
+end;
+
+procedure TGeneralObjectDictionaryB.SetAddOnSet(const AddOnSet: Boolean);
+begin
+  FAddOnSet := AddOnSet;
+end;
+
+function TGeneralObjectDictionaryB.GetHashTableSize: Integer;
+begin
+  Result := Length(FLookup);
+end;
+
+function TGeneralObjectDictionaryB.GetIsItemOwner: Boolean;
+begin
+  Result := FValues.IsItemOwner;
+end;
+
+procedure TGeneralObjectDictionaryB.SetIsItemOwner(const IsItemOwner: Boolean);
+begin
+  FValues.IsItemOwner := IsItemOwner;
+end;
+
+procedure TGeneralObjectDictionaryB.Rehash;
+var I, C, L : Integer;
+begin
+  C := FKeys.Count;
+  L := DictionaryRehashSize(C);
+  FLookup := nil;
+  SetLength(FLookup, L);
+  FHashSize := L;
+  Assert(L > 0);
+  Dec(L);
+  for I := 0 to C - 1 do
+    DynArrayAppend(FLookup[HashStrB(FKeys[I], 1, -1, FCaseSensitive, 0) and L], I);
+end;
+
+function TGeneralObjectDictionaryB.LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, J, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      H := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          J := FLookup[H, I];
+          if StrEqualB(Key, FKeys[J], FCaseSensitive) then
+            begin
+              Result := J;
+              exit;
+            end;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+procedure TGeneralObjectDictionaryB.Add(const Key: RawByteString; const Value: TObject);
+var H, L, I : Integer;
+begin
+  if FDuplicatesAction in [ddIgnore, ddError] then
+    if LocateKey(Key, H, False) >= 0 then
+      if FDuplicatesAction = ddIgnore then
+        exit
+      else
+        RaiseDuplicateKeyError(Key);
+  L := FHashSize;
+  if L = 0 then
+    begin
+      Rehash;
+      L := FHashSize;
+      Assert(L > 0);
+    end;
+  H := Integer(HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1));
+  I := FKeys.AppendItem(Key);
+  DynArrayAppend(FLookup[H], I);
+  FValues.AppendItem(Value);
+  if (I + 1) div DictionaryAverageHashChainSize > L then
+    Rehash;
+end;
+
+procedure TGeneralObjectDictionaryB.DeleteByIndex(const Idx: Integer; const Hash: Integer);
+var I, J, H : Integer;
+begin
+  if Hash = -1 then
+    H := HashStrB(FKeys[Idx], 1, -1, FCaseSensitive, 0) and (FHashSize - 1)
+  else
+    H := Hash;
+  FKeys.Delete(Idx);
+  FValues.Delete(Idx);
+  J := DynArrayPosNext(Idx, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+
+  for I := 0 to FHashSize - 1 do
+    for J := 0 to Length(FLookup[I]) - 1 do
+      if FLookup[I][J] > Idx then
+        Dec(FLookup[I][J]);
+end;
+
+procedure TGeneralObjectDictionaryB.Delete(const Key: RawByteString);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  DeleteByIndex(I, H);
+end;
+
+function TGeneralObjectDictionaryB.HasKey(const Key: RawByteString): Boolean;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False) >= 0;
+end;
+
+procedure TGeneralObjectDictionaryB.Rename(const Key, NewKey: RawByteString);
+var I, J, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  FKeys[I] := NewKey;
+  J := DynArrayPosNext(I, FLookup[H]);
+  Assert(J >= 0, 'Invalid hash value/lookup table');
+  DynArrayRemove(FLookup[H], J, 1);
+  DynArrayAppend(FLookup[HashStrB(NewKey, 1, -1, FCaseSensitive, 0) and (FHashSize - 1)], I);
+end;
+
+function TGeneralObjectDictionaryB.GetDuplicatesAction: TDictionaryDuplicatesAction;
+begin
+  Result := FDuplicatesAction;
+end;
+
+procedure TGeneralObjectDictionaryB.SetDuplicatesAction(const DuplicatesAction: TDictionaryDuplicatesAction);
+begin
+  FDuplicatesAction := DuplicatesAction;
+end;
+
+function TGeneralObjectDictionaryB.LocateItem(const Key: RawByteString; var Value: TObject): Integer;
+var H : Integer;
+begin
+  Result := LocateKey(Key, H, False);
+  if Result >= 0 then
+    Value := FValues[Result]
+  else
+    Value := nil;
+end;
+
+function TGeneralObjectDictionaryB.LocateNext(const Key: RawByteString; const Idx: Integer; var Value: TObject): Integer;
+var L, H, I, J, K : Integer;
+begin
+  Result := -1;
+  L := FHashSize;
+  if L = 0 then
+    RaiseKeyNotFoundError(Key);
+  H := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+  for I := 0 to Length(FLookup[H]) - 1 do
+    begin
+      J := FLookup[H, I];
+      if J = Idx then
+        begin
+          if not StrEqualB(Key, FKeys[J], FCaseSensitive) then
+            RaiseKeyNotFoundError(Key);
+          for K := I + 1 to Length(FLookup[H]) - 1 do
+            begin
+              J := FLookup[H, K];
+              if StrEqualB(Key, FKeys[J], FCaseSensitive) then
+                begin
+                  Value := FValues[J];
+                  Result := J;
+                  exit;
+                end;
+            end;
+          Result := -1;
+          exit;
+        end;
+    end;
+  RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralObjectDictionaryB.SetItem(const Key: RawByteString; const Value: TObject);
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    FValues[I] := Value else
+    if AddOnSet then
+      Add(Key, Value) else
+      RaiseKeyNotFoundError(Key);
+end;
+
+procedure TGeneralObjectDictionaryB.RaiseIndexError;
+begin
+  raise EDictionary.Create('Index out of range');
+end;
+
+function TGeneralObjectDictionaryB.Count: Integer;
+begin
+  Result := FKeys.Count;
+  Assert(FValues.Count = Result, 'Key/Value count mismatch');
+end;
+
+function TGeneralObjectDictionaryB.GetKeyByIndex(const Idx: Integer): RawByteString;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FKeys.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FKeys[Idx];
+end;
+
+procedure TGeneralObjectDictionaryB.DeleteItemByIndex(const Idx: Integer);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  DeleteByIndex(Idx, -1);
+end;
+
+function TGeneralObjectDictionaryB.GetItemByIndex(const Idx: Integer): TObject;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  Result := FValues[Idx];
+end;
+
+procedure TGeneralObjectDictionaryB.SetItemByIndex(const Idx: Integer; const Value: TObject);
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FValues.Count) then
+    RaiseIndexError;
+  {$ENDIF}
+  FValues[Idx] := Value;
+end;
+
+function TGeneralObjectDictionaryB.ReleaseItem(const Key: RawByteString): TObject;
+var I, H : Integer;
+begin
+  I := LocateKey(Key, H, True);
+  Result := FValues.ReleaseItem(I);
+end;
+
+procedure TGeneralObjectDictionaryB.ReleaseItems;
+begin
+  FKeys.Clear;
+  FValues.ReleaseItems;
+  FHashSize := 0;
+  FLookup := nil;
+end;
+
+procedure TGeneralObjectDictionaryB.FreeItems;
+begin
+  FKeys.Clear;
+  FValues.FreeItems;
+  FHashSize := 0;
+  FLookup := nil;
+end;
+
+procedure TGeneralObjectDictionaryB.Clear;
+begin
+  FKeys.Clear;
+  FValues.Clear;
+  FHashSize := 0;
+  FLookup := nil;
+end;
+
+
+
+{                                                                              }
+{ TObjectDictionaryB                                                           }
+{                                                                              }
+function TObjectDictionaryB.LocateKey(const Key: RawByteString; var LookupIdx: Integer;
+    const ErrorIfNotFound: Boolean): Integer;
+var H, I, L : Integer;
+begin
+  L := FHashSize;
+  if L > 0 then
+    begin
+      LongWord(H) := HashStrB(Key, 1, -1, FCaseSensitive, 0) and (L - 1);
+      LookupIdx := H;
+      for I := 0 to Length(FLookup[H]) - 1 do
+        begin
+          Result := FLookup[H][I];
+          if StrEqualB(Key, TRawByteStringArray(FKeys).Data[Result],
+              FCaseSensitive) then
+            exit;
+        end;
+    end;
+  if ErrorIfNotFound then
+    RaiseKeyNotFoundError(Key);
+  Result := -1;
+end;
+
+function TObjectDictionaryB.GetItem(const Key: RawByteString): TObject;
+var H, I : Integer;
+begin
+  I := LocateKey(Key, H, False);
+  if I >= 0 then
+    Result := TObjectArray(FValues).Data[I]
+  else
+    Result := nil;
+end;
+
+function TObjectDictionaryB.LocateItem(const Key: RawByteString; var Value: TObject): Integer;
 var H : Integer;
 begin
   Result := LocateKey(Key, H, False);
@@ -37619,5 +44865,4 @@ end;
 
 
 end.
-
 
