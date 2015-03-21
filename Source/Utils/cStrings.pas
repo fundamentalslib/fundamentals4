@@ -1784,12 +1784,14 @@ function  StrFindClosingBracketA(const S: AnsiString;
 {                                                                              }
 { Escaping                                                                     }
 {                                                                              }
-function  StrHexEscapeA(const S: AnsiString; const C: CharSet;
-          const EscPrefix: AnsiString = '\x'; const EscSuffix: AnsiString = '';
+function  StrHexEscapeB(const S: RawByteString; const C: CharSet;
+          const EscPrefix: RawByteString = '\x';
+          const EscSuffix: RawByteString = '';
           const UpperHex: Boolean = True;
-          const TwoDigitHex: Boolean = True): AnsiString;
-function  StrHexUnescapeA(const S: AnsiString; const EscPrefix: AnsiString = '\x';
-          const AsciiCaseSensitive: Boolean = True): AnsiString;
+          const TwoDigitHex: Boolean = True): RawByteString;
+function  StrHexUnescapeB(const S: RawByteString;
+          const EscPrefix: RawByteString = '\x';
+          const AsciiCaseSensitive: Boolean = True): RawByteString;
 
 function  StrCharEscapeA(const S: AnsiString; const C: array of AnsiChar;
           const EscPrefix: AnsiString;
@@ -24711,38 +24713,38 @@ end;
 {                                                                              }
 { Escaping                                                                     }
 {                                                                              }
-function StrHexEscapeA(const S: AnsiString; const C: CharSet;
-    const EscPrefix: AnsiString; const EscSuffix: AnsiString;
-    const UpperHex: Boolean; const TwoDigitHex: Boolean): AnsiString;
+function StrHexEscapeB(const S: RawByteString; const C: CharSet;
+    const EscPrefix: RawByteString; const EscSuffix: RawByteString;
+    const UpperHex: Boolean; const TwoDigitHex: Boolean): RawByteString;
 var I, J   : Integer;
-    HexStr : AnsiString;
+    HexStr : RawByteString;
 begin
   Result := '';
   J := 1;
-  I := PosCharSetA(C, S);
+  I := PosCharSetB(C, S);
   while I > 0 do
     begin
       if TwoDigitHex then
-        HexStr := LongWordToHexA(Ord(S[I]), 2)
+        HexStr := LongWordToHexB(Ord(S[I]), 2)
       else
-        HexStr := LongWordToHexA(Ord(S[I]), 1);
+        HexStr := LongWordToHexB(Ord(S[I]), 1);
       if UpperHex then
-        AsciiConvertUpperA(HexStr)
+        AsciiConvertUpperB(HexStr)
       else
-        AsciiConvertLowerA(HexStr);
-      Result := Result + CopyRangeA(S, J, I - 1) +
+        AsciiConvertLowerB(HexStr);
+      Result := Result + CopyRangeB(S, J, I - 1) +
                 EscPrefix + HexStr + EscSuffix;
       J := I + 1;
-      I := PosCharSetA(C, S, J);
+      I := PosCharSetB(C, S, J);
     end;
   if J = 1 then
     Result := S
   else
-    Result := Result + CopyFromA(S, J);
+    Result := Result + CopyFromB(S, J);
 end;
 
-function StrHexUnescapeA(const S: AnsiString; const EscPrefix: AnsiString;
-    const AsciiCaseSensitive: Boolean): AnsiString;
+function StrHexUnescapeB(const S: RawByteString; const EscPrefix: RawByteString;
+    const AsciiCaseSensitive: Boolean): RawByteString;
 var I, J, L, M : Integer;
     V : Byte;
     R : AnsiString;
@@ -24759,10 +24761,10 @@ begin
   // Replace
   J := 1;
   repeat
-    I := PosStrA(EscPrefix, S, J, AsciiCaseSensitive);
+    I := PosStrB(EscPrefix, S, J, AsciiCaseSensitive);
     if I > 0 then
       begin
-        R := R + CopyRangeA(S, J, I - 1);
+        R := R + CopyRangeB(S, J, I - 1);
         Inc(I, M);
         if I <= L then
           begin
@@ -24795,7 +24797,7 @@ begin
   if (I = 0) and (J = 0) then
     Result := S
   else
-    Result := R + CopyFromA(S, J);
+    Result := R + CopyFromB(S, J);
 end;
 
 function StrCharEscapeA(const S: AnsiString; const C: array of AnsiChar;
@@ -24909,7 +24911,7 @@ begin
        'f',     'v',     '\',     '''',      '"',      '?'],
       [AsciiCR, AsciiLF, AsciiNULL, AsciiBEL, AsciiBS, AsciiESC, AsciiHT,
        AsciiFF, AsciiVT, '\',     '''',      '"',      '?'], True, False);
-  Result := StrHexUnescapeA(Result, '\x', True);
+  Result := StrHexUnescapeB(Result, '\x', True);
 end;
 
 
@@ -29797,18 +29799,18 @@ begin
   Assert(MatchFileMaskA('A*B*?', 'ACBDC'), 'MatchFileMask');
 
   { Escaping                                                                   }
-  Assert(StrHexEscapeA('ABCDE', ['C', 'D'], '\\', '//', False, True) =
+  Assert(StrHexEscapeB('ABCDE', ['C', 'D'], '\\', '//', False, True) =
          'AB\\43//\\44//E', 'StrHexEscape');
-  Assert(StrHexEscapeA('ABCDE', ['C', 'E'], '\', '', False, True) =
+  Assert(StrHexEscapeB('ABCDE', ['C', 'E'], '\', '', False, True) =
          'AB\43D\45', 'StrHexEscape');
-  Assert(StrHexEscapeA('ABCDE', ['F'], '\', '', False, True) =
+  Assert(StrHexEscapeB('ABCDE', ['F'], '\', '', False, True) =
          'ABCDE', 'StrHexEscape');
-  Assert(StrHexUnescapeA('AB\\43\\44XYZ', '\\') = 'ABCDXYZ', 'StrHexUnescape');
-  Assert(StrHexUnescapeA('ABC', '\') = 'ABC', 'StrHexUnescape');
-  Assert(StrHexUnescapeA('ABC\44', '\') = 'ABCD', 'StrHexUnescape');
-  Assert(StrHexUnescapeA('AB\\43\\44XYZ', '\\') = 'ABCDXYZ', 'StrHexUnescape');
-  Assert(StrHexUnescapeA('AB%43%44XYZ', '%') = 'ABCDXYZ', 'StrHexUnescape');
-  Assert(StrHexUnescapeA('AB%XYZ', '%') = 'ABXYZ', 'StrHexUnescape');
+  Assert(StrHexUnescapeB('AB\\43\\44XYZ', '\\') = 'ABCDXYZ', 'StrHexUnescape');
+  Assert(StrHexUnescapeB('ABC', '\') = 'ABC', 'StrHexUnescape');
+  Assert(StrHexUnescapeB('ABC\44', '\') = 'ABCD', 'StrHexUnescape');
+  Assert(StrHexUnescapeB('AB\\43\\44XYZ', '\\') = 'ABCDXYZ', 'StrHexUnescape');
+  Assert(StrHexUnescapeB('AB%43%44XYZ', '%') = 'ABCDXYZ', 'StrHexUnescape');
+  Assert(StrHexUnescapeB('AB%XYZ', '%') = 'ABXYZ', 'StrHexUnescape');
 
   Assert(StrCharEscapeA('ABCDE', ['C', 'D'], '\\', ['c', 'd']) =
          'AB\\c\\dE', 'StrCharEscape');

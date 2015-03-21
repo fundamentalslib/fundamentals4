@@ -1807,7 +1807,7 @@ end;
 
 function FileNameCleanU(const FileName: UnicodeString): UnicodeString;
 begin
-  Result := StrReplaceCharU(['\', '/', ':', '>', '<', '*', '?'], '_', FileName);
+  Result := StrReplaceCharU(['\', '/', ':', '>', '<', '*', '?'], WideChar('_'), FileName);
   if Result = '.' then
     Result := '_' else
   if Result = '..' then
