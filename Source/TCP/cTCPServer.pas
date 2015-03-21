@@ -126,7 +126,7 @@ type
     procedure Log(const LogType: TTCPLogType; const LogMsg: String; const LogArgs: array of const; const LogLevel: Integer = 0); overload;
 
     function  GetState: TTCPServerClientState;
-    function  GetStateStr: AnsiString;
+    function  GetStateStr: RawByteString;
     procedure SetState(const State: TTCPServerClientState);
 
     {$IFDEF TCPSERVER_TLS}
@@ -158,7 +158,7 @@ type
     destructor Destroy; override;
 
     property  State: TTCPServerClientState read GetState;
-    property  StateStr: AnsiString read GetStateStr;
+    property  StateStr: RawByteString read GetStateStr;
     property  Terminated: Boolean read FTerminated;
     property  Connection: TTCPConnection read FConnection;
     procedure Close;
@@ -273,7 +273,7 @@ type
     procedure LogException(const Msg: String; const E: Exception);
 
     function  GetState: TTCPServerState;
-    function  GetStateStr: AnsiString;
+    function  GetStateStr: RawByteString;
     procedure SetState(const State: TTCPServerState);
     procedure CheckNotActive;
 
@@ -383,7 +383,7 @@ type
     property  OnClientClose: TTCPServerClientEvent read FOnClientClose write FOnClientClose;
 
     property  State: TTCPServerState read GetState;
-    property  StateStr: AnsiString read GetStateStr;
+    property  StateStr: RawByteString read GetStateStr;
     property  Active: Boolean read FActive write SetActive default False;
     procedure Start;
     procedure Stop;
@@ -445,14 +445,14 @@ const
   SError_NotAllowedWhileActive = 'Operation not allowed while server is active';
   SError_InvalidServerPort     = 'Invalid server port';
 
-  STCPServerState : array[TTCPServerState] of AnsiString = (
+  STCPServerState : array[TTCPServerState] of RawByteString = (
       'Initialise',
       'Starting',
       'Ready',
       'Failure',
       'Closed');
 
-  STCPServerClientState : array[TTCPServerClientState] of AnsiString = (
+  STCPServerClientState : array[TTCPServerClientState] of RawByteString = (
       'Initialise',
       'Starting',
       'Negotiating',
@@ -636,7 +636,7 @@ begin
   Result := FState;
 end;
 
-function TTCPServerClient.GetStateStr: AnsiString;
+function TTCPServerClient.GetStateStr: RawByteString;
 begin
   Result := STCPServerClientState[GetState];
 end;
@@ -948,7 +948,7 @@ begin
   end;
 end;
 
-function TF4TCPServer.GetStateStr: AnsiString;
+function TF4TCPServer.GetStateStr: RawByteString;
 begin
   Result := STCPServerState[GetState];
 end;

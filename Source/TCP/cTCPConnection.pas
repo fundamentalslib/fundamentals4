@@ -2,10 +2,10 @@
 {                                                                              }
 {   Library:          Fundamentals 4.00                                        }
 {   File name:        cTCPConnection.pas                                       }
-{   File version:     4.20                                                     }
+{   File version:     4.21                                                     }
 {   Description:      TCP connection.                                          }
 {                                                                              }
-{   Copyright:        Copyright (c) 2007-2012, David J Butler                  }
+{   Copyright:        Copyright (c) 2007-2015, David J Butler                  }
 {                     All rights reserved.                                     }
 {                     This file is licensed under the BSD License.             }
 {                     See http://www.opensource.org/licenses/bsd-license.php   }
@@ -56,7 +56,8 @@
 {   2011/09/03  4.17  Revise for Fundamentals 4.                               }
 {   2011/09/10  4.18  Improve locking granularity.                             }
 {   2011/09/15  4.19  Improve polling efficiency.                              }
-{   2011/10/06  4.20  Fix TCPTick frequency.                                   } 
+{   2011/10/06  4.20  Fix TCPTick frequency.                                   }
+{   2015/03/14  4.21  RawByteString changes.                                   }
 {                                                                              }
 {******************************************************************************}
 
@@ -75,6 +76,7 @@ uses
   SyncObjs,
 
   { Fundamentals }
+  cUtils,
   cSocket,
   cTCPBuffer;
 
@@ -110,7 +112,7 @@ type
   protected
     procedure Log(const LogType: TTCPLogType; const LogMsg: String; const LogLevel: Integer = 0); overload;
     procedure Log(const LogType: TTCPLogType; const LogMsg: String; const LogArgs: array of const; const LogLevel: Integer = 0); overload;
-    function  GetStateStr: AnsiString;
+    function  GetStateStr: RawByteString;
     procedure SetState(const State: TTCPConnectionProxyState);
     procedure ConnectionClose;
     procedure ConnectionPutReadData(const Buf; const BufSize: Integer);
@@ -123,7 +125,7 @@ type
     constructor Create(const Connection: TTCPConnection);
 
     property  State: TTCPConnectionProxyState read FState;
-    property  StateStr: AnsiString read GetStateStr;
+    property  StateStr: RawByteString read GetStateStr;
     procedure Start;
     procedure ProcessReadData(const Buf; const BufSize: Integer); virtual; abstract;
     procedure ProcessWriteData(const Buf; const BufSize: Integer); virtual; abstract;
@@ -211,7 +213,7 @@ type
     procedure Log(const LogType: TTCPLogType; const LogMsg: String; const LogArgs: array of const; const LogLevel: Integer = 0); overload;
 
     function  GetState: TTCPConnectionState;
-    function  GetStateStr: AnsiString;
+    function  GetStateStr: RawByteString;
     procedure SetState(const State: TTCPConnectionState);
 
     procedure SetClosed;
@@ -251,8 +253,8 @@ type
     function  FillBufferFromSocket(out RecvClosed, ReadEventPending, ReadBufFullEvent: Boolean): Integer;
     function  EmptyBufferToSocket(out BufferEmptyBefore, BufferEmptied: Boolean): Integer;
 
-    function  LocateStrInBufferA(const Delimiter: AnsiString; const MaxSize: Integer): Integer;
-    function  LocateChrInBufferA(const Delimiter: TAnsiCharSet; const MaxSize: Integer): Integer;
+    function  LocateStrInBuffer(const Delimiter: RawByteString; const MaxSize: Integer): Integer;
+    function  LocateChrInBuffer(const Delimiter: TAnsiCharSet; const MaxSize: Integer): Integer;
 
     function  ReadFromBuffer(var Buf; const BufSize: Integer): Integer;
     function  ReadFromSocket(var Buf; const BufSize: Integer): Integer;
@@ -282,7 +284,7 @@ type
     procedure AddProxy(const Proxy: TTCPConnectionProxy);
 
     property  State: TTCPConnectionState read GetState;
-    property  StateStr: AnsiString read GetStateStr;
+    property  StateStr: RawByteString read GetStateStr;
     procedure Start;
 
     property  ReadBufferMaxSize: Integer read FReadBufferMaxSize write SetReadBufferMaxSize;
@@ -302,20 +304,20 @@ type
     procedure PollSocket(out Idle, Terminated: Boolean);
 
     function  Read(var Buf; const BufSize: Integer): Integer;
-    function  ReadStr(const StrLen: Integer): AnsiString;
+    function  ReadStr(const StrLen: Integer): RawByteString;
 
     function  Discard(const Size: Integer): Integer;
 
     function  Peek(var Buf; const BufSize: Integer): Integer;
-    function  PeekStr(const StrLen: Integer): AnsiString;
+    function  PeekStr(const StrLen: Integer): RawByteString;
 
-    function  PeekDelimited(var Buf; const BufSize: Integer; const Delimiter: AnsiString; const MaxSize: Integer = -1): Integer; overload;
+    function  PeekDelimited(var Buf; const BufSize: Integer; const Delimiter: RawByteString; const MaxSize: Integer = -1): Integer; overload;
     function  PeekDelimited(var Buf; const BufSize: Integer; const Delimiter: TAnsiCharSet; const MaxSize: Integer = -1): Integer; overload;
 
-    function  ReadLineA(var Line: AnsiString; const Delimiter: AnsiString; const MaxLineLength: Integer = -1): Boolean;
+    function  ReadLine(var Line: RawByteString; const Delimiter: RawByteString; const MaxLineLength: Integer = -1): Boolean;
 
     function  Write(const Buf; const BufSize: Integer): Integer;
-    function  WriteStrA(const Str: AnsiString): Integer;
+    function  WriteStrA(const Str: RawByteString): Integer;
     function  WriteStrW(const Str: WideString): Integer;
     function  WriteStr(const Str: String): Integer;
 
@@ -350,7 +352,7 @@ uses
 const
   SError_InvalidParameter = 'Invalid parameter';
 
-  SConnectionProxyState : array[TTCPConnectionProxyState] of AnsiString = (
+  SConnectionProxyState : array[TTCPConnectionProxyState] of RawByteString = (
     'Init',
     'Negotiating',
     'Filtering',
@@ -359,7 +361,7 @@ const
     'Closed'
     );
 
-  SConnectionState : array[TTCPConnectionState] of AnsiString = (
+  SConnectionState : array[TTCPConnectionState] of RawByteString = (
     'Init',
     'ProxyNegotiation',
     'Connected',
@@ -394,7 +396,7 @@ begin
   Log(LogType, Format(LogMsg, LogArgs), LogLevel);
 end;
 
-function TTCPConnectionProxy.GetStateStr: AnsiString;
+function TTCPConnectionProxy.GetStateStr: RawByteString;
 begin
   Result := SConnectionProxyState[FState];
 end;
@@ -711,7 +713,7 @@ begin
   end;
 end;
 
-function TTCPConnection.GetStateStr: AnsiString;
+function TTCPConnection.GetStateStr: RawByteString;
 begin
   Result := SConnectionState[GetState];
 end;
@@ -1379,7 +1381,7 @@ end;
 // Returns >= 0 if found in buffer
 // Returns -1 if not found in buffer
 // MaxSize specifies maximum bytes before delimiter, of -1 for no limit
-function TTCPConnection.LocateStrInBufferA(const Delimiter: AnsiString; const MaxSize: Integer): Integer;
+function TTCPConnection.LocateStrInBuffer(const Delimiter: RawByteString; const MaxSize: Integer): Integer;
 var DelLen  : Integer;
     BufSize : Integer;
     LocLen  : Integer;
@@ -1429,7 +1431,7 @@ end;
 // Returns >= 0 if found in buffer
 // Returns -1 if not found in buffer
 // MaxSize specifies maximum bytes before delimiter, of -1 for no limit
-function TTCPConnection.LocateChrInBufferA(const Delimiter: TAnsiCharSet; const MaxSize: Integer): Integer;
+function TTCPConnection.LocateChrInBuffer(const Delimiter: TAnsiCharSet; const MaxSize: Integer): Integer;
 var BufSize : Integer;
     LocLen  : Integer;
     BufPtr  : PAnsiChar;
@@ -1471,7 +1473,7 @@ end;
 // Returns >= 0 if found.
 // MaxSize specifies maximum bytes before delimiter, of -1 for no limit
 function TTCPConnection.PeekDelimited(var Buf; const BufSize: Integer;
-         const Delimiter: AnsiString; const MaxSize: Integer): Integer;
+         const Delimiter: RawByteString; const MaxSize: Integer): Integer;
 var DelPos : Integer;
     BufPtr : PAnsiChar;
     BufLen : Integer;
@@ -1479,7 +1481,7 @@ begin
   Assert(Delimiter <> '');
   Lock;
   try
-    DelPos := LocateStrInBufferA(Delimiter, MaxSize);
+    DelPos := LocateStrInBuffer(Delimiter, MaxSize);
     if DelPos >= 0 then
       begin
         // found
@@ -1510,7 +1512,7 @@ var DelPos : Integer;
 begin
   Lock;
   try
-    DelPos := LocateChrInBufferA(Delimiter, MaxSize);
+    DelPos := LocateChrInBuffer(Delimiter, MaxSize);
     if DelPos >= 0 then
       begin
         // found
@@ -1619,7 +1621,7 @@ begin
   Result := SizeTotal;
 end;
 
-function TTCPConnection.ReadStr(const StrLen: Integer): AnsiString;
+function TTCPConnection.ReadStr(const StrLen: Integer): RawByteString;
 var ReadLen : Integer;
 begin
   if StrLen <= 0 then
@@ -1753,7 +1755,7 @@ begin
   Assert(Result = BufSize);
 end;
 
-function TTCPConnection.WriteStrA(const Str: AnsiString): Integer;
+function TTCPConnection.WriteStrA(const Str: RawByteString): Integer;
 var StrLen : Integer;
 begin
   StrLen := Length(Str);
@@ -1780,7 +1782,7 @@ end;
 function TTCPConnection.WriteStr(const Str: String): Integer;
 begin
   {$IFDEF StringIsUnicode}
-  Result := WriteStrW(Str);
+  Result := WriteStrA(UTF8Encode(Str));
   {$ELSE}
   Result := WriteStrA(Str);
   {$ENDIF}
@@ -1796,7 +1798,7 @@ begin
   end;
 end;
 
-function TTCPConnection.PeekStr(const StrLen: Integer): AnsiString;
+function TTCPConnection.PeekStr(const StrLen: Integer): RawByteString;
 var PeekLen : Integer;
 begin
   if StrLen <= 0 then
@@ -1814,7 +1816,7 @@ end;
 // MaxLineLength is maximum line length excluding the delimiter
 // Returns False if line not available
 // Returns True if line read
-function TTCPConnection.ReadLineA(var Line: AnsiString; const Delimiter: AnsiString; const MaxLineLength: Integer): Boolean;
+function TTCPConnection.ReadLine(var Line: RawByteString; const Delimiter: RawByteString; const MaxLineLength: Integer): Boolean;
 var
   DelPos : Integer;
   DelLen : Integer;
@@ -1822,7 +1824,7 @@ begin
   Assert(Delimiter <> '');
   Lock;
   try
-    DelPos := LocateStrInBufferA(Delimiter, MaxLineLength);
+    DelPos := LocateStrInBuffer(Delimiter, MaxLineLength);
     Result := DelPos >= 0;
     if not Result then
       exit;

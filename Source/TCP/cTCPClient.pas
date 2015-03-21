@@ -238,7 +238,7 @@ type
     procedure Unlock;
 
     function  GetState: TTCPClientState;
-    function  GetStateStr: AnsiString;
+    function  GetStateStr: RawByteString;
     procedure SetState(const State: TTCPClientState);
 
     procedure CheckNotActive;
@@ -400,7 +400,7 @@ type
     property  OnStopped: TTCPClientNotifyEvent read FOnStopped write FOnStopped;
 
     property  State: TTCPClientState read GetState;
-    property  StateStr: AnsiString read GetStateStr;
+    property  StateStr: RawByteString read GetStateStr;
 
     function  IsConnecting: Boolean;
     function  IsConnectingOrConnected: Boolean;
@@ -544,7 +544,7 @@ const
   SError_Terminated              = 'Terminated';
   SError_TimedOut                = 'Timed out';
 
-  SClientState : array[TTCPClientState] of AnsiString = (
+  SClientState : array[TTCPClientState] of RawByteString = (
       'Initialise',
       'Starting',
       'Started',
@@ -1015,7 +1015,7 @@ begin
   end;
 end;
 
-function TF4TCPClient.GetStateStr: AnsiString;
+function TF4TCPClient.GetStateStr: RawByteString;
 begin
   Result := SClientState[GetState];
 end;
