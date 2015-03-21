@@ -101,6 +101,7 @@ uses
   Windows,
   SysUtils,
   { Fundamentals }
+  cUtils,
   cWinSock;
 {$ENDIF}
 
@@ -109,6 +110,7 @@ uses
   { System }
   SysUtils,
   { Fundamentals }
+  cUtils,
   cUnixSock;
 {$ENDIF}
 
@@ -211,10 +213,10 @@ function  SockAddrLen(const SockAddr: TSockAddr): Integer; {$IFDEF UseInline}inl
 function  SockAddrToSocketAddr(const Addr: TSockAddr): TSocketAddr;
 function  SocketAddrToSockAddr(const Addr: TSocketAddr): TSockAddr;
 
-function  SocketAddrIPStrA(const Addr: TSocketAddr): AnsiString;
+function  SocketAddrIPStrA(const Addr: TSocketAddr): RawByteString;
 function  SocketAddrIPStr(const Addr: TSocketAddr): String;
 
-function  SocketAddrStrA(const Addr: TSocketAddr): AnsiString;
+function  SocketAddrStrA(const Addr: TSocketAddr): RawByteString;
 function  SocketAddrStr(const Addr: TSocketAddr): String;
 
 type
@@ -276,7 +278,7 @@ function  SocketGetSockOpt(const S: TSocketHandle; const Level, OptName: Integer
           const OptVal: Pointer; var OptLen: Integer): Integer;
 function  Sockethtons(const HostShort: Word): Word;
 function  Sockethtonl(const HostLong: LongWord): LongWord;
-function  Socketinet_ntoa(const InAddr: TIP4Addr): AnsiString;
+function  Socketinet_ntoa(const InAddr: TIP4Addr): RawByteString;
 function  Socketinet_addr(const P: PAnsiChar): TIP4Addr;
 function  SocketListen(const S: TSocketHandle; const Backlog: Integer): Integer;
 function  Socketntohs(const NetShort: Word): Word;
@@ -361,7 +363,7 @@ const
 {$ENDIF}
 {$IFDEF SOCKETLIB_UNIX}
 const
-  // Define Berkeley/Posix error identifiers for equivalent Windows error codes
+  // Define Berkeley/Posix error identifiers for equivalent Unix error codes
   EINTR              = cUnixSock.EINTR;
   EBADF              = cUnixSock.EBADF;
   EACCES             = cUnixSock.EACCES;
@@ -451,14 +453,14 @@ type
       inaMulticast,
       inaBroadcast);
 
-function  IsIPAddressA(const Address: AnsiString; out NetAddress: TIP4Addr): Boolean; overload;
-function  IsIPAddressA(const Address: AnsiString; out NetAddress: TIP6Addr): Boolean; overload;
+function  IsIPAddressA(const Address: RawByteString; out NetAddress: TIP4Addr): Boolean; overload;
+function  IsIPAddressA(const Address: RawByteString; out NetAddress: TIP6Addr): Boolean; overload;
 
 function  IsIPAddress(const Address: String; out NetAddress: TIP4Addr): Boolean; overload;
 function  IsIPAddress(const Address: String; out NetAddress: TIP6Addr): Boolean; overload;
 
-function  IPAddressStrA(const Address: TIP4Addr): AnsiString; overload;
-function  IPAddressStrA(const Address: TIP6Addr): AnsiString; overload;
+function  IPAddressStrA(const Address: TIP4Addr): RawByteString; overload;
+function  IPAddressStrA(const Address: TIP6Addr): RawByteString; overload;
 
 function  IPAddressStr(const Address: TIP4Addr): String; overload;
 function  IPAddressStr(const Address: TIP6Addr): String; overload;
@@ -516,7 +518,7 @@ function  HostEntAddressesCount(const HostEnt: PHostEnt): Integer;
 function  HostEntAddresses(const HostEnt: PHostEnt): TIP4AddrArray;
 function  HostEntAddress(const HostEnt: PHostEnt; const Index: Integer): TSocketAddr;
 function  HostEntAddressIP4(const HostEnt: PHostEnt; const Index: Integer = 0): TIP4Addr;
-function  HostEntAddressStr(const HostEnt: PHostEnt; const Index: Integer = 0): AnsiString;
+function  HostEntAddressStr(const HostEnt: PHostEnt; const Index: Integer = 0): RawByteString;
 function  HostEntName(const HostEnt: PHostEnt): AnsiString;
 
 
@@ -525,8 +527,8 @@ function  HostEntName(const HostEnt: PHostEnt): AnsiString;
 { IP protocol                                                                  }
 {   Enumeration of IP protocols.                                               }
 {                                                                              }
-function  IPProtocolToStrA(const Protocol: TIPProtocol): AnsiString;
-function  StrToIPProtocolA(const Protocol: AnsiString): TIPProtocol;
+function  IPProtocolToStrA(const Protocol: TIPProtocol): RawByteString;
+function  StrToIPProtocolA(const Protocol: RawByteString): TIPProtocol;
 
 function  IPProtocolToStr(const Protocol: TIPProtocol): String;
 function  StrToIPProtocol(const Protocol: String): TIPProtocol;
@@ -537,7 +539,7 @@ function  StrToIPProtocol(const Protocol: String): TIPProtocol;
 { Local host                                                                   }
 {                                                                              }
 type
-  AddressStrArrayA = Array of AnsiString;
+  AddressStrArrayA = Array of RawByteString;
   AddressStrArray = Array of String;
 
 function  LocalHostNameA: AnsiString;
@@ -553,7 +555,7 @@ function  LocalIPAddressesStr: AddressStrArray;
 function  LocalIP6AddressesStr: AddressStrArray;
 
 function  GuessInternetIP: TIP4Addr;
-function  GuessInternetIPStrA: AnsiString;
+function  GuessInternetIPStrA: RawByteString;
 function  GuessInternetIPStr: String;
 
 
@@ -608,7 +610,7 @@ function  ResolvePort(const Port: String; const Protocol: TIPProtocol): Word;
 
 function  NetPortToPort(const NetPort: Word): Word;
 function  NetPortToPortStr(const NetPort: Word): String;
-function  NetPortToPortStrA(const NetPort: Word): AnsiString;
+function  NetPortToPortStrA(const NetPort: Word): RawByteString;
 
 function  PortToNetPort(const Port: Word): Word;
 
@@ -726,7 +728,6 @@ uses
   {$ENDIF}
   SyncObjs,
   { Fundamentals }
-  cUtils,
   cStrings;
 
 
@@ -947,7 +948,7 @@ begin
   end;
 end;
 
-function SocketAddrIPStrA(const Addr: TSocketAddr): AnsiString;
+function SocketAddrIPStrA(const Addr: TSocketAddr): RawByteString;
 begin
   case Addr.AddrFamily of
     iaIP4 : Result := IPAddressStrA(Addr.AddrIP4);
@@ -967,9 +968,9 @@ begin
   end;
 end;
 
-function SocketAddrStrA(const Addr: TSocketAddr): AnsiString;
+function SocketAddrStrA(const Addr: TSocketAddr): RawByteString;
 begin
-  Result := SocketAddrIPStrA(Addr) + ':' + IntToStringA(Addr.Port);
+  Result := SocketAddrIPStrA(Addr) + ':' + IntToStringB(Addr.Port);
 end;
 
 function SocketAddrStr(const Addr: TSocketAddr): String;
@@ -1272,11 +1273,11 @@ begin
   Result := htonl(HostLong);
 end;
 
-function Socketinet_ntoa(const InAddr: TIP4Addr): AnsiString;
+function Socketinet_ntoa(const InAddr: TIP4Addr): RawByteString;
 var A : TInAddr;
 begin
   A.S_addr := InAddr.Addr32;
-  Result := StrPasA(inet_ntoa(A));
+  Result := StrPasB(inet_ntoa(A));
 end;
 
 function Socketinet_addr(const P: PAnsiChar): TIP4Addr;
@@ -1558,7 +1559,7 @@ end;
 {                                                                              }
 { IP Addresses                                                                 }
 {                                                                              }
-function IsIPAddressA(const Address: AnsiString; out NetAddress: TIP4Addr): Boolean;
+function IsIPAddressA(const Address: RawByteString; out NetAddress: TIP4Addr): Boolean;
 var I, L, N : Integer;
 begin
   // Validate length: shortest full IP address is 7 characters: #.#.#.#
@@ -1569,7 +1570,7 @@ begin
       Result := False;
       exit;
     end;
-  // Validate number of '.' characters
+  // Validate number of '.' characters: full IP address must have 3 dots
   N := 0;
   for I := 1 to L do
     if Address[I] = '.' then
@@ -1600,7 +1601,7 @@ begin
       Result := False;
 end;
 
-function IsIPAddressA(const Address: AnsiString; out NetAddress: TIP6Addr): Boolean;
+function IsIPAddressA(const Address: RawByteString; out NetAddress: TIP6Addr): Boolean;
 var Hints    : TAddrInfo;
     AddrInfo : PAddrInfo;
     CurrAddr : PAddrInfo;
@@ -1680,12 +1681,12 @@ begin
   {$ENDIF}
 end;
 
-function IPAddressStrA(const Address: TIP4Addr): AnsiString;
+function IPAddressStrA(const Address: TIP4Addr): RawByteString;
 begin
   Result := Socketinet_ntoa(Address);
 end;
 
-function IPAddressStrA(const Address: TIP6Addr): AnsiString;
+function IPAddressStrA(const Address: TIP6Addr): RawByteString;
 var I : Integer;
 begin
   // Handle special addresses
@@ -1703,11 +1704,11 @@ begin
   Result := '';
   for I := 0 to 7 do
     begin
-      Result := Result + LongWordToHexA(ntohs(Address.Addr16[I]), 0, True);
+      Result := Result + LongWordToHexB(ntohs(Address.Addr16[I]), 0, True);
       if I < 7 then
         Result := Result + ':';
     end;
-  AsciiConvertLowerA(Result);
+  AsciiConvertLowerB(Result);
 end;
 
 function IPAddressStr(const Address: TIP4Addr): String;
@@ -1879,7 +1880,7 @@ begin
     Result.Addr32 := Q^.S_addr;
 end;
 
-function HostEntAddressStr(const HostEnt: PHostEnt; const Index: Integer): AnsiString;
+function HostEntAddressStr(const HostEnt: PHostEnt; const Index: Integer): RawByteString;
 begin
   Result := IPAddressStrA(HostEntAddressIP4(HostEnt, Index));
 end;
@@ -1895,9 +1896,10 @@ end;
 { SocketProtocolAsString                                                       }
 {                                                                              }
 const
-  ProtocolStr: Array[TIPProtocol] of AnsiString = ('', 'ip', 'icmp', 'tcp', 'udp', 'raw');
+  ProtocolStr: Array[TIPProtocol] of RawByteString =
+      ('', 'ip', 'icmp', 'tcp', 'udp', 'raw');
 
-function IPProtocolToStrA(const Protocol: TIPProtocol): AnsiString;
+function IPProtocolToStrA(const Protocol: TIPProtocol): RawByteString;
 var ProtoNum : Integer;
     PEnt     : PProtoEnt;
 begin
@@ -1916,7 +1918,7 @@ begin
       {$ENDIF}
       PEnt := GetProtoByNumber(ProtoNum);
       if Assigned(PEnt) then
-        Result := StrPasA(PEnt^.p_name)
+        Result := StrPasB(PEnt^.p_name)
       else
         Result := ProtocolStr[Protocol];
     end
@@ -1924,7 +1926,7 @@ begin
     Result := '';
 end;
 
-function StrToIPProtocolA(const Protocol: AnsiString): TIPProtocol;
+function StrToIPProtocolA(const Protocol: RawByteString): TIPProtocol;
 var I    : TIPProtocol;
     PEnt : PProtoEnt;
 begin
@@ -1940,7 +1942,7 @@ begin
   else
     begin
       for I := Low(TIPProtocol) to High(TIPProtocol) do
-        if StrEqualNoAsciiCaseA(Protocol, ProtocolStr[I]) then
+        if StrEqualNoAsciiCaseB(Protocol, ProtocolStr[I]) then
           begin
             Result := I;
             exit;
@@ -2073,7 +2075,7 @@ begin
   Result := IP4AddrNone;
 end;
 
-function GuessInternetIPStrA: AnsiString;
+function GuessInternetIPStrA: RawByteString;
 var A : TIP4Addr;
 begin
   A := GuessInternetIP;
@@ -2437,7 +2439,7 @@ end;
 
 function NetPortToPort(const NetPort: Word): Word;
 begin
-  Result := ntohs(NetPort);
+  Result := Socketntohs(NetPort);
 end;
 
 function NetPortToPortStr(const NetPort: Word): String;
@@ -2445,13 +2447,9 @@ begin
   Result := IntToStr(NetPortToPort(NetPort));
 end;
 
-function NetPortToPortStrA(const NetPort: Word): AnsiString;
+function NetPortToPortStrA(const NetPort: Word): RawByteString;
 begin
-  {$IFDEF StringIsUnicode}
-  Result := AnsiString(NetPortToPortStr(NetPort));
-  {$ELSE}
-  Result := NetPortToPortStr(NetPort);
-  {$ENDIF}
+  Result := IntToStringB(NetPortToPort(NetPort));
 end;
 
 function PortToNetPort(const Port: Word): Word;

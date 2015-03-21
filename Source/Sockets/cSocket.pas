@@ -86,6 +86,7 @@ uses
   SyncObjs,
 
   { Fundamentals }
+  cUtils,
   cSocketLib;
 
 
@@ -246,7 +247,7 @@ type
     function  GetLocalAddress: TSocketAddr;
     function  GetLocalAddressIP: TIP4Addr;
     function  GetLocalAddressIP6: TIP6Addr;
-    function  GetLocalAddressStr: AnsiString;
+    function  GetLocalAddressStr: RawByteString;
     function  GetLocalPort: Integer;
     function  GetLocalPortStr: String;
 
@@ -273,7 +274,7 @@ type
     function  GetRemoteHostName: AnsiString;
 
     function  Send(const Buf; const BufSize: Integer): Integer; overload;
-    function  Send(const Buf: AnsiString): Integer; overload;
+    function  Send(const Buf: RawByteString): Integer; overload;
 
     function  SendTo(const Address: TSocketAddr; const Buf; const BufSize: Integer): Integer; overload;
     function  SendTo(const Host, Port: AnsiString; const Buf; const BufSize: Integer): Integer; overload;
@@ -854,7 +855,7 @@ begin
     IP6AddrSetZero(Result);
 end;
 
-function TSysSocket.GetLocalAddressStr: AnsiString;
+function TSysSocket.GetLocalAddressStr: RawByteString;
 var A : TSocketAddr;
 begin
   A := GetLocalAddress;
@@ -1106,7 +1107,7 @@ begin
     end;
 end;
 
-function TSysSocket.Send(const Buf: AnsiString): Integer;
+function TSysSocket.Send(const Buf: RawByteString): Integer;
 var L : Integer;
 begin
   L := Length(Buf);
