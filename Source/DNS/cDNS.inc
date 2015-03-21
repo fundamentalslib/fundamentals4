@@ -1,0 +1,12 @@
+{$INCLUDE ..\cFundamentals.inc}
+
+{$IFDEF DEBUG}
+  {$DEFINE DNS_DEBUG}
+{$ENDIF}
+
+{$IFDEF DEBUG}
+{$IFDEF SELFTEST}
+  {$DEFINE DNS_SELFTEST}
+{$ENDIF}
+{$ENDIF}
+
