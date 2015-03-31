@@ -257,6 +257,8 @@ function  Decrypt(
 {                                                                              }
 {$IFDEF CIPHER_SELFTEST}
 procedure SelfTest;
+{$ENDIF}
+{$IFDEF CIPHER_PROFILE}
 procedure Profile;
 {$ENDIF}
 
@@ -1710,7 +1712,9 @@ begin
   SelfTestCipherRandom;
   SelfTestTestCases;
 end;
+{$ENDIF}
 
+{$IFDEF CIPHER_PROFILE}
 procedure Profile;
 begin
 end;

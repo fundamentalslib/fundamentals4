@@ -34,6 +34,7 @@
 {   Home page:        http://fundementals.sourceforge.net                      }
 {   Forum:            http://sourceforge.net/forum/forum.php?forum_id=2117     }
 {   E-mail:           fundamentalslib at gmail.com                             }
+{   Source:           https://github.com/fundamentalslib                       }
 {                                                                              }
 { Revision history:                                                            }
 {                                                                              }
@@ -188,11 +189,12 @@ function  RSADecryptStr(
 {                                                                              }
 { Test cases                                                                   }
 {                                                                              }
-{$IFDEF DEBUG}{$IFDEF SELFTEST}
+{$IFDEF CIPHER_SELFTEST}
 procedure SelfTest;
-{$ENDIF}{$IFDEF PROFILE}
+{$ENDIF}
+{$IFDEF CIPHER_PROFILE}
 procedure Profile;
-{$ENDIF}{$ENDIF}
+{$ENDIF}
 
 
 
@@ -200,9 +202,11 @@ implementation
 
 uses
   { System }
-  {$IFDEF DEBUG}{$IFDEF PROFILE}
+  {$IFDEF OS_WIN}
+  {$IFDEF CIPHER_PROFILE}
   Windows,
-  {$ENDIF}{$ENDIF}
+  {$ENDIF}
+  {$ENDIF}
   { Fundamentals }
   cRandom,
   cHash;
@@ -1200,8 +1204,8 @@ end;
 {                                                                              }
 { Test cases                                                                   }
 {                                                                              }
-{$IFDEF DEBUG}{$ASSERTIONS ON}
-{$IFDEF SELFTEST}
+{$IFDEF CIPHER_SELFTEST}
+{$ASSERTIONS ON}
 procedure SelfTest;
 
   procedure TestMGF;
@@ -1359,7 +1363,8 @@ begin
 end;
 {$ENDIF}
 
-{$IFDEF PROFILE}
+{$IFDEF OS_WIN}
+{$IFDEF CIPHER_PROFILE}
 procedure Profile;
 const KeySize = 256;
 var T : LongWord;
