@@ -1,7 +1,7 @@
 {******************************************************************************}
 {                                                                              }
 {   File name:        cHugeInt.pas                                             }
-{   File version:     4.19                                                     }
+{   File version:     4.20                                                     }
 {   Description:      HugeInt functions                                        }
 {                                                                              }
 {   Copyright:        Copyright (c) 2001-2015, David J Butler                  }
@@ -56,10 +56,11 @@
 {   2011/10/18  4.18  Minor optimisation.                                      }
 {   2012/11/15  4.19  Improvements to HugeWordIsPrime_MillerRabin courtesy of  }
 {                     Wolfgang Ehrhardt.                                       }
+{   2015/03/29  4.20  Minor optimisations.                                     }
 {                                                                              }
 { Supported compilers:                                                         }
-{   Delphi XE7 Win32                    4.19  2015/03/21                       }
-{   Delphi XE7 Win64                    4.19  2015/03/21                       }
+{   Delphi XE7 Win32                    4.20  2015/03/29                       }
+{   Delphi XE7 Win64                    4.20  2015/03/29                       }
 {                                                                              }
 {******************************************************************************}
 
@@ -179,7 +180,7 @@ procedure HugeWordAssignBufStr(var A: HugeWord; const Buf: AnsiString;
 procedure HugeWordSwap(var A, B: HugeWord);
 
 function  HugeWordIsZero(const A: HugeWord): Boolean; {$IFDEF UseInline}inline;{$ENDIF}
-function  HugeWordIsOne(const A: HugeWord): Boolean;
+function  HugeWordIsOne(const A: HugeWord): Boolean; {$IFDEF UseInline}inline;{$ENDIF}
 function  HugeWordIsOdd(const A: HugeWord): Boolean;
 function  HugeWordIsEven(const A: HugeWord): Boolean;
 
@@ -214,6 +215,7 @@ procedure HugeWordSetBitCount(var A: HugeWord; const Bits: Integer);
 
 function  HugeWordIsBitSet(const A: HugeWord; const B: Integer): Boolean;
 procedure HugeWordSetBit(var A: HugeWord; const B: Integer);
+procedure HugeWordSetBit0(var A: HugeWord); {$IFDEF UseInline}inline;{$ENDIF}
 procedure HugeWordClearBit(var A: HugeWord; const B: Integer);
 procedure HugeWordToggleBit(var A: HugeWord; const B: Integer);
 
@@ -245,8 +247,9 @@ procedure HugeWordDec(var A: HugeWord);
 procedure HugeWordMultiplyWord8(var A: HugeWord; const B: Byte);
 procedure HugeWordMultiplyWord16(var A: HugeWord; const B: Word);
 procedure HugeWordMultiplyWord32(var A: HugeWord; const B: LongWord);
-procedure HugeWordMultiply_Long_NN(var Res: HugeWord; const A, B: HugeWord);
 procedure HugeWordMultiply_Long_NN_Unsafe(var Res: HugeWord; const A, B: HugeWord);
+procedure HugeWordMultiply_Long_NN_Safe(var Res: HugeWord; const A, B: HugeWord);
+procedure HugeWordMultiply_Long_NN(var Res: HugeWord; const A, B: HugeWord);
 procedure HugeWordMultiply_Long(var Res: HugeWord; const A, B: HugeWord);
 procedure HugeWordMultiply_ShiftAdd(var Res: HugeWord; const A, B: HugeWord);
 procedure HugeWordMultiply(var Res: HugeWord; const A, B: HugeWord); {$IFDEF UseInline}inline;{$ENDIF}
@@ -254,8 +257,8 @@ procedure HugeWordMultiply(var Res: HugeWord; const A, B: HugeWord); {$IFDEF Use
 procedure HugeWordSqr(var Res: HugeWord; const A: HugeWord); 
 
 procedure HugeWordDivideWord32(const A: HugeWord; const B: LongWord; var Q: HugeWord; out R: LongWord);
-procedure HugeWordDivide_RR(const A, B: HugeWord; var Q, R: HugeWord);
 procedure HugeWordDivide_RR_Unsafe(const A, B: HugeWord; var Q, R: HugeWord);
+procedure HugeWordDivide_RR_Safe(const A, B: HugeWord; var Q, R: HugeWord);
 procedure HugeWordDivide(const A, B: HugeWord; var Q, R: HugeWord);
 
 procedure HugeWordMod(const A, B: HugeWord; var R: HugeWord);
@@ -1502,6 +1505,15 @@ begin
   P^ := P^ or LongWord(1 shl (B and $1F));
 end;
 
+procedure HugeWordSetBit0(var A: HugeWord);
+var P : PLongWord;
+begin
+  if A.Used = 0 then
+    HugeWordSetSize(A, 1);
+  P := A.Data;
+  P^ := P^ or 1;
+end;
+
 procedure HugeWordClearBit(var A: HugeWord; const B: Integer);
 var I, L : Integer;
     P : PLongWord;
@@ -1671,6 +1683,7 @@ end;
 procedure HugeWordShl1(var A: HugeWord);
 var I, L : Integer;
     P, Q : PLongWord;
+    V, W : LongWord;
 begin
   L := A.Used;
   if L = 0 then
@@ -1685,15 +1698,22 @@ begin
       P^ := 1; // A[L] := 1
       Dec(P);
     end;
+  W := P^;
   Q := P;
   Dec(Q);
+  V := Q^;
   for I := L - 1 downto 1 do
     begin
-      P^ := (P^ shl 1) or (Q^ shr 31); // A[I] := (A[I] shl 1) or (A[I - 1] shr 31)
+      // A[I] := (A[I] shl 1) or (A[I - 1] shr 31)
+      // P^ := (P^ shl 1) or (Q^ shr 31);
+      P^ := (W shl 1) or (V shr 31);
+      W := V;
       Dec(P);
       Dec(Q);
+      V := Q^;
     end;
-  P^ := P^ shl 1; // A[0] := A[0] shl 1
+  // P^ := P^ shl 1; // A[0] := A[0] shl 1
+  P^ := W shl 1;
 end;
 
 procedure HugeWordShr(var A: HugeWord; const B: Integer);
@@ -1749,6 +1769,7 @@ end;
 procedure HugeWordShr1(var A: HugeWord);
 var I, L : Integer;
     P, Q : PLongWord;
+    V, W : LongWord;
 begin
   L := A.Used;
   if L = 0 then
@@ -1756,13 +1777,18 @@ begin
   P := A.Data; // P := A[0]
   Q := P;
   Inc(Q);      // Q := A[1]
+  W := P^;
   for I := 0 to L - 2 do
     begin
-      P^ := (P^ shr 1) or (Q^ shl 31); // A[I] := (A[I] shr 1) or (A[I + 1] shl 31)
+      // A[I] := (A[I] shr 1) or (A[I + 1] shl 31)
+      V := W;
+      W := Q^;
+      P^ := (V shr 1) or (W shl 31);
+      // ----
       Inc(P);
       Inc(Q);
     end;
-  P^ := P^ shr 1; // A[L - 1] := A[L - 1] shr 1
+  P^ := W shr 1; // A[L - 1] := A[L - 1] shr 1
 end;
 
 { HugeWord Logical NOT                                                         }
@@ -2012,7 +2038,6 @@ procedure HugeWordAdd(var A: HugeWord; const B: HugeWord);
 var L, M : Integer;
     I    : Integer;
     R    : Int64;
-    C    : LongWord;
     P, Q : PLongWord;
 begin
   M := B.Used;
@@ -2031,33 +2056,35 @@ begin
     end;
   P := A.Data;
   Q := B.Data;
-  C := 0;
+  R := 0;
   for I := 0 to M - 1 do
     begin
-      R := C;
       Inc(R, P^);
       Inc(R, Q^);
-      P^ := Int64Rec(R).Lo;
-      C := Int64Rec(R).Hi;
+      // P^ := Int64Rec(R).Lo;
+      // C := Int64Rec(R).Hi;
+      P^ := LongWord(R);
+      R := LongWord(R shr 32);
       Inc(P);
       Inc(Q);
     end;
-  if C = 0 then
+  if R = 0 then
     exit;
   for I := M to L - 1 do
     begin
-      R := C;
       Inc(R, P^);
-      P^ := Int64Rec(R).Lo;
-      C := Int64Rec(R).Hi;
-      if C = 0 then
+      // P^ := Int64Rec(R).Lo;
+      // C := Int64Rec(R).Hi;
+      P^ := LongWord(R);
+      R := LongWord(R shr 32);
+      if R = 0 then
         exit;
       Inc(P);
     end;
   HugeWordSetSize(A, L + 1);
   P := A.Data;
   Inc(P, L);
-  P^ := C;
+  P^ := R;
 end;
 {$ENDIF}
 
@@ -2345,8 +2372,10 @@ begin
         R := $100000000;
       Inc(R, P^);
       Dec(R, Q^);
-      Z^ := Int64Rec(R).Lo;
-      F := Int64Rec(R).Hi = 0;
+      // Z^ := Int64Rec(R).Lo;
+      Z^ := LongWord(R);
+      // F := Int64Rec(R).Hi = 0;
+      F := R shr 32 = 0;
       Inc(P);
       Inc(Q);
       Inc(Z);
@@ -2356,8 +2385,10 @@ begin
       begin
         R := $FFFFFFFF;
         Inc(R, P^);
-        Z^ := Int64Rec(R).Lo;
-        if Int64Rec(R).Hi > 0 then
+        // Z^ := Int64Rec(R).Lo;
+        Z^ := LongWord(R);
+        // if Int64Rec(R).Hi > 0 then
+        if R shr 32 > 0 then
           break;
         Inc(P);
         Inc(Z);
@@ -2480,77 +2511,9 @@ end;
 { HugeWord Long Multiplication                                                 }
 {   Multiply using the 'long multiplication' method. Time is o(n^2).           }
 {   Pre:   Res initialised, A and B normalised                                 }
+{          Res is not the same instance as A or B                              }
 {   Post:  Res contains A * B                                                  }
 {          Res NOT normalised. Res has size of Size(A) + Size(B)               }
-procedure HugeWordMultiply_Long_NN(var Res: HugeWord; const A, B: HugeWord);
-var L, M : Integer;
-    I, J : Integer;
-    C    : LongWord;
-    {$IFDEF ASM386_DELPHI}
-    TM   : Int64;
-    {$ENDIF}
-    R, V : Int64;
-    P, Q : PLongWord;
-    F    : PLongWord;
-    T    : HugeWord;
-begin
-  // handle zero
-  L := A.Used;
-  M := B.Used;
-  if (L = 0) or (M = 0) then
-    begin
-      HugeWordAssignZero(Res);
-      exit;
-    end;
-  // multiply
-  HugeWordInit(T);
-  try
-    HugeWordSetSize(T, L + M);
-    Q := B.Data;
-    for I := 0 to M - 1 do
-      begin
-        V := Q^; // V = B[I]
-        C := 0;
-        P := A.Data;
-        F := T.Data;
-        Inc(F, I);
-        for J := 0 to L - 1 do
-          begin
-            R := C;
-            Inc(R, F^);            // Inc(R, Result[I + J])
-            // --- Inc(R, V * A[J]) ---
-            {$IFDEF FREEPASCAL}
-            R := R + (V * P^);
-            {$ELSE}
-              {$IFDEF ASM386_DELPHI}
-              Word32MultiplyWord32(LongWord(V), P^, TM);
-              Inc(R, TM);
-              {$ELSE}
-                {$IFDEF CPU_X86_64}
-                  {$IFOPT Q+}{$DEFINE QOn}{$Q-}{$ELSE}{$UNDEF QOn}{$ENDIF}
-                  R := R + V * P^;
-                  {$IFDEF QOn}{$Q+}{$ENDIF}
-                {$ELSE}
-                Inc(R, V * P^);
-                {$ENDIF}
-              {$ENDIF}
-            {$ENDIF}
-            // ------------------------
-            F^ := Int64Rec(R).Lo;
-            C := Int64Rec(R).Hi;
-            Inc(P);
-            Inc(F);
-          end;
-        F^ := C;
-        Inc(Q);
-      end;
-    HugeWordAssign(Res, T);
-  finally
-    HugeWordFinalise(T);
-  end;
-end;
-
-{   Pre:   Res is not the same instance as A or B                              }
 procedure HugeWordMultiply_Long_NN_Unsafe(var Res: HugeWord; const A, B: HugeWord);
 var L, M : Integer;
     I, J : Integer;
@@ -2564,7 +2527,11 @@ var L, M : Integer;
     {$ENDIF}
     P, Q : PLongWord;
     F    : PLongWord;
+    ADat : PLongWord;
+    RDat : PLongWord;
 begin
+  Assert(@Res <> @A);
+  Assert(@Res <> @B);
   // handle zero
   L := A.Used;
   M := B.Used;
@@ -2576,13 +2543,15 @@ begin
   // multiply
   HugeWordAssignZero(Res);
   HugeWordSetSize(Res, L + M);
+  ADat := A.Data;
   Q := B.Data;
+  RDat := Res.Data;
   for I := 0 to M - 1 do
     begin
       V := Q^; // V = B[I]
       C := 0;
-      P := A.Data;
-      F := Res.Data;
+      P := ADat;
+      F := RDat;
       Inc(F, I);
       for J := 0 to L - 1 do
         begin
@@ -2606,14 +2575,36 @@ begin
             {$ENDIF}
           {$ENDIF}
           // ------------------------
-          F^ := Int64Rec(R).Lo;
-          C := Int64Rec(R).Hi;
+          // F^ := Int64Rec(R).Lo;
+          F^ := LongWord(R);
+          // C := Int64Rec(R).Hi;
+          C := LongWord(R shr 32);
           Inc(P);
           Inc(F);
         end;
       F^ := C;
       Inc(Q);
     end;
+end;
+
+procedure HugeWordMultiply_Long_NN_Safe(var Res: HugeWord; const A, B: HugeWord);
+var T : HugeWord;
+begin
+  HugeWordInit(T);
+  try
+    HugeWordMultiply_Long_NN_Unsafe(T, A, B);
+    HugeWordAssign(Res, T);
+  finally
+    HugeWordFinalise(T);
+  end;
+end;
+
+procedure HugeWordMultiply_Long_NN(var Res: HugeWord; const A, B: HugeWord);
+begin
+  if (@Res = @A) or (@Res = @B) then
+    HugeWordMultiply_Long_NN_Safe(Res, A, B)
+  else
+    HugeWordMultiply_Long_NN_Unsafe(Res, A, B);
 end;
 
 procedure HugeWordMultiply_Long(var Res: HugeWord; const A, B: HugeWord);
@@ -2632,9 +2623,9 @@ end;
 {          Res may be same instance as A or B                                  }
 {   Post:  Res contains A * B                                                  }
 {          Res normalised.                                                     }
-procedure HugeWordMultiply_ShiftAdd(var Res: HugeWord; const A, B: HugeWord);
+procedure HugeWordMultiply_ShiftAdd_Unsafe(var Res: HugeWord; const A, B: HugeWord);
 var L, M, C, I : Integer;
-    D, R : HugeWord;
+    D : HugeWord;
 begin
   // handle zero
   L := A.Used;
@@ -2645,21 +2636,39 @@ begin
       exit;
     end;
   // multiply
-  HugeWordInitZero(R);
+  HugeWordAssignZero(Res);
   HugeWordInitHugeWord(D, B);
   try
     C := HugeWordSetBitScanReverse(A);
     for I := 0 to C do
       begin
         if HugeWordIsBitSet(A, I) then
-          HugeWordAdd(R, D);
+          HugeWordAdd(Res, D);
         HugeWordShl1(D);
       end;
-    HugeWordAssign(Res, R);
   finally
     HugeWordFinalise(D);
+  end;
+end;
+
+procedure HugeWordMultiply_ShiftAdd_Safe(var Res: HugeWord; const A, B: HugeWord);
+var R : HugeWord;
+begin
+  HugeWordInitZero(R);
+  try
+    HugeWordMultiply_ShiftAdd_Unsafe(R, A, B);
+    HugeWordAssign(Res, R);
+  finally
     HugeWordFinalise(R);
   end;
+end;
+
+procedure HugeWordMultiply_ShiftAdd(var Res: HugeWord; const A, B: HugeWord);
+begin
+  if (@Res = @A) or (@Res = @B) then
+    HugeWordMultiply_ShiftAdd_Safe(Res, A, B)
+  else
+    HugeWordMultiply_ShiftAdd_Unsafe(Res, A, B);
 end;
 
 procedure HugeWordMultiply_Karatsuba(var Res: HugeWord; const A, B: HugeWord);
@@ -2712,67 +2721,6 @@ end;
 
 { HugeWord Divide                                                              }
 {   Divide using the "restoring radix two division" method.                    }
-procedure HugeWordDivide_RR(const A, B: HugeWord; var Q, R: HugeWord);
-var C, F : Integer;
-    D, E : HugeWord;
-begin
-  // Handle special cases
-  if HugeWordIsZero(B) then // B = 0
-    RaiseDivByZeroError else
-  if HugeWordIsOne(B) then  // B = 1
-    begin
-      HugeWordAssign(Q, A);         // Q = A
-      HugeWordAssignZero(R);        // R = 0
-      exit;
-    end;
-  if HugeWordIsZero(A) then // A = 0
-    begin
-      HugeWordAssignZero(Q);        // Q = 0
-      HugeWordAssignZero(R);        // R = 0
-      exit;
-    end;
-  C := HugeWordCompare(A, B);
-  if C < 0 then             // A < B
-    begin
-      HugeWordAssign(R, A);         // R = A
-      HugeWordAssignZero(Q);        // Q = 0
-      exit;
-    end else
-  if C = 0 then             // A = B
-    begin
-      HugeWordAssignOne(Q);         // Q = 1
-      HugeWordAssignZero(R);        // R = 0
-      exit;
-    end;
-  // Divide using "restoring radix two division"
-  HugeWordInitHugeWord(D, A);       // D = A
-  HugeWordInitHugeWord(E, B);       // E = B
-  try
-    HugeWordAssignZero(R);             // R = remainder
-    HugeWordAssignZero(Q);             // Q = quotient
-    F := HugeWordSetBitScanReverse(D); // F = high bit index in dividend
-    for C := 0 to F do
-      begin
-        // Shift high bit of dividend D into low bit of remainder R
-        HugeWordShl1(R);
-        if HugeWordIsBitSet(D, F - C) then
-          HugeWordSetBit(R, 0);
-        // Shift quotient
-        HugeWordShl1(Q);
-        // Subtract divisor from remainder if large enough
-        if HugeWordCompare(R, E) >= 0 then
-          begin
-            HugeWordSubtract(R, E);
-            // Set result bit in quotient
-            HugeWordSetBit(Q, 0);
-          end;
-      end;
-  finally
-    HugeWordFinalise(E);
-    HugeWordFinalise(D);
-  end;
-end;
-
 procedure HugeWordDivide_RR_Unsafe(const A, B: HugeWord; var Q, R: HugeWord);
 var C, F : Integer;
 begin
@@ -2813,7 +2761,7 @@ begin
       // Shift high bit of dividend D into low bit of remainder R
       HugeWordShl1(R);
       if HugeWordIsBitSet(A, F - C) then
-        HugeWordSetBit(R, 0);
+        HugeWordSetBit0(R);
       // Shift quotient
       HugeWordShl1(Q);
       // Subtract divisor from remainder if large enough
@@ -2821,9 +2769,24 @@ begin
         begin
           HugeWordSubtract(R, B);
           // Set result bit in quotient
-          HugeWordSetBit(Q, 0);
+          HugeWordSetBit0(Q);
         end;
     end;
+end;
+
+procedure HugeWordDivide_RR_Safe(const A, B: HugeWord; var Q, R: HugeWord);
+var D, E : HugeWord;
+begin
+  HugeWordInit(D); 
+  HugeWordInit(E); 
+  try
+    HugeWordDivide_RR_Unsafe(A, B, D, E);
+    HugeWordAssign(Q, D);
+    HugeWordAssign(R, E);
+  finally
+    HugeWordFinalise(E);
+    HugeWordFinalise(D);
+  end;
 end;
 
 { HugeWord Divide                                                              }
@@ -2833,7 +2796,10 @@ end;
 {          Q and R normalised                                                  }
 procedure HugeWordDivide(const A, B: HugeWord; var Q, R: HugeWord);
 begin
-  HugeWordDivide_RR(A, B, Q, R);
+  if (@A = @Q) or (@A = @R) or (@B = @Q) or (@B = @R) then
+    HugeWordDivide_RR_Safe(A, B, Q, R)
+  else
+    HugeWordDivide_RR_Unsafe(A, B, Q, R);
 end;
 
 { HugeWord Mod                                                                 }
@@ -5423,6 +5389,12 @@ begin
   Assert(HugeWordToStrA(D) = '111111111111111111111111111111111111');
   Assert(F = 0);
 
+  // Multiply_ShiftAdd
+  StrToHugeWordA('111111111111111111111111111111111111', A);
+  StrToHugeWordA('100000000000000000000000000000000000', B);
+  HugeWordMultiply_ShiftAdd(C, A, B);
+  Assert(HugeWordToStrA(C) = '11111111111111111111111111111111111100000000000000000000000000000000000');
+
   // ISqrt/Sqr
   HugeWordAssignWord32(A, $FFFF);
   HugeWordISqrt(A);
@@ -6198,6 +6170,7 @@ const
   Digit_Test_Count = 3;
   Digits_Default: array[0..Digit_Test_Count - 1] of Integer = (1000, 10000, 25000);
   Digits_Multiply: array[0..Digit_Test_Count - 1] of Integer = (10, 100, 250);
+  Digits_PowerMod: array[0..Digit_Test_Count - 1] of Integer = (32, 64, 128);
 var
   A, B, C, D : HugeWord;
   I, J, Di : Integer;
@@ -6210,6 +6183,43 @@ begin
 
   for J := 0 to Digit_Test_Count - 1 do
     begin
+      Di := Digits_Multiply[J];
+      HugeWordRandom(A, Di);
+      HugeWordRandom(B, Di);
+
+      T := GetTickCount;
+      for I := 1 to 3000 do
+        HugeWordMultiply_ShiftAdd_Unsafe(C, A, B);
+      T := GetTickCount - T;
+      Writeln('Mul_ShiftAdd:':25, Di*32:10, ' ', 1000 / (T / 3000):0:1, '/s');
+    end;
+
+  for J := 0 to Digit_Test_Count - 1 do
+    begin
+      Di := Digits_Default[J];
+      HugeWordRandom(A, Di);
+      HugeWordSetElement(A, Di - 1, 0);
+      T := GetTickCount;
+      for I := 1 to 10000000 do
+        HugeWordSetBitScanReverse(A);
+      T := GetTickCount - T;
+      Writeln('SetBitScanReverse:':25, Di*32:10, ' ', 1000 / (T / 10000000):0:1, '/s');
+    end;
+
+  for J := 0 to Digit_Test_Count - 1 do
+    begin
+      Di := Digits_Default[J];
+      HugeWordAssignZero(A);
+      HugeWordRandom(B, Di);
+      T := GetTickCount;
+      for I := 1 to 50000 do
+        HugeWordAdd(A, B);
+      T := GetTickCount - T;
+      Writeln('Add:':25, Di*32:10, ' ', 1000 / (T / 50000):0:1, '/s');
+    end;
+
+  for J := 0 to Digit_Test_Count - 1 do
+    begin
       Di := Digits_Default[J];
       repeat
         HugeWordRandom(A, Di);
@@ -6217,10 +6227,10 @@ begin
       until HugeWordGetElement(A, 0) <> HugeWordGetElement(B, 0);
 
       T := GetTickCount;
-      for I := 1 to 10000000 do
+      for I := 1 to 100000000 do
         HugeWordCompare(A, B);
       T := GetTickCount - T;
-      Writeln('Compare (best case):':25, Di:10, ' ', 1000 / (T / 10000000):0:1, '/s');
+      Writeln('Compare (best case):':25, Di*32:10, ' ', 1000 / (T / 100000000):0:1, '/s');
     end;
 
   for J := 0 to Digit_Test_Count - 1 do
@@ -6230,10 +6240,23 @@ begin
       HugeWordAssign(B, A);
 
       T := GetTickCount;
-      for I := 1 to 25000 do
+      for I := 1 to 50000 do
         HugeWordCompare(A, B);
       T := GetTickCount - T;
-      Writeln('Compare (worst case):':25, Di:10, ' ', 1000 / (T / 25000):0:1, '/s');
+      Writeln('Compare (worst case):':25, Di*32:10, ' ', 1000 / (T / 50000):0:1, '/s');
+    end;
+
+  for J := 0 to Digit_Test_Count - 1 do
+    begin
+      Di := Digits_Multiply[J];
+      HugeWordRandom(A, Di);
+      HugeWordRandom(B, Di - 2);
+
+      T := GetTickCount;
+      for I := 1 to 3000 do
+        HugeWordDivide(A, B, C, D);
+      T := GetTickCount - T;
+      Writeln('Div:':25, Di*32:10, ' ', 1000 / (T / 3000):0:1, '/s');
     end;
 
   for J := 0 to Digit_Test_Count - 1 do
@@ -6244,19 +6267,30 @@ begin
       for I := 1 to 100000 do
         HugeWordShl1(A);
       T := GetTickCount - T;
-      Writeln('Shl1:':25, Di:10, ' ', 1000 / (T / 100000):0:1, '/s');
+      Writeln('Shl1:':25, Di*32:10, ' ', 1000 / (T / 100000):0:1, '/s');
   end;
 
   for J := 0 to Digit_Test_Count - 1 do
     begin
       Di := Digits_Default[J];
-      HugeWordAssignZero(A);
-      HugeWordRandom(B, Di);
+      HugeWordRandom(A, Di);
+      T := GetTickCount;
+      for I := 1 to 100000 do
+        HugeWordShr1(A);
+      T := GetTickCount - T;
+      Writeln('Shr1:':25, Di*32:10, ' ', 1000 / (T / 100000):0:1, '/s');
+  end;
+
+  for J := 0 to Digit_Test_Count - 1 do
+    begin
+      Di := Digits_Default[J];
+      HugeWordRandom(A, Di);
+      HugeWordRandom(B, Di - 2);
       T := GetTickCount;
       for I := 1 to 10000 do
-        HugeWordAdd(A, B);
+        HugeWordSubtract(A, B);
       T := GetTickCount - T;
-      Writeln('Add:':25, Di:10, ' ', 1000 / (T / 10000):0:1, '/s');
+      Writeln('Sub:':25, Di*32:10, ' ', 1000 / (T / 10000):0:1, '/s');
     end;
 
   for J := 0 to Digit_Test_Count - 1 do
@@ -6266,23 +6300,10 @@ begin
       HugeWordRandom(B, Di);
 
       T := GetTickCount;
-      for I := 1 to 15000 do
+      for I := 1 to 100000 do
         HugeWordMultiply_Long(C, A, B);
       T := GetTickCount - T;
-      Writeln('Mul_Long:':25, Di:10, ' ', 1000 / (T / 15000):0:1, '/s');
-    end;
-
-  for J := 0 to Digit_Test_Count - 1 do
-    begin
-      Di := Digits_Multiply[J];
-      HugeWordRandom(A, Di);
-      HugeWordRandom(B, Di);
-
-      T := GetTickCount;
-      for I := 1 to 1500 do
-        HugeWordMultiply_ShiftAdd(C, A, B);
-      T := GetTickCount - T;
-      Writeln('Mul_ShiftAdd:':25, Di:10, ' ', 1000 / (T / 1500):0:1, '/s');
+      Writeln('Mul_Long:':25, Di*32:10, ' ', 1000 / (T / 100000):0:1, '/s');
     end;
 
   HugeWordRandom(A, 100);
@@ -6293,18 +6314,7 @@ begin
       HugeWordMod(A, B, C);
     end;
   T := GetTickCount - T;
-  Writeln('Mod: ', 1000 / (T / 100):0:5, '/s');
-
-  HugeWordRandom(A, 64);
-  HugeWordRandom(B, 64);
-  HugeWordRandom(C, 64);
-  T := GetTickCount;
-  for I := 1 to 1 do
-    begin
-      HugeWordPowerAndMod(D, A, B, C);
-    end;
-  T := GetTickCount - T;
-  Writeln('PowerAndMod: ', 1000 / (T / 1):0:5, '/s');
+  Writeln('Mod:':25, 100*32:10, ' ', 1000 / (T / 100):0:5, '/s');
 
   HugeWordRandom(A, 10000);
   HugeWordRandom(B, 9000);
@@ -6314,18 +6324,23 @@ begin
       HugeWordSubtract(A, B);
     end;
   T := GetTickCount - T;
-  Writeln('Subtract: ', 1000 / (T / 10000):0:1, '/s');
+  Writeln('Subtract:':25, 10000*32:10, ' ', 1000 / (T / 10000):0:1, '/s');
 
-  HugeWordRandom(A, 1000);
-  HugeWordSetElement(A, 999, 0);
-  T := GetTickCount;
-  for I := 1 to 10000000 do
+  for J := 0 to Digit_Test_Count - 1 do
     begin
-      HugeWordSetBitScanReverse(A);
+      Di := Digits_PowerMod[J];
+      HugeWordRandom(A, Di);
+      HugeWordRandom(B, Di);
+      HugeWordRandom(C, Di);
+      T := GetTickCount;
+      for I := 1 to 1 do
+        begin
+          HugeWordPowerAndMod(D, A, B, C);
+        end;
+      T := GetTickCount - T;
+      Writeln('PowerAndMod:':25, Di*32:10, ' ', 1000 / (T / 1):0:5, '/s');
     end;
-  T := GetTickCount - T;
-  Writeln('SetBitScanReverse: ', 1000 / (T / 10000000):0:1, '/s');
-
+      
   HugeWordFinalise(D);
   HugeWordFinalise(C);
   HugeWordFinalise(B);
