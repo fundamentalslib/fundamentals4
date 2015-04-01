@@ -788,6 +788,7 @@ function  StrZMatchStrA(const P: PAnsiChar; const M: AnsiString): Boolean;
 function  StrZMatchStrB(const P: PAnsiChar; const M: RawByteString): Boolean;
 function  StrZMatchStrW(const P: PWideChar; const M: WideString): Boolean;
 function  StrZMatchStrAW(const P: PWideChar; const M: AnsiString): Boolean;
+function  StrZMatchStrBW(const P: PWideChar; const M: RawByteString): Boolean;
 function  StrZMatchStrU(const P: PWideChar; const M: UnicodeString): Boolean;
 function  StrZMatchStr(const P: PChar; const M: String): Boolean;
 
@@ -795,6 +796,7 @@ function  StrZMatchStrNoAsciiCaseA(const P: PAnsiChar; const M: AnsiString): Boo
 function  StrZMatchStrNoAsciiCaseB(const P: PAnsiChar; const M: RawByteString): Boolean;
 function  StrZMatchStrNoAsciiCaseW(const P: PWideChar; const M: WideString): Boolean;
 function  StrZMatchStrNoAsciiCaseAW(const P: PWideChar; const M: AnsiString): Boolean;
+function  StrZMatchStrNoAsciiCaseBW(const P: PWideChar; const M: RawByteString): Boolean;
 function  StrZMatchStrNoAsciiCaseU(const P: PWideChar; const M: UnicodeString): Boolean;
 function  StrZMatchStrNoAsciiCase(const P: PChar; const M: String): Boolean;
 
@@ -805,6 +807,7 @@ function  StrZMatchStrAsciiA(const P: PAnsiChar; const M: AnsiString; const Asci
 function  StrZMatchStrAsciiB(const P: PAnsiChar; const M: RawByteString; const AsciiCaseSensitive: Boolean): Boolean;
 function  StrZMatchStrAsciiW(const P: PWideChar; const M: WideString; const AsciiCaseSensitive: Boolean): Boolean;
 function  StrZMatchStrAsciiAW(const P: PWideChar; const M: AnsiString; const AsciiCaseSensitive: Boolean): Boolean;
+function  StrZMatchStrAsciiBW(const P: PWideChar; const M: RawByteString; const AsciiCaseSensitive: Boolean): Boolean;
 function  StrZMatchStrAsciiU(const P: PWideChar; const M: UnicodeString; const AsciiCaseSensitive: Boolean): Boolean;
 function  StrZMatchStrAscii(const P: PChar; const M: String; const AsciiCaseSensitive: Boolean): Boolean;
 
@@ -816,6 +819,7 @@ function  StrMatchA(const S, M: AnsiString; const Index: Integer = 1): Boolean;
 function  StrMatchB(const S, M: RawByteString; const Index: Integer = 1): Boolean;
 function  StrMatchW(const S, M: WideString; const Index: Integer = 1): Boolean;
 function  StrMatchAW(const S: WideString; const M: AnsiString; const Index: Integer = 1): Boolean;
+function  StrMatchBW(const S: WideString; const M: RawByteString; const Index: Integer): Boolean;
 function  StrMatchU(const S, M: UnicodeString; const Index: Integer = 1): Boolean;
 function  StrMatchAU(const S: UnicodeString; const M: AnsiString; const Index: Integer = 1): Boolean;
 function  StrMatchAS(const S: String; const M: AnsiString; const Index: Integer = 1): Boolean;
@@ -922,6 +926,7 @@ function  StrEqualA(const A, B: AnsiString; const AsciiCaseSensitive: Boolean = 
 function  StrEqualB(const A, B: RawByteString; const AsciiCaseSensitive: Boolean = True): Boolean;
 function  StrEqualW(const A, B: WideString; const AsciiCaseSensitive: Boolean = True): Boolean;
 function  StrEqualAW(const A: WideString; const B: AnsiString; const AsciiCaseSensitive: Boolean = True): Boolean;
+function  StrEqualBW(const A: WideString; const B: RawByteString; const AsciiCaseSensitive: Boolean = True): Boolean;
 function  StrEqualU(const A, B: UnicodeString; const AsciiCaseSensitive: Boolean = True): Boolean;
 function  StrEqualAU(const A: UnicodeString; const B: AnsiString; const AsciiCaseSensitive: Boolean = True): Boolean;
 function  StrEqual(const A, B: String; const AsciiCaseSensitive: Boolean = True): Boolean;
@@ -930,8 +935,10 @@ function  StrEqualNoAsciiCaseA(const A, B: AnsiString): Boolean;
 function  StrEqualNoAsciiCaseB(const A, B: RawByteString): Boolean;
 function  StrEqualNoAsciiCaseW(const A, B: WideString): Boolean;
 function  StrEqualNoAsciiCaseAW(const A: WideString; const B: AnsiString): Boolean;
+function  StrEqualNoAsciiCaseBW(const A: WideString; const B: RawByteString): Boolean;
 function  StrEqualNoAsciiCaseU(const A, B: UnicodeString): Boolean;
 function  StrEqualNoAsciiCaseAU(const A: UnicodeString; const B: AnsiString): Boolean;
+function  StrEqualNoAsciiCaseBU(const A: UnicodeString; const B: RawByteString): Boolean;
 function  StrEqualNoAsciiCase(const A, B: String): Boolean;
 
 function  StrEqualNoUnicodeCaseW(const A, B: WideString): Boolean;
@@ -13076,6 +13083,25 @@ begin
   Result := True;
 end;
 
+function StrMatchBW(const S: WideString; const M: RawByteString; const Index: Integer): Boolean;
+var N, T, I : Integer;
+begin
+  N := Length(M);
+  T := Length(S);
+  if (N = 0) or (T = 0) or (Index < 1) or (Index + N - 1 > T) then
+    begin
+      Result := False;
+      exit;
+    end;
+  for I := 1 to N do
+    if Ord(M[I]) <> Ord(S[I + Index - 1]) then
+      begin
+        Result := False;
+        exit;
+      end;
+  Result := True;
+end;
+
 function StrMatchU(const S, M: UnicodeString; const Index: Integer): Boolean;
 var N, T, I : Integer;
 begin
@@ -13873,6 +13899,36 @@ begin
   Result := True;
 end;
 
+function StrZMatchStrBW(const P: PWideChar; const M: RawByteString): Boolean;
+var T    : PWideChar;
+    Q    : PAnsiChar;
+    I, L : Integer;
+    C    : WideChar;
+begin
+  L := Length(M);
+  if L = 0 then
+    begin
+      Result := False;
+      exit;
+    end;
+  T := P;
+  Q := Pointer(M);
+  for I := 1 to L do
+    begin
+      C := T^;
+      if (C = #0) or (Ord(C) <> Ord(Q^)) then
+        begin
+          Result := False;
+          exit;
+        end else
+        begin
+          Inc(T);
+          Inc(Q);
+        end;
+    end;
+  Result := True;
+end;
+
 function StrZMatchStrU(const P: PWideChar; const M: UnicodeString): Boolean;
 var T, Q : PWideChar;
     I, L : Integer;
@@ -14052,6 +14108,52 @@ begin
 end;
 
 function StrZMatchStrNoAsciiCaseAW(const P: PWideChar; const M: AnsiString): Boolean;
+var T    : PWideChar;
+    Q    : PAnsiChar;
+    I, L : Integer;
+    C    : WideChar;
+    D    : AnsiChar;
+    E, F : AnsiChar;
+begin
+  L := Length(M);
+  if L = 0 then
+    begin
+      Result := False;
+      exit;
+    end;
+  T := P;
+  Q := Pointer(M);
+  for I := 1 to L do
+    begin
+      C := T^;
+      if C = #0 then
+        begin
+          Result := False;
+          exit;
+        end;
+      D := Q^;
+      if Ord(C) <> Ord(D) then
+        begin
+          if (Ord(C) >= $80) or (Ord(D) >= $80) then
+            begin
+              Result := False;
+              exit;
+            end;
+          E := AsciiLowCaseLookup[AnsiChar(Ord(C))];
+          F := AsciiLowCaseLookup[D];
+          if E <> F then
+            begin
+              Result := False;
+              exit;
+            end;
+        end;
+      Inc(T);
+      Inc(Q);
+    end;
+  Result := True;
+end;
+
+function StrZMatchStrNoAsciiCaseBW(const P: PWideChar; const M: RawByteString): Boolean;
 var T    : PWideChar;
     Q    : PAnsiChar;
     I, L : Integer;
@@ -14287,6 +14389,15 @@ begin
     Result := StrZMatchStrAW(P, M)
   else
     Result := StrZMatchStrNoAsciiCaseAW(P, M);
+end;
+
+function StrZMatchStrAsciiBW(const P: PWideChar; const M: RawByteString;
+    const AsciiCaseSensitive: Boolean): Boolean;
+begin
+  if AsciiCaseSensitive then
+    Result := StrZMatchStrBW(P, M)
+  else
+    Result := StrZMatchStrNoAsciiCaseBW(P, M);
 end;
 
 function StrZMatchStrAsciiU(const P: PWideChar; const M: UnicodeString;
@@ -15142,6 +15253,20 @@ begin
     Result := StrPMatchNoAsciiCaseAW(Pointer(A), Pointer(B), L1);
 end;
 
+function StrEqualBW(const A: WideString; const B: RawByteString; const AsciiCaseSensitive: Boolean): Boolean;
+var L1, L2 : Integer;
+begin
+  L1 := Length(A);
+  L2 := Length(B);
+  Result := L1 = L2;
+  if not Result or (L1 = 0) then
+    exit;
+  if AsciiCaseSensitive then
+    Result := StrPMatchAW(Pointer(A), Pointer(B), L1, L1)
+  else
+    Result := StrPMatchNoAsciiCaseAW(Pointer(A), Pointer(B), L1);
+end;
+
 function StrEqualU(const A, B: UnicodeString; const AsciiCaseSensitive: Boolean): Boolean;
 var L1, L2 : Integer;
 begin
@@ -15240,6 +15365,17 @@ begin
   Result := StrPMatchNoAsciiCaseAW(Pointer(A), Pointer(B), L);
 end;
 
+function StrEqualNoAsciiCaseBW(const A: WideString; const B: RawByteString): Boolean;
+var L, M : Integer;
+begin
+  L := Length(A);
+  M := Length(B);
+  Result := L = M;
+  if not Result or (L = 0) then
+    exit;
+  Result := StrPMatchNoAsciiCaseAW(Pointer(A), Pointer(B), L);
+end;
+
 function StrEqualNoAsciiCaseU(const A, B: UnicodeString): Boolean;
 var L, M : Integer;
 begin
@@ -15252,6 +15388,17 @@ begin
 end;
 
 function StrEqualNoAsciiCaseAU(const A: UnicodeString; const B: AnsiString): Boolean;
+var L, M : Integer;
+begin
+  L := Length(A);
+  M := Length(B);
+  Result := L = M;
+  if not Result or (L = 0) then
+    exit;
+  Result := StrPMatchNoAsciiCaseAW(Pointer(A), Pointer(B), L);
+end;
+
+function StrEqualNoAsciiCaseBU(const A: UnicodeString; const B: RawByteString): Boolean;
 var L, M : Integer;
 begin
   L := Length(A);
