@@ -118,7 +118,7 @@
 {   Delphi XE2 Win32                    4.54  2014/01/31                       }
 {   Delphi XE2 Win64                    4.54  2014/01/31                       }
 {   Delphi XE3 Win64                    4.51  2013/01/29                       }
-{   Delphi XE6 Win32                    4.54  2014/12/28                       }
+{   Delphi XE7 Win32                    4.54  2014/12/28                       }
 {   Delphi XE7 Win64                    4.55  2015/03/13                       }
 {   FreePascal 2.0.4 Linux i386                                                }
 {   FreePascal 2.4.0 OSX x86-64         4.46  2010/06/27                       }
@@ -358,51 +358,6 @@ const
 
 
 {                                                                              }
-{ WideString                                                                   }
-{   WideChar is a 16-bit character.                                            }
-{   WideString is not reference counted.                                       }
-{                                                                              }
-{$IFNDEF SupportWideChar}
-type
-  WideChar = type Word;
-  PWideChar = ^WideChar;
-{$ENDIF}
-
-{$IFNDEF SupportWideString}
-type
-  WideString = array of WideChar;
-{$ENDIF}
-
-type
-  TWideCharMatchFunction = function (const Ch: WideChar): Boolean;
-
-{$IFNDEF SupportWideString}
-const
-  StrEmptyW = WideString(nil);
-{$ELSE}
-const
-  StrEmptyW = '';
-{$ENDIF}
-
-
-
-{                                                                              }
-{ UnicodeString                                                                }
-{   UnicodeString in Delphi 2009 is reference counted, code page aware,        }
-{   variable character length unicode string. Defaults to UTF-16 encoding.     }
-{   WideString is not reference counted.                                       }
-{                                                                              }
-type
-  UnicodeChar = WideChar;
-  PUnicodeChar = ^UnicodeChar;
-  {$IFNDEF SupportUnicodeString}
-  UnicodeString = WideString;
-  PUnicodeString = ^UnicodeString;
-  {$ENDIF}
-
-
-
-{                                                                              }
 { RawByteString                                                                }
 {   RawByteString is an alias for AnsiString where all bytes are raw bytes     }
 {   that do not undergo any character set translation.                         }
@@ -449,6 +404,51 @@ type
   AsciiString = AnsiString;
   AsciiCharSet = set of AsciiChar;
   AsciiStringArray = array of AsciiString;
+
+
+
+{                                                                              }
+{ WideString                                                                   }
+{   WideChar is a 16-bit character.                                            }
+{   WideString is not reference counted.                                       }
+{                                                                              }
+{$IFNDEF SupportWideChar}
+type
+  WideChar = type Word;
+  PWideChar = ^WideChar;
+{$ENDIF}
+
+{$IFNDEF SupportWideString}
+type
+  WideString = array of WideChar;
+{$ENDIF}
+
+type
+  TWideCharMatchFunction = function (const Ch: WideChar): Boolean;
+
+{$IFNDEF SupportWideString}
+const
+  StrEmptyW = WideString(nil);
+{$ELSE}
+const
+  StrEmptyW = '';
+{$ENDIF}
+
+
+
+{                                                                              }
+{ UnicodeString                                                                }
+{   UnicodeString in Delphi 2009 is reference counted, code page aware,        }
+{   variable character length unicode string. Defaults to UTF-16 encoding.     }
+{   WideString is not reference counted.                                       }
+{                                                                              }
+type
+  UnicodeChar = WideChar;
+  PUnicodeChar = ^UnicodeChar;
+  {$IFNDEF SupportUnicodeString}
+  UnicodeString = WideString;
+  PUnicodeString = ^UnicodeString;
+  {$ENDIF}
 
 
 
@@ -1100,23 +1100,23 @@ function  StringToFloatDef(const A: String; const Default: Extended): Extended;
 {   DecodeBase64 converts a base 64 string using Alphabet (64 characters for   }
 {   values 0-63) to a binary string.                                           }
 {                                                                              }
-function  EncodeBase64(const S, Alphabet: AnsiString;
+function  EncodeBase64(const S, Alphabet: RawByteString;
           const Pad: Boolean = False;
           const PadMultiple: Integer = 4;
-          const PadChar: AnsiChar = '='): AnsiString;
+          const PadChar: AnsiChar = '='): RawByteString;
 
-function  DecodeBase64(const S, Alphabet: AnsiString;
-          const PadSet: CharSet{$IFNDEF CLR} = []{$ENDIF}): AnsiString;
+function  DecodeBase64(const S, Alphabet: RawByteString;
+          const PadSet: CharSet{$IFNDEF CLR} = []{$ENDIF}): RawByteString;
 
 const
   b64_MIMEBase64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   b64_UUEncode   = ' !"#$%&''()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_';
   b64_XXEncode   = '+-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 
-function  MIMEBase64Decode(const S: AnsiString): AnsiString;
-function  MIMEBase64Encode(const S: AnsiString): AnsiString;
-function  UUDecode(const S: AnsiString): AnsiString;
-function  XXDecode(const S: AnsiString): AnsiString;
+function  MIMEBase64Decode(const S: RawByteString): RawByteString;
+function  MIMEBase64Encode(const S: RawByteString): RawByteString;
+function  UUDecode(const S: RawByteString): RawByteString;
+function  XXDecode(const S: RawByteString): RawByteString;
 
 function  BytesToHex(
           {$IFDEF ManagedCode}const P: array of Byte;
@@ -6211,8 +6211,8 @@ end;
 { Base64                                                                       }
 {                                                                              }
 {$IFDEF CLR}
-function EncodeBase64(const S, Alphabet: AnsiString; const Pad: Boolean;
-    const PadMultiple: Integer; const PadChar: AnsiChar): AnsiString;
+function EncodeBase64(const S, Alphabet: RawByteString; const Pad: Boolean;
+    const PadMultiple: Integer; const PadChar: AnsiChar): RawByteString;
 var R, C : Byte;
     I, F, L, M, N, U : Integer;
     T : Boolean;
@@ -6283,8 +6283,8 @@ begin
     end;
 end;
 {$ELSE}
-function EncodeBase64(const S, Alphabet: AnsiString; const Pad: Boolean;
-    const PadMultiple: Integer; const PadChar: AnsiChar): AnsiString;
+function EncodeBase64(const S, Alphabet: RawByteString; const Pad: Boolean;
+    const PadMultiple: Integer; const PadChar: AnsiChar): RawByteString;
 var R, C : Byte;
     F, L, M, N, U : Integer;
     P : PAnsiChar;
@@ -6358,7 +6358,7 @@ end;
 {$ENDIF}
 
 {$IFDEF CLR}
-function DecodeBase64(const S, Alphabet: AnsiString; const PadSet: CharSet): AnsiString;
+function DecodeBase64(const S, Alphabet: RawByteString; const PadSet: CharSet): RawByteString;
 var F, L, M, P : Integer;
     B, OutPos  : Byte;
     C          : AnsiChar;
@@ -6422,7 +6422,7 @@ begin
       Result := Result + AnsiChar(OutB[OutPos]);
 end;
 {$ELSE}
-function DecodeBase64(const S, Alphabet: AnsiString; const PadSet: CharSet): AnsiString;
+function DecodeBase64(const S, Alphabet: RawByteString; const PadSet: CharSet): RawByteString;
 var F, L, M, P : Integer;
     B, OutPos  : Byte;
     OutB       : array[1..3] of Byte;
@@ -6485,23 +6485,23 @@ begin
 end;
 {$ENDIF}
 
-function MIMEBase64Encode(const S: AnsiString): AnsiString;
+function MIMEBase64Encode(const S: RawByteString): RawByteString;
 begin
   Result := EncodeBase64(S, b64_MIMEBase64, True, 4, '=');
 end;
 
-function UUDecode(const S: AnsiString): AnsiString;
+function UUDecode(const S: RawByteString): RawByteString;
 begin
   // Line without size indicator (first byte = length + 32)
   Result := DecodeBase64(S, b64_UUEncode, ['`']);
 end;
 
-function MIMEBase64Decode(const S: AnsiString): AnsiString;
+function MIMEBase64Decode(const S: RawByteString): RawByteString;
 begin
   Result := DecodeBase64(S, b64_MIMEBase64, ['=']);
 end;
 
-function XXDecode(const S: AnsiString): AnsiString;
+function XXDecode(const S: RawByteString): RawByteString;
 begin
   Result := DecodeBase64(S, b64_XXEncode, []);
 end;
