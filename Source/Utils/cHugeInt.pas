@@ -1,7 +1,7 @@
 {******************************************************************************}
 {                                                                              }
 {   File name:        cHugeInt.pas                                             }
-{   File version:     4.20                                                     }
+{   File version:     4.21                                                     }
 {   Description:      HugeInt functions                                        }
 {                                                                              }
 {   Copyright:        Copyright (c) 2001-2015, David J Butler                  }
@@ -57,10 +57,12 @@
 {   2012/11/15  4.19  Improvements to HugeWordIsPrime_MillerRabin courtesy of  }
 {                     Wolfgang Ehrhardt.                                       }
 {   2015/03/29  4.20  Minor optimisations.                                     }
+{   2015/04/01  4.21  Compilable with FreePascal 2.6.2.                        }
 {                                                                              }
 { Supported compilers:                                                         }
 {   Delphi XE7 Win32                    4.20  2015/03/29                       }
-{   Delphi XE7 Win64                    4.20  2015/03/29                       }
+{   Delphi XE7 Win64                    4.21  2015/04/01                       }
+{   FreePascal 2.6.2 Linux x64          4.21  2015/04/01                       }
 {                                                                              }
 {******************************************************************************}
 
@@ -2530,8 +2532,8 @@ var L, M : Integer;
     ADat : PLongWord;
     RDat : PLongWord;
 begin
-  Assert(@Res <> @A);
-  Assert(@Res <> @B);
+  Assert(Res.Data <> A.Data);
+  Assert(Res.Data <> B.Data);
   // handle zero
   L := A.Used;
   M := B.Used;
@@ -2601,7 +2603,7 @@ end;
 
 procedure HugeWordMultiply_Long_NN(var Res: HugeWord; const A, B: HugeWord);
 begin
-  if (@Res = @A) or (@Res = @B) then
+  if (Res.Data = A.Data) or (Res.Data = B.Data) then
     HugeWordMultiply_Long_NN_Safe(Res, A, B)
   else
     HugeWordMultiply_Long_NN_Unsafe(Res, A, B);
@@ -2665,7 +2667,7 @@ end;
 
 procedure HugeWordMultiply_ShiftAdd(var Res: HugeWord; const A, B: HugeWord);
 begin
-  if (@Res = @A) or (@Res = @B) then
+  if (Res.Data = A.Data) or (Res.Data = B.Data) then
     HugeWordMultiply_ShiftAdd_Safe(Res, A, B)
   else
     HugeWordMultiply_ShiftAdd_Unsafe(Res, A, B);
@@ -2777,8 +2779,8 @@ end;
 procedure HugeWordDivide_RR_Safe(const A, B: HugeWord; var Q, R: HugeWord);
 var D, E : HugeWord;
 begin
-  HugeWordInit(D); 
-  HugeWordInit(E); 
+  HugeWordInit(D);
+  HugeWordInit(E);
   try
     HugeWordDivide_RR_Unsafe(A, B, D, E);
     HugeWordAssign(Q, D);
@@ -2796,7 +2798,8 @@ end;
 {          Q and R normalised                                                  }
 procedure HugeWordDivide(const A, B: HugeWord; var Q, R: HugeWord);
 begin
-  if (@A = @Q) or (@A = @R) or (@B = @Q) or (@B = @R) then
+  if (A.Data = Q.Data) or (A.Data = R.Data) or
+     (B.Data = Q.Data) or (B.Data = R.Data) then
     HugeWordDivide_RR_Safe(A, B, Q, R)
   else
     HugeWordDivide_RR_Unsafe(A, B, Q, R);
@@ -5280,6 +5283,10 @@ begin
   Assert(HugeWordToWord32(A) = $80);
   HugeWordShl(A, 1);
   Assert(HugeWordToWord32(A) = $100);
+  HugeWordShl1(A);
+  Assert(HugeWordToWord32(A) = $200);
+  HugeWordShr1(A);
+  Assert(HugeWordToWord32(A) = $100);
 
   // Shl1/Shl/Shr1/Shr
   HugeWordAssignWord32(A, 1);
@@ -5315,6 +5322,13 @@ begin
       HugeWordNormalise(A);
       HugeWordNormalise(B);
     end;
+
+  // Shl/Shr
+  HugeWordAssignInt64(A, $1234678FFFFFFFF);
+  HugeWordShl1(A);
+  Assert(HugeWordToInt64(A) = $2468CF1FFFFFFFE);
+  HugeWordShr1(A);
+  Assert(HugeWordToInt64(A) = $1234678FFFFFFFF);
 
   // Add/Subtract
   HugeWordAssignZero(A);
@@ -5361,6 +5375,10 @@ begin
   StrToHugeWordA('222222222222222222222222222222222222222222222222222222222', B);
   HugeWordAdd(A, B);
   Assert(HugeWordToStrA(A) = '333333333333333333333333333333333333333333333333333333333');
+  HugeWordSubtract(A, B);
+  Assert(HugeWordToStrA(A) = '111111111111111111111111111111111111111111111111111111111');
+  HugeWordSubtract(A, A);
+  Assert(HugeWordIsZero(A));
 
   // Multiply/Divide
   HugeWordAssignWord32(A, $10000000);
@@ -5375,6 +5393,7 @@ begin
   StrToHugeWordA('111111111111111111111111111111111111', A);
   StrToHugeWordA('100000000000000000000000000000000000', B);
   HugeWordMultiply(C, A, B);
+  Assert(HugeWordToStrA(A) = '111111111111111111111111111111111111');
   Assert(HugeWordToStrA(C) = '11111111111111111111111111111111111100000000000000000000000000000000000');
   HugeWordDivide(C, B, D, C);
   Assert(HugeWordToStrA(D) = '111111111111111111111111111111111111');

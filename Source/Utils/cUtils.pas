@@ -196,6 +196,9 @@ type
   {$ENDIF}
   PNativeInt  = ^NativeInt;
   {$ENDIF}
+  {$IFDEF FREEPASCAL}
+  PNativeInt  = ^NativeInt;
+  {$ENDIF}
 
   {$IFNDEF SupportNativeUInt}
   {$IFDEF CPU_X86_64}
@@ -203,6 +206,9 @@ type
   {$ELSE}
   NativeUInt  = type Cardinal;
   {$ENDIF}
+  PNativeUInt = ^NativeUInt;
+  {$ENDIF}
+  {$IFDEF FREEPASCAL}
   PNativeUInt = ^NativeUInt;
   {$ENDIF}
 
@@ -811,7 +817,9 @@ procedure Swap(var X, Y: ShortInt); overload;
 procedure Swap(var X, Y: SmallInt); overload;
 procedure Swap(var X, Y: LongInt); overload;
 procedure Swap(var X, Y: Int64); overload;
+{$IFNDEF FREEPASCAL}
 procedure Swap(var X, Y: NativeInt); overload;
+{$ENDIF}
 procedure Swap(var X, Y: Single); overload;
 procedure Swap(var X, Y: Double); overload;
 procedure Swap(var X, Y: Extended); overload;
@@ -3270,6 +3278,7 @@ begin
   Y := F;
 end;
 
+{$IFNDEF FREEPASCAL}
 procedure Swap(var X, Y: NativeInt);
 var F : NativeInt;
 begin
@@ -3277,6 +3286,7 @@ begin
   X := Y;
   Y := F;
 end;
+{$ENDIF}
 
 {$IFNDEF ManagedCode}
 {$IFDEF ASM386_DELPHI}
