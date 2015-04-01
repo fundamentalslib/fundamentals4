@@ -2,10 +2,10 @@
 {                                                                              }
 {   Library:          Fundamentals 4.00                                        }
 {   File name:        cUnicodeReader.pas                                       }
-{   File version:     4.07                                                     }
+{   File version:     4.08                                                     }
 {   Description:      Unicode reader class                                     }
 {                                                                              }
-{   Copyright:        Copyright (c) 2002-2012, David J Butler                  }
+{   Copyright:        Copyright (c) 2002-2015, David J Butler                  }
 {                     All rights reserved.                                     }
 {                     Redistribution and use in source and binary forms, with  }
 {                     or without modification, are permitted provided that     }
@@ -32,6 +32,7 @@
 {   Home page:        http://fundementals.sourceforge.net                      }
 {   Forum:            http://sourceforge.net/forum/forum.php?forum_id=2117     }
 {   E-mail:           fundamentalslib at gmail.com                             }
+{   Source:           https://github.com/fundamentalslib                       }
 {                                                                              }
 { Revision history:                                                            }
 {                                                                              }
@@ -42,6 +43,7 @@
 {   2004/01/02  3.05  Changed reader's block size to 64K as suggested by Eb.   }
 {   2005/08/27  4.06  Revised for Fundamentals 4.                              }
 {   2011/10/16  4.07  Changes for Unicode Delphi.                              }
+{   2015/04/01  4.08  Revision.                                                }
 {                                                                              }
 { Supported compilers:                                                         }
 {                                                                              }
@@ -107,7 +109,7 @@ type
     function  ReadWide(const Buf: PWideChar; const Len: Integer): Integer;
     function  ReadWideStr(const Len: Integer): WideString;
     function  ReadUnicodeStr(const Len: Integer): UnicodeString;
-    function  ReadUTF8Str(const Len: Integer): AnsiString;
+    function  ReadUTF8Str(const Len: Integer): RawByteString;
 
     procedure Skip(const Count: Integer);
     function  SkipAll(const CharMatchFunc: TWideCharMatchFunction): Integer;
@@ -116,19 +118,19 @@ type
               const Skip: Boolean): Boolean;
     function  MatchWideChar(const Ch: WideChar; const Skip: Boolean): Boolean;
 
-    function  MatchAnsiStr(const S: AnsiString; const CaseSensitive: Boolean;
+    function  MatchRawByteStr(const S: RawByteString; const CaseSensitive: Boolean;
               const Skip: Boolean): Boolean;
-    function  MatchAnsiStrDelimited(const S: AnsiString;
+    function  MatchRawByteStrDelimited(const S: RawByteString;
               const CaseSensitive: Boolean;
               const Delimiter: TWideCharMatchFunction;
               const Skip: Boolean): Boolean;
 
     function  MatchChars(const CharMatchFunc: TWideCharMatchFunction): Integer;
-    function  MatchAnsiChars(const C: CharSet): Integer;
+    function  MatchRawByteChars(const C: CharSet): Integer;
 
-    function  LocateAnsiChar(const C: CharSet;
+    function  LocateRawByteChar(const C: CharSet;
               const Optional: Boolean = False): Integer;
-    function  LocateAnsiStr(const S: AnsiString; const CaseSensitive: Boolean;
+    function  LocateRawByteStr(const S: RawByteString; const CaseSensitive: Boolean;
               const Optional: Boolean = False): Integer;
 
     function  PeekChar: WideChar;
@@ -136,21 +138,21 @@ type
     function  GetPeekBuffer(const Len: Integer; var Buffer: PWideChar): Integer;
 
     function  ReadChars(const CharMatchFunc: TWideCharMatchFunction): UnicodeString;
-    function  ReadAnsiChars(const C: CharSet): AnsiString;
+    function  ReadRawByteChars(const C: CharSet): RawByteString;
 
-    function  SkipToAnsiChar(const C: CharSet;
+    function  SkipToRawByteChar(const C: CharSet;
               const SkipDelimiter: Boolean): Integer;
-    function  ReadToAnsiChar(const C: CharSet;
+    function  ReadToRawByteChar(const C: CharSet;
               const SkipDelimiter: Boolean = False): UnicodeString;
-    function  ReadUTF8StrToAnsiChar(const C: CharSet;
-              const SkipDelimiter: Boolean = False): AnsiString;
+    function  ReadUTF8StrToRawByteChar(const C: CharSet;
+              const SkipDelimiter: Boolean = False): RawByteString;
 
-    function  ReadToAnsiStr(const S: AnsiString;
+    function  ReadToRawByteStr(const S: RawByteString;
               const CaseSensitive: Boolean = True;
               const SkipDelimiter: Boolean = False): UnicodeString;
-    function  ReadUTF8StrToAnsiStr(const S: AnsiString;
+    function  ReadUTF8StrToRawByteStr(const S: RawByteString;
               const CaseSensitive: Boolean = True;
-              const SkipDelimiter: Boolean = False): AnsiString;
+              const SkipDelimiter: Boolean = False): RawByteString;
   end;
   EUnicodeReader = class(Exception);
   EUnicodeReaderReadError = class(EUnicodeReader);
@@ -439,7 +441,7 @@ begin
   Inc(FBufPos, L);
 end;
 
-function TUnicodeReader.ReadUTF8Str(const Len: Integer): AnsiString;
+function TUnicodeReader.ReadUTF8Str(const Len: Integer): RawByteString;
 var L: Integer;
     P: PWideChar;
 begin
@@ -541,7 +543,7 @@ begin
     Inc(FBufPos);
 end;
 
-function TUnicodeReader.MatchAnsiStr(const S: AnsiString;
+function TUnicodeReader.MatchRawByteStr(const S: RawByteString;
     const CaseSensitive: Boolean; const Skip: Boolean): Boolean;
 var L: Integer;
     P: PWideChar;
@@ -562,13 +564,13 @@ begin
   // match
   P := Pointer(FBuffer);
   Inc(P, FBufPos);
-  Result := StrZMatchStrAsciiAW(P, S, CaseSensitive);
+  Result := StrZMatchStrAsciiBW(P, S, CaseSensitive);
   // skip
   if Skip and Result then
     Inc(FBufPos, L);
 end;
 
-function TUnicodeReader.MatchAnsiStrDelimited(const S: AnsiString;
+function TUnicodeReader.MatchRawByteStrDelimited(const S: RawByteString;
     const CaseSensitive: Boolean; const Delimiter: TWideCharMatchFunction;
     const Skip: Boolean): Boolean;
 var L: Integer;
@@ -585,7 +587,7 @@ begin
   // match
   P := Pointer(FBuffer);
   Inc(P, FBufPos);
-  Result := StrZMatchStrAsciiAW(P, S, CaseSensitive);
+  Result := StrZMatchStrAsciiBW(P, S, CaseSensitive);
   if not Result then
     exit;
   Inc(P, L);
@@ -622,7 +624,7 @@ begin
   Until False;
 end;
 
-function TUnicodeReader.MatchAnsiChars(const C: CharSet): Integer;
+function TUnicodeReader.MatchRawByteChars(const C: CharSet): Integer;
 var P: PWideChar;
     N, I: Integer;
 begin
@@ -649,7 +651,7 @@ begin
   Until False;
 end;
 
-function TUnicodeReader.LocateAnsiChar(const C: CharSet;
+function TUnicodeReader.LocateRawByteChar(const C: CharSet;
     const Optional: Boolean): Integer;
 var P: PWideChar;
     N, I: Integer;
@@ -686,7 +688,7 @@ begin
   Until False;
 end;
 
-function TUnicodeReader.LocateAnsiStr(const S: AnsiString;
+function TUnicodeReader.LocateRawByteStr(const S: RawByteString;
     const CaseSensitive: Boolean;
     const Optional: Boolean): Integer;
 var P: PWideChar;
@@ -712,7 +714,7 @@ begin
     P := Pointer(FBuffer);
     Inc(P, FBufPos + Result);
     For I := Result + 1 to N - M + 1 do
-      if StrZMatchStrAsciiAW(P, S, CaseSensitive) then
+      if StrZMatchStrAsciiBW(P, S, CaseSensitive) then
         // found
         exit else
         begin
@@ -818,12 +820,12 @@ begin
     end;
 end;
 
-function TUnicodeReader.ReadAnsiChars(const C: CharSet): AnsiString;
+function TUnicodeReader.ReadRawByteChars(const C: CharSet): RawByteString;
 var P : PWideChar;
     L : Integer;
 begin
   // calculate length
-  L := MatchAnsiChars(C);
+  L := MatchRawByteChars(C);
   if L = 0 then
     Result := '' else
     begin
@@ -836,12 +838,12 @@ begin
     end;
 end;
 
-function TUnicodeReader.SkipToAnsiChar(const C: CharSet;
+function TUnicodeReader.SkipToRawByteChar(const C: CharSet;
     const SkipDelimiter: Boolean): Integer;
 var L: Integer;
 begin
   // locate
-  L := LocateAnsiChar(C, False);
+  L := LocateRawByteChar(C, False);
   if L = 0 then
     Result := 0 else
     begin
@@ -856,12 +858,12 @@ begin
     Inc(FBufPos);
 end;
 
-function TUnicodeReader.ReadToAnsiChar(const C: CharSet;
+function TUnicodeReader.ReadToRawByteChar(const C: CharSet;
     const SkipDelimiter: Boolean): UnicodeString;
 var L, M: Integer;
 begin
   // locate
-  L := LocateAnsiChar(C, False);
+  L := LocateRawByteChar(C, False);
   if L = 0 then
     Result := '' else
     begin
@@ -877,12 +879,12 @@ begin
     Inc(FBufPos);
 end;
 
-function TUnicodeReader.ReadUTF8StrToAnsiChar(const C: CharSet;
-    const SkipDelimiter: Boolean): AnsiString;
+function TUnicodeReader.ReadUTF8StrToRawByteChar(const C: CharSet;
+    const SkipDelimiter: Boolean): RawByteString;
 var L, M: Integer;
 begin
   // locate
-  L := LocateAnsiChar(C, False);
+  L := LocateRawByteChar(C, False);
   if L = 0 then
     Result := '' else
     begin
@@ -897,12 +899,12 @@ begin
     Inc(FBufPos);
 end;
 
-function TUnicodeReader.ReadToAnsiStr(const S: AnsiString;
+function TUnicodeReader.ReadToRawByteStr(const S: RawByteString;
     const CaseSensitive: Boolean; const SkipDelimiter: Boolean): UnicodeString;
 var L, M: Integer;
 begin
   // locate
-  L := LocateAnsiStr(S, CaseSensitive, False);
+  L := LocateRawByteStr(S, CaseSensitive, False);
   if L = 0 then
     Result := '' else
     begin
@@ -917,12 +919,12 @@ begin
     Inc(FBufPos, Length(S));
 end;
 
-function TUnicodeReader.ReadUTF8StrToAnsiStr(const S: AnsiString;
-    const CaseSensitive: Boolean; const SkipDelimiter: Boolean): AnsiString;
+function TUnicodeReader.ReadUTF8StrToRawByteStr(const S: RawByteString;
+    const CaseSensitive: Boolean; const SkipDelimiter: Boolean): RawByteString;
 var L, M: Integer;
 begin
   // locate
-  L := LocateAnsiStr(S, CaseSensitive, False);
+  L := LocateRawByteStr(S, CaseSensitive, False);
   if L = 0 then
     Result := '' else
     begin
@@ -956,7 +958,7 @@ end;
 constructor TUnicodeLongStringReader.Create(const DataStr: AnsiString;
     const Codec: TCustomUnicodeCodec; const CodecOwner: Boolean);
 begin
-  inherited Create(TLongStringReader.Create(DataStr), True, Codec, CodecOwner);
+  inherited Create(TRawByteStringReader.Create(DataStr), True, Codec, CodecOwner);
 end;
 
 
@@ -981,7 +983,7 @@ procedure SelfTest;
 var A : TUnicodeReader;
 begin
   A := TUnicodeReader.Create(
-      TLongStringReader.Create(#$41#$E2#$89#$A2#$CE#$91#$2E),
+      TRawByteStringReader.Create(RawByteString(#$41#$E2#$89#$A2#$CE#$91#$2E)),
       True,
       TUTF8Codec.Create,
       True);

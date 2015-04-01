@@ -13,6 +13,7 @@
 {   Home page:        http://fundementals.sourceforge.net                      }
 {   Forum:            http://sourceforge.net/forum/forum.php?forum_id=2117     }
 {   E-mail:           fundamentalslib at gmail.com                             }
+{   Source:           https://github.com/fundamentalslib                       }
 {                                                                              }
 {   This unit is also part of the Open XML Utility Library.                    }
 {   http://www.philo.de/xml/                                                   }
@@ -130,16 +131,6 @@ type
 
 
 {                                                                              }
-{ UTF8String                                                                   }
-{                                                                              }
-{$IFNDEF SupportUTF8String}
-type
-  UTF8String = AnsiString;
-{$ENDIF}
-
-
-
-{                                                                              }
 { UnicodeString                                                                }
 {                                                                              }
 {$IFNDEF SupportUnicodeString}
@@ -160,8 +151,6 @@ type
 {$IFDEF DELPHI8}
 type
   UCS4Char = LongWord;
-  UTF8Char = AnsiChar;
-  UTF8String = AnsiString;
 {$ENDIF}
 
 const
@@ -177,7 +166,6 @@ const
 function  IsUSASCIIBuf(const S: PAnsiChar; const Len: Integer): Boolean;
 function  IsUSASCIIAnsiString(const S: AnsiString): Boolean;
 function  IsUSASCIIRawByteString(const S: RawByteString): Boolean;
-function  IsUSASCIIUTF8String(const S: UTF8String): Boolean;
 function  IsUSASCIIWideBuf(const Buf: PWideChar; const Len: Integer): Boolean;
 function  IsUSASCIIWideString(const S: WideString): Boolean;
 function  IsUSASCIIUnicodeString(const S: UnicodeString): Boolean;
@@ -1538,11 +1526,6 @@ begin
 end;
 
 function IsUSASCIIRawByteString(const S: RawByteString): Boolean;
-begin
-  Result := IsUSASCIIBuf(Pointer(S), Length(S));
-end;
-
-function IsUSASCIIUTF8String(const S: UTF8String): Boolean;
 begin
   Result := IsUSASCIIBuf(Pointer(S), Length(S));
 end;
