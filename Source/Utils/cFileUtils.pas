@@ -84,23 +84,25 @@ uses
 { Path functions                                                               }
 {                                                                              }
 const
-  PathSeparator = {$IFDEF UNIX}  '/' {$ENDIF}
-                  {$IFDEF MSWIN} '\' {$ENDIF};
+  UnixPathSeparator = '/';
+  WinPathSeparator  = '\';
+  PathSeparator = {$IFDEF UNIX}  UnixPathSeparator {$ENDIF}
+                  {$IFDEF MSWIN} WinPathSeparator  {$ENDIF};
 
-function  PathHasDriveLetterA(const Path: AnsiString): Boolean;
-function  PathHasDriveLetterB(const Path: RawByteString): Boolean;
-function  PathHasDriveLetterU(const Path: UnicodeString): Boolean;
-function  PathHasDriveLetter(const Path: String): Boolean;
+function  WinPathHasDriveLetterA(const Path: AnsiString): Boolean;
+function  WinPathHasDriveLetterB(const Path: RawByteString): Boolean;
+function  WinPathHasDriveLetterU(const Path: UnicodeString): Boolean;
+function  WinPathHasDriveLetter(const Path: String): Boolean;
 
-function  PathIsDriveLetterA(const Path: AnsiString): Boolean;
-function  PathIsDriveLetterB(const Path: RawByteString): Boolean;
-function  PathIsDriveLetterU(const Path: UnicodeString): Boolean;
-function  PathIsDriveLetter(const Path: String): Boolean;
+function  WinPathIsDriveLetterA(const Path: AnsiString): Boolean;
+function  WinPathIsDriveLetterB(const Path: RawByteString): Boolean;
+function  WinPathIsDriveLetterU(const Path: UnicodeString): Boolean;
+function  WinPathIsDriveLetter(const Path: String): Boolean;
 
-function  PathIsDriveRootA(const Path: AnsiString): Boolean;
-function  PathIsDriveRootB(const Path: RawByteString): Boolean;
-function  PathIsDriveRootU(const Path: UnicodeString): Boolean;
-function  PathIsDriveRoot(const Path: String): Boolean;
+function  WinPathIsDriveRootA(const Path: AnsiString): Boolean;
+function  WinPathIsDriveRootB(const Path: RawByteString): Boolean;
+function  WinPathIsDriveRootU(const Path: UnicodeString): Boolean;
+function  WinPathIsDriveRoot(const Path: String): Boolean;
 
 function  PathIsRootA(const Path: AnsiString): Boolean;
 function  PathIsRootB(const Path: RawByteString): Boolean;
@@ -630,7 +632,7 @@ resourcestring
 {                                                                              }
 { Path functions                                                               }
 {                                                                              }
-function PathHasDriveLetterA(const Path: AnsiString): Boolean;
+function WinPathHasDriveLetterA(const Path: AnsiString): Boolean;
 begin
   Result := False;
   if Length(Path) < 2 then
@@ -645,7 +647,7 @@ begin
   Result := True;
 end;
 
-function PathHasDriveLetterB(const Path: RawByteString): Boolean;
+function WinPathHasDriveLetterB(const Path: RawByteString): Boolean;
 begin
   Result := False;
   if Length(Path) < 2 then
@@ -660,7 +662,7 @@ begin
   Result := True;
 end;
 
-function PathHasDriveLetterU(const Path: UnicodeString): Boolean;
+function WinPathHasDriveLetterU(const Path: UnicodeString): Boolean;
 begin
   Result := False;
   if Length(Path) < 2 then
@@ -675,7 +677,7 @@ begin
   Result := True;
 end;
 
-function PathHasDriveLetter(const Path: String): Boolean;
+function WinPathHasDriveLetter(const Path: String): Boolean;
 begin
   Result := False;
   if Length(Path) < 2 then
@@ -690,65 +692,65 @@ begin
   Result := True;
 end;
 
-function PathIsDriveLetterA(const Path: AnsiString): Boolean;
+function WinPathIsDriveLetterA(const Path: AnsiString): Boolean;
 begin
-  Result := (Length(Path) = 2) and PathHasDriveLetterA(Path);
+  Result := (Length(Path) = 2) and WinPathHasDriveLetterA(Path);
 end;
 
-function PathIsDriveLetterB(const Path: RawByteString): Boolean;
+function WinPathIsDriveLetterB(const Path: RawByteString): Boolean;
 begin
-  Result := (Length(Path) = 2) and PathHasDriveLetterB(Path);
+  Result := (Length(Path) = 2) and WinPathHasDriveLetterB(Path);
 end;
 
-function PathIsDriveLetterU(const Path: UnicodeString): Boolean;
+function WinPathIsDriveLetterU(const Path: UnicodeString): Boolean;
 begin
-  Result := (Length(Path) = 2) and PathHasDriveLetterU(Path);
+  Result := (Length(Path) = 2) and WinPathHasDriveLetterU(Path);
 end;
 
-function PathIsDriveLetter(const Path: String): Boolean;
+function WinPathIsDriveLetter(const Path: String): Boolean;
 begin
-  Result := (Length(Path) = 2) and PathHasDriveLetter(Path);
+  Result := (Length(Path) = 2) and WinPathHasDriveLetter(Path);
 end;
 
-function PathIsDriveRootA(const Path: AnsiString): Boolean;
+function WinPathIsDriveRootA(const Path: AnsiString): Boolean;
 begin
-  Result := (Length(Path) = 3) and PathHasDriveLetterA(Path) and
+  Result := (Length(Path) = 3) and WinPathHasDriveLetterA(Path) and
             (Path[3] = '\');
 end;
 
-function PathIsDriveRootB(const Path: RawByteString): Boolean;
+function WinPathIsDriveRootB(const Path: RawByteString): Boolean;
 begin
-  Result := (Length(Path) = 3) and PathHasDriveLetterB(Path) and
+  Result := (Length(Path) = 3) and WinPathHasDriveLetterB(Path) and
             (Path[3] = '\');
 end;
 
-function PathIsDriveRootU(const Path: UnicodeString): Boolean;
+function WinPathIsDriveRootU(const Path: UnicodeString): Boolean;
 begin
-  Result := (Length(Path) = 3) and PathHasDriveLetterU(Path) and
+  Result := (Length(Path) = 3) and WinPathHasDriveLetterU(Path) and
             (Path[3] = '\');
 end;
 
-function PathIsDriveRoot(const Path: String): Boolean;
+function WinPathIsDriveRoot(const Path: String): Boolean;
 begin
-  Result := (Length(Path) = 3) and PathHasDriveLetter(Path) and
+  Result := (Length(Path) = 3) and WinPathHasDriveLetter(Path) and
             (Path[3] = '\');
 end;
 
 function PathIsRootA(const Path: AnsiString): Boolean;
 begin
   Result := ((Length(Path) = 1) and (Path[1] in csSlash)) or
-            PathIsDriveRootA(Path);
+            WinPathIsDriveRootA(Path);
 end;
 
 function PathIsRootB(const Path: RawByteString): Boolean;
 begin
   Result := ((Length(Path) = 1) and (Path[1] in csSlash)) or
-            PathIsDriveRootB(Path);
+            WinPathIsDriveRootB(Path);
 end;
 
 function PathIsRootU(const Path: UnicodeString): Boolean;
 begin
-  Result := PathIsDriveRootU(Path);
+  Result := WinPathIsDriveRootU(Path);
   if Result then
     exit;
   if Length(Path) = 1 then
@@ -759,7 +761,7 @@ end;
 
 function PathIsRoot(const Path: String): Boolean;
 begin
-  Result := PathIsDriveRoot(Path);
+  Result := WinPathIsDriveRoot(Path);
   if Result then
     exit;
   if Length(Path) = 1 then
@@ -826,7 +828,7 @@ function PathIsAbsoluteA(const Path: AnsiString): Boolean;
 begin
   if Path = '' then
     Result := False else
-  if PathHasDriveLetterA(Path) then
+  if WinPathHasDriveLetterA(Path) then
     Result := True else
   if PAnsiChar(Pointer(Path))^ in ['\', '/'] then
     Result := True
@@ -838,7 +840,7 @@ function PathIsAbsoluteB(const Path: RawByteString): Boolean;
 begin
   if Path = '' then
     Result := False else
-  if PathHasDriveLetterB(Path) then
+  if WinPathHasDriveLetterB(Path) then
     Result := True else
   if PAnsiChar(Pointer(Path))^ in ['\', '/'] then
     Result := True
@@ -850,7 +852,7 @@ function PathIsAbsoluteU(const Path: UnicodeString): Boolean;
 begin
   if Path = '' then
     Result := False else
-  if PathHasDriveLetterU(Path) then
+  if WinPathHasDriveLetterU(Path) then
     Result := True
   else
     case Path[1] of
@@ -864,7 +866,7 @@ function PathIsAbsolute(const Path: String): Boolean;
 begin
   if Path = '' then
     Result := False else
-  if PathHasDriveLetter(Path) then
+  if WinPathHasDriveLetter(Path) then
     Result := True
   else
     case Path[1] of
@@ -881,7 +883,7 @@ begin
   L := Length(Path);
   if L = 0 then
     Result := False else
-  if (L = 2) and PathHasDriveLetterA(Path) then
+  if (L = 2) and WinPathHasDriveLetterA(Path) then
     Result := True else
     begin
       P := Pointer(Path);
@@ -897,7 +899,7 @@ begin
   L := Length(Path);
   if L = 0 then
     Result := False else
-  if (L = 2) and PathHasDriveLetterB(Path) then
+  if (L = 2) and WinPathHasDriveLetterB(Path) then
     Result := True else
     begin
       P := Pointer(Path);
@@ -912,7 +914,7 @@ begin
   L := Length(Path);
   if L = 0 then
     Result := False else
-  if (L = 2) and PathHasDriveLetterU(Path) then
+  if (L = 2) and WinPathHasDriveLetterU(Path) then
     Result := True
   else
     case Path[L] of
@@ -928,7 +930,7 @@ begin
   L := Length(Path);
   if L = 0 then
     Result := False else
-  if (L = 2) and PathHasDriveLetter(Path) then
+  if (L = 2) and WinPathHasDriveLetter(Path) then
     Result := True
   else
     case Path[L] of
@@ -1133,7 +1135,7 @@ begin
           break;
         M := -1;
         For I := J - 1 downto 0 do
-          if (P[I] = '') or ((I = 0) and PathHasDriveLetterA(P[I])) then
+          if (P[I] = '') or ((I = 0) and WinPathHasDriveLetterA(P[I])) then
             break else
           if P[I] <> '..' then
             begin
@@ -1227,7 +1229,7 @@ begin
           break;
         M := -1;
         For I := J - 1 downto 0 do
-          if (P[I] = '') or ((I = 0) and PathHasDriveLetterB(P[I])) then
+          if (P[I] = '') or ((I = 0) and WinPathHasDriveLetterB(P[I])) then
             break else
           if P[I] <> '..' then
             begin
@@ -1322,7 +1324,7 @@ begin
           break;
         M := -1;
         For I := J - 1 downto 0 do
-          if (P[I] = '') or ((I = 0) and PathHasDriveLetterU(P[I])) then
+          if (P[I] = '') or ((I = 0) and WinPathHasDriveLetterU(P[I])) then
             break else
           if P[I] <> '..' then
             begin
@@ -1421,7 +1423,7 @@ begin
           break;
         M := -1;
         For I := J - 1 downto 0 do
-          if (P[I] = '') or ((I = 0) and PathHasDriveLetter(P[I])) then
+          if (P[I] = '') or ((I = 0) and WinPathHasDriveLetter(P[I])) then
             break else
           if P[I] <> '..' then
             begin
@@ -1928,7 +1930,7 @@ end;
 function WinPathToUnixPath(const Path: AnsiString): AnsiString;
 begin
   Result := Path;
-  if PathHasDriveLetterA(Path) then
+  if WinPathHasDriveLetterA(Path) then
     begin
       // X: -> \X
       Result[2] := Result[1];
@@ -3478,7 +3480,7 @@ end;
 function DirEntryGetAttr(const FileName: AnsiString): Integer;
 var SRec : TSearchRec;
 begin
-  if (FileName = '') or PathIsDriveLetterA(FileName) then
+  if (FileName = '') or WinPathIsDriveLetterA(FileName) then
     Result := -1 else
   if PathIsRootA(FileName) then
     Result := $0800 or faDirectory else
@@ -3494,7 +3496,7 @@ end;
 function DirEntryIsDirectory(const FileName: AnsiString): Boolean;
 var SRec : TSearchRec;
 begin
-  if (FileName = '') or PathIsDriveLetterA(FileName) then
+  if (FileName = '') or WinPathIsDriveLetterA(FileName) then
     Result := False else
   if PathIsRootA(FileName) then
     Result := True else
@@ -3622,7 +3624,7 @@ end;
 function DriveFreeSpace(const Path: AnsiString): Int64;
 var D: Byte;
 begin
-  if PathHasDriveLetterA(Path) then
+  if WinPathHasDriveLetterA(Path) then
     D := Ord(UpCase(PAnsiChar(Path)^)) - Ord('A') + 1 else
   if PathIsUNCPathA(Path) then
     begin
@@ -3648,35 +3650,35 @@ const
   TempFilename = 'c:\temp\cFileUtilsTest.txt';
 begin
   // PathHasDriveLetter
-  Assert(PathHasDriveLetterA('A:'), 'PathHasDriveLetter');
-  Assert(PathHasDriveLetterA('a:'), 'PathHasDriveLetter');
-  Assert(PathHasDriveLetterA('A:\'), 'PathHasDriveLetter');
-  Assert(not PathHasDriveLetterA('a\'), 'PathHasDriveLetter');
-  Assert(not PathHasDriveLetterA('\a\'), 'PathHasDriveLetter');
-  Assert(not PathHasDriveLetterA('::'), 'PathHasDriveLetter');
+  Assert(WinPathHasDriveLetterA('A:'), 'PathHasDriveLetter');
+  Assert(WinPathHasDriveLetterA('a:'), 'PathHasDriveLetter');
+  Assert(WinPathHasDriveLetterA('A:\'), 'PathHasDriveLetter');
+  Assert(not WinPathHasDriveLetterA('a\'), 'PathHasDriveLetter');
+  Assert(not WinPathHasDriveLetterA('\a\'), 'PathHasDriveLetter');
+  Assert(not WinPathHasDriveLetterA('::'), 'PathHasDriveLetter');
 
-  Assert(PathHasDriveLetter('A:'), 'PathHasDriveLetter');
-  Assert(PathHasDriveLetter('a:'), 'PathHasDriveLetter');
-  Assert(PathHasDriveLetter('A:\'), 'PathHasDriveLetter');
-  Assert(not PathHasDriveLetter('a\'), 'PathHasDriveLetter');
-  Assert(not PathHasDriveLetter('\a\'), 'PathHasDriveLetter');
-  Assert(not PathHasDriveLetter('::'), 'PathHasDriveLetter');
+  Assert(WinPathHasDriveLetter('A:'), 'PathHasDriveLetter');
+  Assert(WinPathHasDriveLetter('a:'), 'PathHasDriveLetter');
+  Assert(WinPathHasDriveLetter('A:\'), 'PathHasDriveLetter');
+  Assert(not WinPathHasDriveLetter('a\'), 'PathHasDriveLetter');
+  Assert(not WinPathHasDriveLetter('\a\'), 'PathHasDriveLetter');
+  Assert(not WinPathHasDriveLetter('::'), 'PathHasDriveLetter');
 
   // PathIsDriveLetter
-  Assert(PathIsDriveLetterA('B:'), 'PathIsDriveLetter');
-  Assert(not PathIsDriveLetterA('B:\'), 'PathIsDriveLetter');
+  Assert(WinPathIsDriveLetterA('B:'), 'PathIsDriveLetter');
+  Assert(not WinPathIsDriveLetterA('B:\'), 'PathIsDriveLetter');
 
-  Assert(PathIsDriveLetter('B:'), 'PathIsDriveLetter');
-  Assert(not PathIsDriveLetter('B:\'), 'PathIsDriveLetter');
+  Assert(WinPathIsDriveLetter('B:'), 'PathIsDriveLetter');
+  Assert(not WinPathIsDriveLetter('B:\'), 'PathIsDriveLetter');
 
   // PathIsDriveRoot
-  Assert(PathIsDriveRootA('C:\'), 'PathIsDriveRoot');
-  Assert(not PathIsDriveRootA('C:'), 'PathIsDriveRoot');
-  Assert(not PathIsDriveRootA('C:\A'), 'PathIsDriveRoot');
+  Assert(WinPathIsDriveRootA('C:\'), 'PathIsDriveRoot');
+  Assert(not WinPathIsDriveRootA('C:'), 'PathIsDriveRoot');
+  Assert(not WinPathIsDriveRootA('C:\A'), 'PathIsDriveRoot');
 
-  Assert(PathIsDriveRoot('C:\'), 'PathIsDriveRoot');
-  Assert(not PathIsDriveRoot('C:'), 'PathIsDriveRoot');
-  Assert(not PathIsDriveRoot('C:\A'), 'PathIsDriveRoot');
+  Assert(WinPathIsDriveRoot('C:\'), 'PathIsDriveRoot');
+  Assert(not WinPathIsDriveRoot('C:'), 'PathIsDriveRoot');
+  Assert(not WinPathIsDriveRoot('C:\A'), 'PathIsDriveRoot');
 
   // PathIsAbsolute
   Assert(PathIsAbsoluteA('\'), 'PathIsAbsolute');
