@@ -34,6 +34,7 @@
 {   Home page:        http://fundementals.sourceforge.net                      }
 {   Forum:            http://sourceforge.net/forum/forum.php?forum_id=2117     }
 {   E-mail:           fundamentalslib@gmail.com                                }
+{   Source:           https://github.com/fundamentalslib                       }
 {                                                                              }
 { Revision history:                                                            }
 {                                                                              }
