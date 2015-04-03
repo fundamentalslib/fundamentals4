@@ -63,6 +63,7 @@ interface
 uses
   { System }
   {$IFDEF OS_MSWIN}
+  Messages,
   Windows,
   {$ENDIF}
   SysUtils,
@@ -517,15 +518,11 @@ type
 
 implementation
 
+{$IFDEF TCPCLIENT_TLS}
 uses
-  { Fundamentals }
-  {$IFDEF OS_MSWIN}
-  Messages
-  {$ENDIF}
   { TLS }
-  {$IFDEF TCPCLIENT_TLS},
-  cTLSUtils
-  {$ENDIF};
+  cTLSUtils;
+{$ENDIF}
 
 
 

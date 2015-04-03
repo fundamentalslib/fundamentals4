@@ -129,6 +129,8 @@ type
     function  GetStateStr: RawByteString;
     procedure SetState(const State: TTCPServerClientState);
 
+    function  GetRemoteAddrStr: RawByteString;
+
     {$IFDEF TCPSERVER_TLS}
     procedure InstallTLSProxy;
     {$ENDIF}
@@ -140,7 +142,7 @@ type
     procedure ConnectionClose(Sender: TTCPConnection);
 
     procedure TriggerStateChange;
-    procedure TriggerRead;    
+    procedure TriggerRead;
     procedure TriggerWrite;
     procedure TriggerClose;
 
@@ -170,6 +172,7 @@ type
     {$ENDIF}
 
     property  RemoteAddr: TSocketAddr read FRemoteAddr;
+    property  RemoteAddrStr: RawByteString read GetRemoteAddrStr;
 
     property  ClientID: Integer read FClientID;
 
@@ -648,6 +651,11 @@ begin
   {$IFDEF TCP_DEBUG}
   Log(tlDebug, 'State:%s', [STCPServerClientState[State]]);
   {$ENDIF}
+end;
+
+function TTCPServerClient.GetRemoteAddrStr: RawByteString;
+begin
+  Result := SocketAddrStrA(FRemoteAddr);
 end;
 
 {$IFDEF TCPSERVER_TLS}

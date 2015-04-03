@@ -121,7 +121,7 @@ type
 
   public
     class function ProxyName: String; virtual;
-    
+
     constructor Create(const Connection: TTCPConnection);
 
     property  State: TTCPConnectionProxyState read FState;
@@ -160,7 +160,7 @@ type
     TransferRate : LongWord;
   end;
 
-  TAnsiCharSet = set of AnsiChar;
+  TRawByteCharSet = set of AnsiChar;
 
   TTCPConnectionNotifyEvent = procedure (Sender: TTCPConnection) of object;
   TTCPConnectionStateChangeEvent = procedure (Sender: TTCPConnection; State: TTCPConnectionState) of object;
@@ -193,7 +193,7 @@ type
     FReadThrottleRate   : Integer;
     FWriteThrottle      : Boolean;
     FWriteThrottleRate  : Integer;
-    
+
     FReadTransferState  : TTCPConnectionTransferState;
     FWriteTransferState : TTCPConnectionTransferState;
 
@@ -253,8 +253,8 @@ type
     function  FillBufferFromSocket(out RecvClosed, ReadEventPending, ReadBufFullEvent: Boolean): Integer;
     function  EmptyBufferToSocket(out BufferEmptyBefore, BufferEmptied: Boolean): Integer;
 
+    function  LocateChrInBuffer(const Delimiter: TRawByteCharSet; const MaxSize: Integer): Integer;
     function  LocateStrInBuffer(const Delimiter: RawByteString; const MaxSize: Integer): Integer;
-    function  LocateChrInBuffer(const Delimiter: TAnsiCharSet; const MaxSize: Integer): Integer;
 
     function  ReadFromBuffer(var Buf; const BufSize: Integer): Integer;
     function  ReadFromSocket(var Buf; const BufSize: Integer): Integer;
@@ -309,10 +309,11 @@ type
     function  Discard(const Size: Integer): Integer;
 
     function  Peek(var Buf; const BufSize: Integer): Integer;
+    function  PeekByte(out B: Byte): Boolean;
     function  PeekStr(const StrLen: Integer): RawByteString;
 
+    function  PeekDelimited(var Buf; const BufSize: Integer; const Delimiter: TRawByteCharSet; const MaxSize: Integer = -1): Integer; overload;
     function  PeekDelimited(var Buf; const BufSize: Integer; const Delimiter: RawByteString; const MaxSize: Integer = -1): Integer; overload;
-    function  PeekDelimited(var Buf; const BufSize: Integer; const Delimiter: TAnsiCharSet; const MaxSize: Integer = -1): Integer; overload;
 
     function  ReadLine(var Line: RawByteString; const Delimiter: RawByteString; const MaxLineLength: Integer = -1): Boolean;
 
@@ -334,7 +335,7 @@ type
 {                                                                              }
 function  TCPGetTick: LongWord;
 function  TCPTickDelta(const D1, D2: LongWord): Integer;
-function  TCPTickDeltaW(const D1, D2: LongWord): LongWord;
+function  TCPTickDeltaU(const D1, D2: LongWord): LongWord;
 
 
 
@@ -503,7 +504,7 @@ begin
   Result := Integer(D2 - D1);
 end;
 
-function TCPTickDeltaW(const D1, D2: LongWord): LongWord; {$IFDEF UseInline}inline;{$ENDIF}
+function TCPTickDeltaU(const D1, D2: LongWord): LongWord; {$IFDEF UseInline}inline;{$ENDIF}
 begin
   Result := LongWord(D2 - D1);
 end;
@@ -615,7 +616,7 @@ begin
       Elapsed := Elapsed div 2;
       State.ByteCount := State.ByteCount div 2;
     end;
-  State.LastUpdate := TCPTickDeltaW(LongWord(Elapsed), CurrentTick);
+  State.LastUpdate := TCPTickDeltaU(LongWord(Elapsed), CurrentTick);
 end;
 
 // Returns the number of bytes that can be transferred with this throttle in place
@@ -1376,6 +1377,47 @@ begin
     end;
 end;
 
+// LocateChrInBuffer
+// Returns position of Delimiter in buffer
+// Returns >= 0 if found in buffer
+// Returns -1 if not found in buffer
+// MaxSize specifies maximum bytes before delimiter, of -1 for no limit
+function TTCPConnection.LocateChrInBuffer(const Delimiter: TRawByteCharSet; const MaxSize: Integer): Integer;
+var BufSize : Integer;
+    LocLen  : Integer;
+    BufPtr  : PAnsiChar;
+    I       : Integer;
+begin
+  if MaxSize = 0 then
+    begin
+      Result := -1;
+      exit;
+    end;
+  BufSize := FReadBuffer.Used;
+  if BufSize <= 0 then
+    begin
+      Result := -1;
+      exit;
+    end;
+  if MaxSize < 0 then
+    LocLen := BufSize
+  else
+    if BufSize < MaxSize then
+      LocLen := BufSize
+    else
+      LocLen := MaxSize;
+  BufPtr := TCPBufferPtr(FReadBuffer);
+  for I := 0 to LocLen - 1 do
+    if BufPtr^ in Delimiter then
+      begin
+        Result := I;
+        exit;
+      end
+    else
+      Inc(BufPtr);
+  Result := -1;
+end;
+
 // LocateStrInBuffer
 // Returns position of Delimiter in buffer
 // Returns >= 0 if found in buffer
@@ -1426,45 +1468,35 @@ begin
   Result := -1;
 end;
 
-// LocateChrInBuffer
-// Returns position of Delimiter in buffer
-// Returns >= 0 if found in buffer
+// PeekDelimited
+// Returns number of bytes transferred to buffer, including delimiter
 // Returns -1 if not found in buffer
+// Returns >= 0 if found.
 // MaxSize specifies maximum bytes before delimiter, of -1 for no limit
-function TTCPConnection.LocateChrInBuffer(const Delimiter: TAnsiCharSet; const MaxSize: Integer): Integer;
-var BufSize : Integer;
-    LocLen  : Integer;
-    BufPtr  : PAnsiChar;
-    I       : Integer;
+function TTCPConnection.PeekDelimited(var Buf; const BufSize: Integer;
+         const Delimiter: TRawByteCharSet; const MaxSize: Integer): Integer;
+var DelPos : Integer;
+    BufPtr : PAnsiChar;
+    BufLen : Integer;
 begin
-  if MaxSize = 0 then
-    begin
-      Result := -1;
-      exit;
-    end;
-  BufSize := FReadBuffer.Used;
-  if BufSize <= 0 then
-    begin
-      Result := -1;
-      exit;
-    end;
-  if MaxSize < 0 then
-    LocLen := BufSize
-  else
-    if BufSize < MaxSize then
-      LocLen := BufSize
-    else
-      LocLen := MaxSize;
-  BufPtr := TCPBufferPtr(FReadBuffer);
-  for I := 0 to LocLen - 1 do
-    if BufPtr^ in Delimiter then
+  Lock;
+  try
+    DelPos := LocateChrInBuffer(Delimiter, MaxSize);
+    if DelPos >= 0 then
       begin
-        Result := I;
-        exit;
+        // found
+        BufPtr := TCPBufferPtr(FReadBuffer);
+        BufLen := DelPos + 1;
+        if BufLen > BufSize then
+          BufLen := BufSize;
+        Move(BufPtr^, Buf, BufLen);
+        Result := BufLen;
       end
     else
-      Inc(BufPtr);
-  Result := -1;
+      Result := -1;
+  finally
+    Unlock;
+  end;
 end;
 
 // PeekDelimited
@@ -1487,37 +1519,6 @@ begin
         // found
         BufPtr := TCPBufferPtr(FReadBuffer);
         BufLen := DelPos + Length(Delimiter);
-        if BufLen > BufSize then
-          BufLen := BufSize;
-        Move(BufPtr^, Buf, BufLen);
-        Result := BufLen;
-      end
-    else
-      Result := -1;
-  finally
-    Unlock;
-  end;
-end;
-
-// PeekDelimited
-// Returns number of bytes transferred to buffer, including delimiter
-// Returns -1 if not found in buffer
-// Returns >= 0 if found.
-// MaxSize specifies maximum bytes before delimiter, of -1 for no limit
-function TTCPConnection.PeekDelimited(var Buf; const BufSize: Integer;
-         const Delimiter: TAnsiCharSet; const MaxSize: Integer): Integer;
-var DelPos : Integer;
-    BufPtr : PAnsiChar;
-    BufLen : Integer;
-begin
-  Lock;
-  try
-    DelPos := LocateChrInBuffer(Delimiter, MaxSize);
-    if DelPos >= 0 then
-      begin
-        // found
-        BufPtr := TCPBufferPtr(FReadBuffer);
-        BufLen := DelPos + 1;
         if BufLen > BufSize then
           BufLen := BufSize;
         Move(BufPtr^, Buf, BufLen);
@@ -1793,6 +1794,16 @@ begin
   Lock;
   try
     Result := TCPBufferPeek(FReadBuffer, Buf, BufSize);
+  finally
+    Unlock;
+  end;
+end;
+
+function TTCPConnection.PeekByte(out B: Byte): Boolean;
+begin
+  Lock;
+  try
+    Result := TCPBufferPeekByte(FReadBuffer, B);
   finally
     Unlock;
   end;

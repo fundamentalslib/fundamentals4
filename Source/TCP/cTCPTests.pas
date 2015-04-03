@@ -138,6 +138,7 @@ uses
 {                                                                              }
 procedure SelfTest_Buffer;
 var A : TTCPBuffer;
+    B : Byte;
     S : AnsiString;
     I, L : Integer;
 begin
@@ -155,6 +156,8 @@ begin
   Assert(S = 'XXXXXXXXXXXX');
   TCPBufferPeek(A, S[1], 3);
   Assert(S = 'FunXXXXXXXXX');
+  Assert(TCPBufferPeekByte(A, B));
+  Assert(B = Ord('F'));
   FillChar(S[1], L, #0);
   TCPBufferRemove(A, S[1], L);
   Assert(S = 'Fundamentals');
@@ -659,6 +662,7 @@ var C : array of TF4TCPClient;
     T : array of TTCPServerClient;
     I, J, K : Integer;
     F : AnsiString;
+    B : Byte;
     {$IFDEF TCPCLIENTSERVER_SELFTEST_TLS}
     // CtL : TTLSCertificateList;
     {$ENDIF}
@@ -842,6 +846,8 @@ begin
         Assert(T[K].Connection.ReadBufferSize = 12);
         F := T[K].Connection.PeekStr(3);
         Assert(F = 'Fun');
+        Assert(T[K].Connection.PeekByte(B));
+        Assert(B = Ord('F'));
         F := T[K].Connection.ReadStr(12);
         Assert(F = 'Fundamentals');
         DebugObj.Log('{RWS:' + IntToStr(K + 1) + ':Z}');

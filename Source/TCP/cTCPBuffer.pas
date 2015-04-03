@@ -106,6 +106,9 @@ function  TCPBufferPeekPtr(
 function  TCPBufferPeek(
           var TCPBuf: TTCPBuffer;
           var Buf; const Size: Integer): Integer;
+function  TCPBufferPeekByte(
+          var TCPBuf: TTCPBuffer;
+          out B: Byte): Boolean;
 function  TCPBufferRemove(
           var TCPBuf: TTCPBuffer;
           var Buf; const Size: Integer): Integer;
@@ -379,6 +382,25 @@ begin
     L := Size;
   Move(P^, Buf, L);
   Result := L;
+end;
+
+// Peek byte from a TCP buffer
+// Returns True if a byte is available
+function TCPBufferPeekByte(
+         var TCPBuf: TTCPBuffer;
+         out B: Byte): Boolean;
+var P : Pointer;
+    L : Integer;
+begin
+  L := TCPBufferPeekPtr(TCPBuf, P);
+  // peek from TCP buffer
+  if L = 0 then
+    Result := False
+  else
+    begin
+      B := PByte(P)^;
+      Result := True;
+    end;
 end;
 
 // Remove data from a TCP buffer
