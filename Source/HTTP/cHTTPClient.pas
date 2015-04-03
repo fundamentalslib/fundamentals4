@@ -328,7 +328,7 @@ type
 
     procedure SetRequestFailedFromException(const E: Exception);
 
-    function  InitRequestContent: Int64;
+    function  InitRequestContent(out HasContent: Boolean): Int64;
     procedure FinaliseRequestContent;
 
     procedure PrepareHTTPRequest;
@@ -1306,7 +1306,7 @@ begin
         {$IFDEF StringIsUnicode}
         FResponseCookies.Add(B.AsString);
         {$ELSE}
-        FResponseCookies.Add(B.AsAnsiString);
+        FResponseCookies.Add(B.AsRawByteString);
         {$ENDIF}
       end;
     FResponseRequireClose :=
@@ -1534,10 +1534,10 @@ begin
   SetState(hcsRequestFailed);
 end;
 
-function TF4HTTPClient.InitRequestContent: Int64;
+function TF4HTTPClient.InitRequestContent(out HasContent: Boolean): Int64;
 var L : Int64;
 begin
-  FRequestContentWriter.InitContent(L);
+  FRequestContentWriter.InitContent(HasContent, L);
   Result := L;
 end;
 
@@ -1751,6 +1751,7 @@ end;
 
 procedure TF4HTTPClient.PrepareHTTPRequest;
 var C : THTTPConnectionFieldEnum;
+    R : Boolean;
     L : Int64;
 begin
   ClearHTTPRequest(FRequest);
@@ -1806,7 +1807,7 @@ begin
     begin
       FRequest.Header.CommonHeaders.ContentType.Value := hctCustomString;
       FRequest.Header.CommonHeaders.ContentType.CustomStr := FRequestContentType;
-      L := InitRequestContent;
+      L := InitRequestContent(R);
       Assert(L >= 0);
       FRequest.Header.CommonHeaders.ContentLength.Value := hcltByteCount;
       FRequest.Header.CommonHeaders.ContentLength.ByteCount := L;

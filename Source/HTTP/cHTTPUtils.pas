@@ -206,6 +206,7 @@ type
     hctImageJpeg,
     hctImagePng,
     hctImageGif,
+    hctImageIcon,
     hctImageCustom,
     hctApplicationJSON,
     hctApplicationOctetStream,
@@ -1034,6 +1035,7 @@ type
 
 type
   THTTPContentWriterMechanism = (
+      hctmNone,
       hctmEvent,
       hctmString,
       hctmStream,
@@ -1063,7 +1065,8 @@ type
 
     procedure Init;
 
-    procedure Log(const LogMsg: String);
+    procedure Log(const LogMsg: String); overload;
+    procedure Log(const LogMsg: String; const Args: array of const); overload;
 
     procedure WriteBuf(const Buf; const Size: Integer);
     procedure WriteStr(const S: RawByteString);
@@ -1081,7 +1084,7 @@ type
     property  ContentStream: TStream read FContentStream write FContentStream;
     property  ContentFileName: String read FContentFileName write FContentFileName;
 
-    procedure InitContent(var ContentLength: Int64);
+    procedure InitContent(out HasContent: Boolean; out ContentLength: Int64);
     procedure SendContent;
     property  ContentComplete: Boolean read FContentComplete;
     procedure FinaliseContent;
@@ -1184,6 +1187,7 @@ const
     'image/jpeg',
     'image/png',
     'image/gif',
+    'image/x-icon',
     'image/',
     'application/json',
     'application/octet-stream',
@@ -2326,6 +2330,9 @@ begin
   else
   if StrEqualNoAsciiCaseB(Extension, '.gif') then
     R := hctImageGif
+  else
+  if StrEqualNoAsciiCaseB(Extension, '.ico') then
+    R := hctImageIcon
   else
   if StrEqualNoAsciiCaseB(Extension, '.js') then
     R := hctApplicationJavaScript
@@ -3861,7 +3868,7 @@ end;
 procedure THTTPContentReader.InitReader(const CommonHeaders: THTTPCommonHeaders);
 begin
   {$IFDEF HTTP_DEBUG}
-  Log('InitReader:Mechanism:%d', [Ord(FMechanism)]);
+  Log('InitReader:Mechanism=%d', [Ord(FMechanism)]);
   {$ENDIF}
   InternalReset;
   FContentDecoder.InitDecoder(CommonHeaders);
@@ -3928,21 +3935,33 @@ begin
     FOnLog(self, LogMsg);
 end;
 
-procedure THTTPContentWriter.InitContent(var ContentLength: Int64);
-var L : Int64;
+procedure THTTPContentWriter.Log(const LogMsg: String; const Args: array of const);
+begin
+  Log(Format(LogMsg, Args));
+end;
+
+// Returns content length
+// Returns 0 if content specified and length is zero
+// Returns -1 if content not specified
+procedure THTTPContentWriter.InitContent(out HasContent: Boolean; out ContentLength: Int64);
+var R : Boolean;
+    L : Int64;
 begin
   {$IFDEF HTTP_DEBUG}
-  Log('InitContent');
+  Log('InitContent:Mechanism=%d', [Ord(FMechanism)]);
   {$ENDIF}
   InternalReset;
+  R := True;
+  L := 0;
   case FMechanism of
+    hctmNone    : R := False;
     hctmEvent   : raise EHTTP.Create('Mechanism not supported');
     hctmString  : L := Length(FContentString);
     hctmStream  :
       if Assigned(FContentStream) then
         L := FContentStream.Size
       else
-        L := 0;
+        R := False;
     hctmFile    :
       if FContentFileName <> '' then
         begin
@@ -3950,15 +3969,16 @@ begin
           L := FContentFile.Size;
         end
       else
-        L := 0;
+        R := False;
   else
     raise EHTTP.Create('Mechanism not supported');
   end;
-  {$IFDEF HTTP_DEBUG}
-  Log('ContentLength:' + IntToString(L));
-  {$ENDIF}
+  HasContent := R;
   ContentLength := L;
-  FContentComplete := (L = 0);
+  FContentComplete := not R or (L = 0);
+  {$IFDEF HTTP_DEBUG}
+  Log('InitContent:ContentLength=%d', [ContentLength]);
+  {$ENDIF}
 end;
 
 procedure THTTPContentWriter.WriteBuf(const Buf; const Size: Integer);
@@ -3996,6 +4016,7 @@ procedure THTTPContentWriter.SendContent;
 
 begin
   case FMechanism of
+    hctmNone   : ;
     hctmEvent  : ;
     hctmString :
       begin
@@ -4013,7 +4034,11 @@ end;
 
 procedure THTTPContentWriter.FinaliseContent;
 begin
+  {$IFDEF HTTP_DEBUG}
+  Log('FinaliseContent', [Ord(FMechanism)]);
+  {$ENDIF}
   case FMechanism of
+    hctmNone   : ;
     hctmEvent  : ;
     hctmString : ;
     hctmStream : ;
@@ -4033,7 +4058,7 @@ end;
 
 procedure THTTPContentWriter.Clear;
 begin
-  FMechanism := hctmEvent;
+  FMechanism := hctmNone;
   FContentString := '';
   FContentStream := nil;
   FContentFileName := '';
