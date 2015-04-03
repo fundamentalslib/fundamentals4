@@ -130,6 +130,17 @@ uses
 
 
 {                                                                              }
+{ RawByteString                                                                }
+{                                                                              }
+{$IFNDEF SupportRawByteString}
+type
+  RawByteString = AnsiString;
+  PRawByteString = ^RawByteString;
+{$ENDIF}
+
+
+
+{                                                                              }
 { Hash digests                                                                 }
 {                                                                              }
 type
@@ -196,7 +207,7 @@ const
 
 procedure DigestToHexBufA(const Digest; const Size: Integer; const Buf);
 procedure DigestToHexBufW(const Digest; const Size: Integer; const Buf);
-function  DigestToHexA(const Digest; const Size: Integer): AnsiString;
+function  DigestToHexA(const Digest; const Size: Integer): RawByteString;
 function  DigestToHexW(const Digest; const Size: Integer): WideString;
 function  Digest128Equal(const Digest1, Digest2: T128BitDigest): Boolean;
 function  Digest160Equal(const Digest1, Digest2: T160BitDigest): Boolean;
@@ -252,7 +263,7 @@ procedure SecureClear(var Buf; const BufSize: Integer);
 procedure SecureClear512(var Buf: T512BitBuf);
 procedure SecureClear1024(var Buf: T1024BitBuf);
 procedure SecureClearStr(var S: String);
-procedure SecureClearStrA(var S: AnsiString);
+procedure SecureClearStrA(var S: RawByteString);
 procedure SecureClearStrW(var S: WideString);
 
 
@@ -261,7 +272,7 @@ procedure SecureClearStrW(var S: WideString);
 { Checksum hashing                                                             }
 {                                                                              }
 function  CalcChecksum32(const Buf; const BufSize: Integer): LongWord; overload;
-function  CalcChecksum32(const Buf: AnsiString): LongWord; overload;
+function  CalcChecksum32(const Buf: RawByteString): LongWord; overload;
 
 
 
@@ -269,13 +280,13 @@ function  CalcChecksum32(const Buf: AnsiString): LongWord; overload;
 { XOR hashing                                                                  }
 {                                                                              }
 function  CalcXOR8(const Buf; const BufSize: Integer): Byte; overload;
-function  CalcXOR8(const Buf: AnsiString): Byte; overload;
+function  CalcXOR8(const Buf: RawByteString): Byte; overload;
 
 function  CalcXOR16(const Buf; const BufSize: Integer): Word; overload;
-function  CalcXOR16(const Buf: AnsiString): Word; overload;
+function  CalcXOR16(const Buf: RawByteString): Word; overload;
 
 function  CalcXOR32(const Buf; const BufSize: Integer): LongWord; overload;
-function  CalcXOR32(const Buf: AnsiString): LongWord; overload;
+function  CalcXOR32(const Buf: RawByteString): LongWord; overload;
 
 
 
@@ -318,7 +329,7 @@ function  CRC16Byte(const CRC16: Word; const Octet: Byte): Word;
 function  CRC16Buf(const CRC16: Word; const Buf; const BufSize: Integer): Word;
 
 function  CalcCRC16(const Buf; const BufSize: Integer): Word; overload;
-function  CalcCRC16(const Buf: AnsiString): Word; overload;
+function  CalcCRC16(const Buf: RawByteString): Word; overload;
 
 
 
@@ -333,7 +344,7 @@ function  CRC32Buf(const CRC32: LongWord; const Buf; const BufSize: Integer): Lo
 function  CRC32BufNoCase(const CRC32: LongWord; const Buf; const BufSize: Integer): LongWord;
 
 function  CalcCRC32(const Buf; const BufSize: Integer): LongWord; overload;
-function  CalcCRC32(const Buf: AnsiString): LongWord; overload;
+function  CalcCRC32(const Buf: RawByteString): LongWord; overload;
 
 
 
@@ -345,7 +356,7 @@ function  Adler32Byte(const Adler32: LongWord; const Octet: Byte): LongWord;
 function  Adler32Buf(const Adler32: LongWord; const Buf; const BufSize: Integer): LongWord;
 
 function  CalcAdler32(const Buf; const BufSize: Integer): LongWord; overload;
-function  CalcAdler32(const Buf: AnsiString): LongWord; overload;
+function  CalcAdler32(const Buf: RawByteString): LongWord; overload;
 
 
 
@@ -356,14 +367,14 @@ procedure ELFInit(var Digest: LongWord);
 function  ELFBuf(const Digest: LongWord; const Buf; const BufSize: Integer): LongWord;
 
 function  CalcELF(const Buf; const BufSize: Integer): LongWord; overload;
-function  CalcELF(const Buf: AnsiString): LongWord; overload;
+function  CalcELF(const Buf: RawByteString): LongWord; overload;
 
 
 
 {                                                                              }
 { ISBN checksum                                                                }
 {                                                                              }
-function  IsValidISBN(const S: AnsiString): Boolean;
+function  IsValidISBN(const S: RawByteString): Boolean;
 
 
 
@@ -373,7 +384,7 @@ function  IsValidISBN(const S: AnsiString): Boolean;
 {   The LUHN forumula (also known as mod-10) is used in major credit card      }
 {   account numbers for validity checking.                                     }
 {                                                                              }
-function  IsValidLUHN(const S: AnsiString): Boolean;
+function  IsValidLUHN(const S: RawByteString): Boolean;
 
 
 
@@ -382,7 +393,7 @@ function  IsValidLUHN(const S: AnsiString): Boolean;
 { General purpose string hashing function proposed by Donald E Knuth in        }
 { 'The Art of Computer Programming Vol 3'.                                     }
 {                                                                              }
-function  KnuthHashA(const S: AnsiString): LongWord;
+function  KnuthHashA(const S: RawByteString): LongWord;
 function  KnuthHashW(const S: WideString): LongWord;
 
 
@@ -404,10 +415,10 @@ procedure MD5FinalBuf(var Digest: T128BitDigest; const Buf; const BufSize: Integ
           const TotalSize: Int64);
 
 function  CalcMD5(const Buf; const BufSize: Integer): T128BitDigest; overload;
-function  CalcMD5(const Buf: AnsiString): T128BitDigest; overload;
+function  CalcMD5(const Buf: RawByteString): T128BitDigest; overload;
 
-function  MD5DigestToStrA(const Digest: T128BitDigest): AnsiString;
-function  MD5DigestToHexA(const Digest: T128BitDigest): AnsiString;
+function  MD5DigestToStrA(const Digest: T128BitDigest): RawByteString;
+function  MD5DigestToHexA(const Digest: T128BitDigest): RawByteString;
 function  MD5DigestToHexW(const Digest: T128BitDigest): WideString;
 
 
@@ -429,10 +440,10 @@ procedure SHA1FinalBuf(var Digest: T160BitDigest; const Buf; const BufSize: Inte
           const TotalSize: Int64);
 
 function  CalcSHA1(const Buf; const BufSize: Integer): T160BitDigest; overload;
-function  CalcSHA1(const Buf: AnsiString): T160BitDigest; overload;
+function  CalcSHA1(const Buf: RawByteString): T160BitDigest; overload;
 
-function  SHA1DigestToStrA(const Digest: T160BitDigest): AnsiString;
-function  SHA1DigestToHexA(const Digest: T160BitDigest): AnsiString;
+function  SHA1DigestToStrA(const Digest: T160BitDigest): RawByteString;
+function  SHA1DigestToHexA(const Digest: T160BitDigest): RawByteString;
 function  SHA1DigestToHexW(const Digest: T160BitDigest): WideString;
 
 
@@ -450,10 +461,10 @@ procedure SHA224FinalBuf(var Digest: T256BitDigest; const Buf; const BufSize: In
           var OutDigest: T224BitDigest);
 
 function  CalcSHA224(const Buf; const BufSize: Integer): T224BitDigest; overload;
-function  CalcSHA224(const Buf: AnsiString): T224BitDigest; overload;
+function  CalcSHA224(const Buf: RawByteString): T224BitDigest; overload;
 
-function  SHA224DigestToStrA(const Digest: T224BitDigest): AnsiString;
-function  SHA224DigestToHexA(const Digest: T224BitDigest): AnsiString;
+function  SHA224DigestToStrA(const Digest: T224BitDigest): RawByteString;
+function  SHA224DigestToHexA(const Digest: T224BitDigest): RawByteString;
 function  SHA224DigestToHexW(const Digest: T224BitDigest): WideString;
 
 
@@ -467,10 +478,10 @@ procedure SHA256Buf(var Digest: T256BitDigest; const Buf; const BufSize: Integer
 procedure SHA256FinalBuf(var Digest: T256BitDigest; const Buf; const BufSize: Integer; const TotalSize: Int64);
 
 function  CalcSHA256(const Buf; const BufSize: Integer): T256BitDigest; overload;
-function  CalcSHA256(const Buf: AnsiString): T256BitDigest; overload;
+function  CalcSHA256(const Buf: RawByteString): T256BitDigest; overload;
 
-function  SHA256DigestToStrA(const Digest: T256BitDigest): AnsiString;
-function  SHA256DigestToHexA(const Digest: T256BitDigest): AnsiString;
+function  SHA256DigestToStrA(const Digest: T256BitDigest): RawByteString;
+function  SHA256DigestToHexA(const Digest: T256BitDigest): RawByteString;
 function  SHA256DigestToHexW(const Digest: T256BitDigest): WideString;
 
 
@@ -485,10 +496,10 @@ procedure SHA384Buf(var Digest: T512BitDigest; const Buf; const BufSize: Integer
 procedure SHA384FinalBuf(var Digest: T512BitDigest; const Buf; const BufSize: Integer; const TotalSize: Int64; var OutDigest: T384BitDigest);
 
 function  CalcSHA384(const Buf; const BufSize: Integer): T384BitDigest; overload;
-function  CalcSHA384(const Buf: AnsiString): T384BitDigest; overload;
+function  CalcSHA384(const Buf: RawByteString): T384BitDigest; overload;
 
-function  SHA384DigestToStrA(const Digest: T384BitDigest): AnsiString;
-function  SHA384DigestToHexA(const Digest: T384BitDigest): AnsiString;
+function  SHA384DigestToStrA(const Digest: T384BitDigest): RawByteString;
+function  SHA384DigestToHexA(const Digest: T384BitDigest): RawByteString;
 function  SHA384DigestToHexW(const Digest: T384BitDigest): WideString;
 
 
@@ -502,10 +513,10 @@ procedure SHA512Buf(var Digest: T512BitDigest; const Buf; const BufSize: Integer
 procedure SHA512FinalBuf(var Digest: T512BitDigest; const Buf; const BufSize: Integer; const TotalSize: Int64);
 
 function  CalcSHA512(const Buf; const BufSize: Integer): T512BitDigest; overload;
-function  CalcSHA512(const Buf: AnsiString): T512BitDigest; overload;
+function  CalcSHA512(const Buf: RawByteString): T512BitDigest; overload;
 
-function  SHA512DigestToStrA(const Digest: T512BitDigest): AnsiString;
-function  SHA512DigestToHexA(const Digest: T512BitDigest): AnsiString;
+function  SHA512DigestToStrA(const Digest: T512BitDigest): RawByteString;
+function  SHA512DigestToHexA(const Digest: T512BitDigest): RawByteString;
 function  SHA512DigestToHexW(const Digest: T512BitDigest): WideString;
 
 
@@ -526,10 +537,10 @@ procedure RipeMD160Buf(var Digest: T160BitDigest; const Buf; const BufSize: Inte
 procedure RipeMD160FinalBuf(var Digest: T160BitDigest; const Buf; const BufSize: Integer; const TotalSize: Int64);
 
 function  CalcRipeMD160(const Buf; const BufSize: Integer): T160BitDigest; overload;
-function  CalcRipeMD160(const Buf: AnsiString): T160BitDigest; overload;
+function  CalcRipeMD160(const Buf: RawByteString): T160BitDigest; overload;
 
-function  RipeMD160DigestToStrA(const Digest: T160BitDigest): AnsiString;
-function  RipeMD160DigestToHexA(const Digest: T160BitDigest): AnsiString;
+function  RipeMD160DigestToStrA(const Digest: T160BitDigest): RawByteString;
+function  RipeMD160DigestToHexA(const Digest: T160BitDigest): RawByteString;
 function  RipeMD160DigestToHexW(const Digest: T160BitDigest): WideString;
 
 
@@ -552,8 +563,8 @@ procedure HMAC_MD5FinalBuf(const K: T512BitBuf; var Digest: T128BitDigest;
 
 function  CalcHMAC_MD5(const Key: Pointer; const KeySize: Integer;
           const Buf; const BufSize: Integer): T128BitDigest; overload;
-function  CalcHMAC_MD5(const Key: AnsiString; const Buf; const BufSize: Integer): T128BitDigest; overload;
-function  CalcHMAC_MD5(const Key, Buf: AnsiString): T128BitDigest; overload;
+function  CalcHMAC_MD5(const Key: RawByteString; const Buf; const BufSize: Integer): T128BitDigest; overload;
+function  CalcHMAC_MD5(const Key, Buf: RawByteString): T128BitDigest; overload;
 
 
 
@@ -568,8 +579,8 @@ procedure HMAC_SHA1FinalBuf(const K: T512BitBuf; var Digest: T160BitDigest;
 
 function  CalcHMAC_SHA1(const Key: Pointer; const KeySize: Integer;
           const Buf; const BufSize: Integer): T160BitDigest; overload;
-function  CalcHMAC_SHA1(const Key: AnsiString; const Buf; const BufSize: Integer): T160BitDigest; overload;
-function  CalcHMAC_SHA1(const Key, Buf: AnsiString): T160BitDigest; overload;
+function  CalcHMAC_SHA1(const Key: RawByteString; const Buf; const BufSize: Integer): T160BitDigest; overload;
+function  CalcHMAC_SHA1(const Key, Buf: RawByteString): T160BitDigest; overload;
 
 
 
@@ -584,8 +595,8 @@ procedure HMAC_SHA256FinalBuf(const K: T512BitBuf; var Digest: T256BitDigest;
 
 function  CalcHMAC_SHA256(const Key: Pointer; const KeySize: Integer;
           const Buf; const BufSize: Integer): T256BitDigest; overload;
-function  CalcHMAC_SHA256(const Key: AnsiString; const Buf; const BufSize: Integer): T256BitDigest; overload;
-function  CalcHMAC_SHA256(const Key, Buf: AnsiString): T256BitDigest; overload;
+function  CalcHMAC_SHA256(const Key: RawByteString; const Buf; const BufSize: Integer): T256BitDigest; overload;
+function  CalcHMAC_SHA256(const Key, Buf: RawByteString): T256BitDigest; overload;
 
 
 
@@ -598,8 +609,8 @@ procedure HMAC_SHA512FinalBuf(const K: T1024BitBuf; var Digest: T512BitDigest; c
 
 function  CalcHMAC_SHA512(const Key: Pointer; const KeySize: Integer;
           const Buf; const BufSize: Integer): T512BitDigest; overload;
-function  CalcHMAC_SHA512(const Key: AnsiString; const Buf; const BufSize: Integer): T512BitDigest; overload;
-function  CalcHMAC_SHA512(const Key, Buf: AnsiString): T512BitDigest; overload;
+function  CalcHMAC_SHA512(const Key: RawByteString; const Buf; const BufSize: Integer): T512BitDigest; overload;
+function  CalcHMAC_SHA512(const Key, Buf: RawByteString): T512BitDigest; overload;
 
 
 
@@ -624,7 +635,7 @@ type
 
     procedure Init(const Digest: Pointer; const Key: Pointer = nil;
               const KeySize: Integer = 0); overload;
-    procedure Init(const Digest: Pointer; const Key: AnsiString = ''); overload;
+    procedure Init(const Digest: Pointer; const Key: RawByteString = ''); overload;
 
     procedure HashBuf(const Buf; const BufSize: Integer; const FinalBuf: Boolean);
     procedure HashFile(const FileName: String; const Offset: Int64 = 0;
@@ -868,10 +879,10 @@ procedure CalculateHash(const HashType: THashType;
           const Key: Pointer = nil; const KeySize: Integer = 0); overload;
 procedure CalculateHash(const HashType: THashType;
           const Buf; const BufSize: Integer;
-          const Digest: Pointer; const Key: AnsiString = ''); overload;
+          const Digest: Pointer; const Key: RawByteString = ''); overload;
 procedure CalculateHash(const HashType: THashType;
-          const Buf: AnsiString; const Digest: Pointer;
-          const Key: AnsiString = ''); overload;
+          const Buf: RawByteString; const Digest: Pointer;
+          const Key: RawByteString = ''); overload;
 
 
 
@@ -891,7 +902,7 @@ procedure CalculateHash(const HashType: THashType;
 {                                                                              }
 function  HashString(const StrBuf: Pointer; const StrLength: Integer;
           const Slots: LongWord = 0; const CaseSensitive: Boolean = True): LongWord; overload;
-function  HashString(const S: AnsiString; const Slots: LongWord = 0;
+function  HashString(const S: RawByteString; const Slots: LongWord = 0;
           const CaseSensitive: Boolean = True): LongWord; overload;
 
 
@@ -997,7 +1008,7 @@ begin
   S := '';
 end;
 
-procedure SecureClearStrA(var S: AnsiString);
+procedure SecureClearStrA(var S: RawByteString);
 var L : Integer;
 begin
   L := Length(S);
@@ -1061,7 +1072,7 @@ begin
 end;
 {$ENDIF}
 
-function CalcChecksum32(const Buf: AnsiString): LongWord;
+function CalcChecksum32(const Buf: RawByteString): LongWord;
 begin
   Result := CalcChecksum32(Pointer(Buf)^, Length(Buf));
 end;
@@ -1146,7 +1157,7 @@ begin
             Byte(L shr 24);
 end;
 
-function CalcXOR8(const Buf: AnsiString): Byte;
+function CalcXOR8(const Buf: RawByteString): Byte;
 begin
   Result := CalcXOR8(Pointer(Buf)^, Length(Buf));
 end;
@@ -1159,7 +1170,7 @@ begin
             Word(L shr 16);
 end;
 
-function CalcXOR16(const Buf: AnsiString): Word;
+function CalcXOR16(const Buf: RawByteString): Word;
 begin
   Result := CalcXOR16(Pointer(Buf)^, Length(Buf));
 end;
@@ -1169,7 +1180,7 @@ begin
   Result := XOR32Buf(Buf, BufSize);
 end;
 
-function CalcXOR32(const Buf: AnsiString): LongWord;
+function CalcXOR32(const Buf: RawByteString): LongWord;
 begin
   Result := XOR32Buf(Pointer(Buf)^, Length(Buf));
 end;
@@ -1243,7 +1254,7 @@ begin
   Result := CRC16Buf(Result, Buf, BufSize);
 end;
 
-function CalcCRC16(const Buf: AnsiString): Word;
+function CalcCRC16(const Buf: RawByteString): Word;
 begin
   Result := CalcCRC16(Pointer(Buf)^, Length(Buf));
 end;
@@ -1337,7 +1348,7 @@ begin
   Result := not CRC32Buf(Result, Buf, BufSize);
 end;
 
-function CalcCRC32(const Buf: AnsiString): LongWord;
+function CalcCRC32(const Buf: RawByteString): LongWord;
 begin
   Result := CalcCRC32(Pointer(Buf)^, Length(Buf));
 end;
@@ -1396,7 +1407,7 @@ begin
   Result := Adler32Buf(Result, Buf, BufSize);
 end;
 
-function CalcAdler32(const Buf: AnsiString): LongWord;
+function CalcAdler32(const Buf: RawByteString): LongWord;
 begin
   Result := CalcAdler32(Pointer(Buf)^, Length(Buf));
 end;
@@ -1434,7 +1445,7 @@ begin
   Result := ELFBuf(0, Buf, BufSize);
 end;
 
-function CalcELF(const Buf: AnsiString): LongWord;
+function CalcELF(const Buf: RawByteString): LongWord;
 begin
   Result := CalcELF(Pointer(Buf)^, Length(Buf));
 end;
@@ -1444,7 +1455,7 @@ end;
 {                                                                              }
 { ISBN checksum                                                                }
 {                                                                              }
-function IsValidISBN(const S: AnsiString): Boolean;
+function IsValidISBN(const S: RawByteString): Boolean;
 var I, L, M, D, C : Integer;
     P : PAnsiChar;
 begin
@@ -1487,7 +1498,7 @@ end;
 {                                                                              }
 { LUHN checksum                                                                }
 {                                                                              }
-function IsValidLUHN(const S: AnsiString): Boolean;
+function IsValidLUHN(const S: RawByteString): Boolean;
 var P : PAnsiChar;
     I, L, M, C, D : Integer;
     R : Boolean;
@@ -1527,7 +1538,7 @@ end;
 {                                                                              }
 { Knuth Hash                                                                   }
 {                                                                              }
-function KnuthHashA(const S: AnsiString): LongWord;
+function KnuthHashA(const S: RawByteString): LongWord;
 var
   I, L : Integer;
   H : LongWord;
@@ -1597,7 +1608,7 @@ begin
     end;
 end;
 
-function DigestToHexA(const Digest; const Size: Integer): AnsiString;
+function DigestToHexA(const Digest; const Size: Integer): RawByteString;
 begin
   SetLength(Result, Size * 2);          
   DigestToHexBufA(Digest, Size, Pointer(Result)^);
@@ -2162,18 +2173,18 @@ begin
   MD5FinalBuf(Result, P^, I, BufSize);
 end;
 
-function CalcMD5(const Buf: AnsiString): T128BitDigest;
+function CalcMD5(const Buf: RawByteString): T128BitDigest;
 begin
   Result := CalcMD5(Pointer(Buf)^, Length(Buf));
 end;
 
-function MD5DigestToStrA(const Digest: T128BitDigest): AnsiString;
+function MD5DigestToStrA(const Digest: T128BitDigest): RawByteString;
 begin
   SetLength(Result, Sizeof(Digest));
   Move(Digest, Pointer(Result)^, Sizeof(Digest));
 end;
 
-function MD5DigestToHexA(const Digest: T128BitDigest): AnsiString;
+function MD5DigestToHexA(const Digest: T128BitDigest): RawByteString;
 begin
   Result := DigestToHexA(Digest, Sizeof(Digest));
 end;
@@ -2331,18 +2342,18 @@ begin
   SHA1FinalBuf(Result, P^, I, BufSize);
 end;
 
-function CalcSHA1(const Buf: AnsiString): T160BitDigest;
+function CalcSHA1(const Buf: RawByteString): T160BitDigest;
 begin
   Result := CalcSHA1(Pointer(Buf)^, Length(Buf));
 end;
 
-function SHA1DigestToStrA(const Digest: T160BitDigest): AnsiString;
+function SHA1DigestToStrA(const Digest: T160BitDigest): RawByteString;
 begin
   SetLength(Result, Sizeof(Digest));
   Move(Digest, Pointer(Result)^, Sizeof(Digest));
 end;
 
-function SHA1DigestToHexA(const Digest: T160BitDigest): AnsiString;
+function SHA1DigestToHexA(const Digest: T160BitDigest): RawByteString;
 begin
   Result := DigestToHexA(Digest, Sizeof(Digest));
 end;
@@ -2406,18 +2417,18 @@ begin
   SHA224FinalBuf(D, P^, I, BufSize, Result);
 end;
 
-function CalcSHA224(const Buf: AnsiString): T224BitDigest;
+function CalcSHA224(const Buf: RawByteString): T224BitDigest;
 begin
   Result := CalcSHA224(Pointer(Buf)^, Length(Buf));
 end;
 
-function SHA224DigestToStrA(const Digest: T224BitDigest): AnsiString;
+function SHA224DigestToStrA(const Digest: T224BitDigest): RawByteString;
 begin
   SetLength(Result, Sizeof(Digest));
   Move(Digest, Pointer(Result)^, Sizeof(Digest));
 end;
 
-function SHA224DigestToHexA(const Digest: T224BitDigest): AnsiString;
+function SHA224DigestToHexA(const Digest: T224BitDigest): RawByteString;
 begin
   Result := DigestToHexA(Digest, Sizeof(Digest));
 end;
@@ -2571,18 +2582,18 @@ begin
   SHA256FinalBuf(Result, P^, I, BufSize);
 end;
 
-function CalcSHA256(const Buf: AnsiString): T256BitDigest;
+function CalcSHA256(const Buf: RawByteString): T256BitDigest;
 begin
   Result := CalcSHA256(Pointer(Buf)^, Length(Buf));
 end;
 
-function SHA256DigestToStrA(const Digest: T256BitDigest): AnsiString;
+function SHA256DigestToStrA(const Digest: T256BitDigest): RawByteString;
 begin
   SetLength(Result, Sizeof(Digest));
   Move(Digest, Pointer(Result)^, Sizeof(Digest));
 end;
 
-function SHA256DigestToHexA(const Digest: T256BitDigest): AnsiString;
+function SHA256DigestToHexA(const Digest: T256BitDigest): RawByteString;
 begin
   Result := DigestToHexA(Digest, Sizeof(Digest));
 end;
@@ -2648,18 +2659,18 @@ begin
   SHA384FinalBuf(D, P^, I, BufSize, Result);
 end;
 
-function CalcSHA384(const Buf: AnsiString): T384BitDigest;
+function CalcSHA384(const Buf: RawByteString): T384BitDigest;
 begin
   Result := CalcSHA384(Pointer(Buf)^, Length(Buf));
 end;
 
-function SHA384DigestToStrA(const Digest: T384BitDigest): AnsiString;
+function SHA384DigestToStrA(const Digest: T384BitDigest): RawByteString;
 begin
   SetLength(Result, Sizeof(Digest));
   Move(Digest, Pointer(Result)^, Sizeof(Digest));
 end;
 
-function SHA384DigestToHexA(const Digest: T384BitDigest): AnsiString;
+function SHA384DigestToHexA(const Digest: T384BitDigest): RawByteString;
 begin
   Result := DigestToHexA(Digest, Sizeof(Digest));
 end;
@@ -2919,18 +2930,18 @@ begin
   SHA512FinalBuf(Result, P^, I, BufSize);
 end;
 
-function CalcSHA512(const Buf: AnsiString): T512BitDigest;
+function CalcSHA512(const Buf: RawByteString): T512BitDigest;
 begin
   Result := CalcSHA512(Pointer(Buf)^, Length(Buf));
 end;
 
-function SHA512DigestToStrA(const Digest: T512BitDigest): AnsiString;
+function SHA512DigestToStrA(const Digest: T512BitDigest): RawByteString;
 begin
   SetLength(Result, Sizeof(Digest));
   Move(Digest, Pointer(Result)^, Sizeof(Digest));
 end;
 
-function SHA512DigestToHexA(const Digest: T512BitDigest): AnsiString;
+function SHA512DigestToHexA(const Digest: T512BitDigest): RawByteString;
 begin
   Result := DigestToHexA(Digest, Sizeof(Digest));
 end;
@@ -3242,18 +3253,18 @@ begin
   RipeMD160FinalBuf(Result, P^, I, BufSize);
 end;
 
-function CalcRipeMD160(const Buf: AnsiString): T160BitDigest;
+function CalcRipeMD160(const Buf: RawByteString): T160BitDigest;
 begin
   Result := CalcRipeMD160(Pointer(Buf)^, Length(Buf));
 end;
 
-function RipeMD160DigestToStrA(const Digest: T160BitDigest): AnsiString;
+function RipeMD160DigestToStrA(const Digest: T160BitDigest): RawByteString;
 begin
   SetLength(Result, Sizeof(Digest));
   Move(Digest, Pointer(Result)^, Sizeof(Digest));
 end;
 
-function RipeMD160DigestToHexA(const Digest: T160BitDigest): AnsiString;
+function RipeMD160DigestToHexA(const Digest: T160BitDigest): RawByteString;
 begin
   Result := DigestToHexA(Digest, Sizeof(Digest));
 end;
@@ -3383,12 +3394,12 @@ begin
   SecureClear512(K);
 end;
 
-function CalcHMAC_MD5(const Key: AnsiString; const Buf; const BufSize: Integer): T128BitDigest;
+function CalcHMAC_MD5(const Key: RawByteString; const Buf; const BufSize: Integer): T128BitDigest;
 begin
   Result := CalcHMAC_MD5(Pointer(Key), Length(Key), Buf, BufSize);
 end;
 
-function CalcHMAC_MD5(const Key, Buf: AnsiString): T128BitDigest;
+function CalcHMAC_MD5(const Key, Buf: RawByteString): T128BitDigest;
 begin
   Result := CalcHMAC_MD5(Key, Pointer(Buf)^, Length(Buf));
 end;
@@ -3458,12 +3469,12 @@ begin
   SecureClear512(K);
 end;
 
-function CalcHMAC_SHA1(const Key: AnsiString; const Buf; const BufSize: Integer): T160BitDigest;
+function CalcHMAC_SHA1(const Key: RawByteString; const Buf; const BufSize: Integer): T160BitDigest;
 begin
   Result := CalcHMAC_SHA1(Pointer(Key), Length(Key), Buf, BufSize);
 end;
 
-function CalcHMAC_SHA1(const Key, Buf: AnsiString): T160BitDigest;
+function CalcHMAC_SHA1(const Key, Buf: RawByteString): T160BitDigest;
 begin
   Result := CalcHMAC_SHA1(Key, Pointer(Buf)^, Length(Buf));
 end;
@@ -3533,12 +3544,12 @@ begin
   SecureClear512(K);
 end;
 
-function CalcHMAC_SHA256(const Key: AnsiString; const Buf; const BufSize: Integer): T256BitDigest;
+function CalcHMAC_SHA256(const Key: RawByteString; const Buf; const BufSize: Integer): T256BitDigest;
 begin
   Result := CalcHMAC_SHA256(Pointer(Key), Length(Key), Buf, BufSize);
 end;
 
-function CalcHMAC_SHA256(const Key, Buf: AnsiString): T256BitDigest;
+function CalcHMAC_SHA256(const Key, Buf: RawByteString): T256BitDigest;
 begin
   Result := CalcHMAC_SHA256(Key, Pointer(Buf)^, Length(Buf));
 end;
@@ -3608,12 +3619,12 @@ begin
   SecureClear1024(K);
 end;
 
-function CalcHMAC_SHA512(const Key: AnsiString; const Buf; const BufSize: Integer): T512BitDigest;
+function CalcHMAC_SHA512(const Key: RawByteString; const Buf; const BufSize: Integer): T512BitDigest;
 begin
   Result := CalcHMAC_SHA512(Pointer(Key), Length(Key), Buf, BufSize);
 end;
 
-function CalcHMAC_SHA512(const Key, Buf: AnsiString): T512BitDigest;
+function CalcHMAC_SHA512(const Key, Buf: RawByteString): T512BitDigest;
 begin
   Result := CalcHMAC_SHA512(Key, Pointer(Buf)^, Length(Buf));
 end;
@@ -3784,12 +3795,12 @@ begin
     end;
 end;
 
-procedure CalculateHash(const HashType: THashType; const Buf; const BufSize: Integer; const Digest: Pointer; const Key: AnsiString);
+procedure CalculateHash(const HashType: THashType; const Buf; const BufSize: Integer; const Digest: Pointer; const Key: RawByteString);
 begin
   CalculateHash(HashType, Buf, BufSize, Digest, Pointer(Key), Length(Key));
 end;
 
-procedure CalculateHash(const HashType: THashType; const Buf: AnsiString; const Digest: Pointer; const Key: AnsiString);
+procedure CalculateHash(const HashType: THashType; const Buf: RawByteString; const Digest: Pointer; const Key: RawByteString);
 begin
   CalculateHash(HashType, Pointer(Buf)^, Length(Buf), Digest, Key);
 end;
@@ -3881,7 +3892,7 @@ begin
   InitHash(Digest, Key, KeySize);
 end;
 
-procedure AHash.Init(const Digest: Pointer; const Key: AnsiString);
+procedure AHash.Init(const Digest: Pointer; const Key: RawByteString);
 begin
   Init(Digest, Pointer(Key), Length(Key));
 end;
@@ -4471,7 +4482,7 @@ begin
     Result := Result mod Slots;
 end;
 
-function HashString(const S: AnsiString; const Slots: LongWord; const CaseSensitive: Boolean): LongWord;
+function HashString(const S: RawByteString; const Slots: LongWord; const CaseSensitive: Boolean): LongWord;
 begin
   Result := HashString(Pointer(S), Length(S), Slots, CaseSensitive);
 end;
@@ -4511,8 +4522,8 @@ procedure SelfTest;
 const
   QuickBrownFoxStr = 'The quick brown fox jumps over the lazy dog';
 var
-  MillionA, TenThousandA : AnsiString;
-  S, T : AnsiString;
+  MillionA, TenThousandA : RawByteString;
+  S, T : RawByteString;
   U : WideString;
 begin
   SetLength(S, 5);
