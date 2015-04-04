@@ -325,6 +325,7 @@ type
     FOutBuffer    : Pointer;
     FOutAvailable : Integer;
     FInflateInit  : Boolean;
+    FDoInRead     : Boolean;
 
   protected
     function GetSize: Int64; override;
@@ -872,6 +873,7 @@ begin
   FStreamRec.avail_out := ZLib_StreamBufferSize;
   CheckZLibError(InflateInit(FStreamRec));
   FInflateInit := True;
+  FDoInRead := True;
 end;
 
 destructor TZLibDecompressionStream.Destroy;
@@ -907,6 +909,7 @@ begin
   if Count <= 0 then
     exit;
   P := @Buffer;
+  Fin := False;
   repeat
     // read from buffer
     if FOutAvailable > 0 then
@@ -921,37 +924,39 @@ begin
             Inc(Q, L);
             Move(Q^, FOutBuffer^, FOutAvailable - L);
           end;
+        Inc(P, L);
         Dec(FOutAvailable, L);
         Inc(Result, L);
         if Result >= Count then
           exit; // required data read
       end;
     // fill buffer
-    InBufUsed := FStream.Read(FInBuffer^, ZLib_StreamBufferSize);
-    if InBufUsed = 0 then
-      exit; // no more to read
-    FStreamRec.next_in := FInBuffer;
-    FStreamRec.avail_in := InBufUsed;
+    if FDoInRead then
+      begin
+        InBufUsed := FStream.Read(FInBuffer^, ZLib_StreamBufferSize);
+        if InBufUsed = 0 then
+          exit; // no more to read
+        FStreamRec.next_in := FInBuffer;
+        FStreamRec.avail_in := InBufUsed;
+        FDoInRead := False;
+      end;
     Q := FOutBuffer;
     Inc(Q, FOutAvailable);
     FStreamRec.next_out := Pointer(Q);
     FStreamRec.avail_out := ZLib_StreamBufferSize - FOutAvailable;
-    Fin := False;
-    repeat
-      PrevAvailOut := FStreamRec.avail_out;
-      Ret := inflate(FStreamRec, Z_NO_FLUSH);
-      OutDone := PrevAvailOut - Integer(FStreamRec.avail_out);
-      Inc(FOutAvailable, OutDone);
-      if Ret = Z_STREAM_END then
-        Fin := True
-      else
-      if OutDone = 0 then
-        if Ret < 0 then
-          raise EZLibError.Create(ZLibErrorMessage(Ret))
-        else
-          Fin := True;
-    until Fin;
-  until False;
+    PrevAvailOut := FStreamRec.avail_out;
+    Ret := inflate(FStreamRec, Z_NO_FLUSH);
+    OutDone := PrevAvailOut - Integer(FStreamRec.avail_out);
+    Inc(FOutAvailable, OutDone);
+    if (OutDone = 0) and (Ret = Z_STREAM_END) then
+      Fin := True
+    else
+    if (OutDone = 0) and (Ret = Z_BUF_ERROR) then
+      FDoInRead := True
+    else
+      if (Ret < 0) and (Ret <> Z_BUF_ERROR) then
+        raise EZLibError.Create(ZLibErrorMessage(Ret))
+  until Fin;
 end;
 
 function TZLibDecompressionStream.Write(const Buffer; Count: Longint): Longint;
@@ -1056,46 +1061,74 @@ begin
 end;
 
 procedure SelfTest_CompressStream;
+
+  procedure Test(const TestStr: RawByteString);
+  var
+    S : TZLibCompressionStream;
+    T : TStringStream;
+    F : RawByteString;
+    G : RawByteString;
+  begin
+    T := TStringStream.Create('');
+    S := TZLibCompressionStream.Create(T, zclDefault);
+    F := TestStr;
+    if F <> '' then
+      S.Write(F[1], Length(F));
+    S.Free;
+    G := RawByteString(T.DataString);
+    T.Free;
+    Assert(ZLibDecompressStr(G) = TestStr);
+  end;
+
 var
-  S : TZLibCompressionStream;
-  T : TStringStream;
-  F : RawByteString;
-  G : RawByteString;
   I : Integer;
+  S : RawByteString;
 begin
   for I := 1 to TestStrCount do
-    begin
-      T := TStringStream.Create('');
-      S := TZLibCompressionStream.Create(T, zclDefault);
-      F := TestStr[I];
-      if F <> '' then
-        S.Write(F[1], Length(F));
-      S.Free;
-      G := RawByteString(T.DataString);
-      T.Free;
-      Assert(ZLibDecompressStr(G) = TestStr[I]);
-    end;
+    Test(TestStr[I]);
+  S := '';
+  for I := 1 to 100000 do
+    S := S + 'test';
+  Test(S);
+  S := '';
+  for I := 1 to 100000 do
+    S := S + 'test' + RawByteString(IntToStr(I));
+  Test(S);
 end;
 
 procedure SelfTest_DecompressStream;
+
+  procedure Test(const TestStr: RawByteString; const BufSize: Integer);
+  var
+    S : TZLibDecompressionStream;
+    T : TStringStream;
+    F : RawByteString;
+    L : Integer;
+  begin
+    T := TStringStream.Create(ZLibCompressStr(TestStr));
+    S := TZLibDecompressionStream.Create(T);
+    SetLength(F, BufSize);
+    L := S.Read(F[1], Length(F));
+    S.Free;
+    T.Free;
+    SetLength(F, L);
+    Assert(F = TestStr);
+  end;
+
 var
-  S : TZLibDecompressionStream;
-  T : TStringStream;
-  F : RawByteString;
-  L : Integer;
   I : Integer;
+  S : RawByteString;
 begin
   for I := 1 to TestStrCount do
-    begin
-      T := TStringStream.Create(ZLibCompressStr(TestStr[I]));
-      S := TZLibDecompressionStream.Create(T);
-      SetLength(F, 1000);
-      L := S.Read(F[1], Length(F));
-      S.Free;
-      T.Free;
-      SetLength(F, L);
-      Assert(F = TestStr[I]);
-    end;
+    Test(TestStr[I], 1000);
+  S := '';
+  for I := 1 to 100000 do
+    S := S + 'test';
+  Test(S, 500000);
+  S := '';
+  for I := 1 to 100000 do
+    S := S + 'test' + RawByteString(IntToStr(I));
+  Test(S, 1000000);
 end;
 
 procedure SelfTest;
