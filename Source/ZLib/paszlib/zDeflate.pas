@@ -11,7 +11,7 @@ Unit zDeflate;
   Modifiied 02/2003 by Sergey A. Galin for Delphi 6+ and Kylix compatibility.
   See README in directory above for more information.
 
-  Modified 04/2015 by David J Butler for FreePascal compatibility.
+  Modified 04/2015 by David J Butler for compilers compatibility.
 }
 
 
@@ -1598,7 +1598,11 @@ begin
        begin
          zmemcpy( pBytef(s.window), pBytef(@(s.window^[wsize])),
                  unsigned(wsize));
+         {$IFOPT Q+} {$Q-} {$DEFINE NoOverflowCheck} {$ENDIF}
+         {$IFOPT R+} {$R-} {$DEFINE NoRangeCheck} {$ENDIF}
          Dec(s.match_start, wsize);
+         {$IFDEF NoOverflowCheck} {$Q+} {$UNDEF NoOverflowCheck} {$ENDIF}
+         {$IFDEF NoRangeCheck} {$Q+} {$UNDEF NoRangeCheck} {$ENDIF}
          Dec(s.strstart, wsize); { we now have strstart >= MAX_DIST }
          Dec(s.block_start, long(wsize));
 

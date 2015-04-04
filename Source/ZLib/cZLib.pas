@@ -70,7 +70,7 @@
 
 {$INCLUDE ..\cFundamentals.inc}
 
-{$DEFINE ZLIB_PORTABLE}
+{.DEFINE ZLIB_PORTABLE}
 
 {$IFDEF ZLIB_PORTABLE}
   {$DEFINE ZLIBPAS}
@@ -948,14 +948,20 @@ begin
     Ret := inflate(FStreamRec, Z_NO_FLUSH);
     OutDone := PrevAvailOut - Integer(FStreamRec.avail_out);
     Inc(FOutAvailable, OutDone);
-    if (OutDone = 0) and (Ret = Z_STREAM_END) then
-      Fin := True
-    else
-    if (OutDone = 0) and (Ret = Z_BUF_ERROR) then
-      FDoInRead := True
+    if OutDone = 0 then
+      begin
+        if Ret = Z_STREAM_END then
+          Fin := True
+        else
+        if Ret = Z_BUF_ERROR then
+          FDoInRead := True
+        else
+        if Ret < 0 then
+          raise EZLibError.Create(ZLibErrorMessage(Ret));
+      end
     else
       if (Ret < 0) and (Ret <> Z_BUF_ERROR) then
-        raise EZLibError.Create(ZLibErrorMessage(Ret))
+        raise EZLibError.Create(ZLibErrorMessage(Ret));
   until Fin;
 end;
 
@@ -1026,7 +1032,7 @@ var
   T : RawByteString;
 begin
   S := 'Long string';
-  for I := 1 to 1000 do
+  for I := 1 to 10000 do
     S := S + ' testing ' + RawByteString(IntToStr(I));
   for L := Low(TZLibCompressionLevel) to High(TZLibCompressionLevel) do
     begin
