@@ -304,6 +304,8 @@ type
     FOutBuffer   : Pointer;
     FDeflateInit : Boolean;
 
+    procedure DoDeflate(const Flush: Integer);
+
   protected
     function GetSize: Int64; override;
 
@@ -311,9 +313,9 @@ type
     constructor Create(const AStream: TStream; const Level: TZLibCompressionLevel = zclDefault);
     destructor Destroy; override;
 
-    function Seek(Offset: Longint; Origin: Word): Longint; override;
-    function Read(var Buffer; Count: Longint): Longint; override;
-    function Write(const Buffer; Count: Longint): Longint; override;
+    function  Seek(Offset: Longint; Origin: Word): Longint; override;
+    function  Read(var Buffer; Count: Longint): Longint; override;
+    function  Write(const Buffer; Count: Longint): Longint; override;
     procedure Flush;
   end;
 
@@ -600,8 +602,34 @@ procedure ZLibCompressBuf(
           const Level: TZLibCompressionLevel);
 var
   StreamRec : TZStreamRec;
+  OutDone : Integer;
+
+  procedure DoDeflate(const Flush: Integer);
+  var
+    PrevAvailOut, Ret : Integer;
+    Fin : Boolean;
+  begin
+    Fin := False;
+    repeat
+      PrevAvailOut := StreamRec.avail_out;
+      Ret := deflate(StreamRec, Flush);
+      Inc(OutDone, PrevAvailOut - Integer(StreamRec.avail_out));
+      if StreamRec.avail_out = 0 then
+        begin
+          OutSize := ZLibCompressBufSizeReEstimate(OutSize);
+          StreamRecOutBufResize(StreamRec, OutBuffer, OutSize, OutDone);
+        end
+      else
+        if (Ret = Z_OK) or (Ret = Z_STREAM_END) then
+          Fin := True
+        else
+          raise EZLibError.Create(ZLibErrorMessage(Ret));
+    until Fin;
+  end;
+
+var
   Ret : Integer;
-  OutDone, PrevAvailOut : Integer;
+
 begin
   OutSize := ZLibCompressBufSizeEstimate(InSize);
   GetMem(OutBuffer, OutSize);
@@ -611,36 +639,8 @@ begin
     CheckZLibError(Ret);
     try
       OutDone := 0;
-      repeat
-        PrevAvailOut := StreamRec.avail_out;
-        Ret := deflate(StreamRec, Z_NO_FLUSH);
-        Inc(OutDone, PrevAvailOut - Integer(StreamRec.avail_out));
-        if StreamRec.avail_out = 0 then
-          begin
-            OutSize := ZLibCompressBufSizeReEstimate(OutSize);
-            StreamRecOutBufResize(StreamRec, OutBuffer, OutSize, OutDone);
-          end
-        else
-          if (Ret = Z_OK) or (Ret = Z_STREAM_END) then
-            break
-          else
-            raise EZLibError.Create(ZLibErrorMessage(Ret));
-      until False;
-      repeat
-        PrevAvailOut := StreamRec.avail_out;
-        Ret := deflate(StreamRec, Z_FINISH);
-        Inc(OutDone, PrevAvailOut - Integer(StreamRec.avail_out));
-        if StreamRec.avail_out = 0 then
-          begin
-            OutSize := ZLibCompressBufSizeReEstimate(OutSize);
-            StreamRecOutBufResize(StreamRec, OutBuffer, OutSize, OutDone);
-          end
-        else
-          if (Ret = Z_OK) or (Ret = Z_STREAM_END) then
-            break
-          else
-            raise EZLibError.Create(ZLibErrorMessage(Ret));
-      until False;
+      DoDeflate(Z_NO_FLUSH);
+      DoDeflate(Z_FINISH);
     finally
       Ret := deflateEnd(StreamRec);
       CheckZLibError(Ret);
@@ -692,6 +692,7 @@ procedure ZLibDecompressBuf(
 var
   StreamRec : TZStreamRec;
   Ret : LongInt;
+  Fin : Boolean;
   OutDone, PrevAvailOut : Integer;
 begin
   OutSize := ZLibDecompressBufSizeEstimate(InSize);
@@ -702,20 +703,25 @@ begin
     CheckZLibError(Ret);
     try
       OutDone := 0;
+      Fin := False;
       repeat
         PrevAvailOut := StreamRec.avail_out;
         Ret := inflate(StreamRec, Z_NO_FLUSH);
         Inc(OutDone, PrevAvailOut - Integer(StreamRec.avail_out));
         if Ret = Z_STREAM_END then
-          break; // finished
+          Fin := True
+        else
         if StreamRec.avail_out > 0 then
           if Ret < 0 then
             raise EZLibError.Create(ZLibErrorMessage(Ret))
           else
-            break; // finished
-        OutSize := ZLibDecompressBufSizeReEstimate(OutSize);
-        StreamRecOutBufResize(StreamRec, OutBuffer, OutSize, OutDone);
-      until False;
+            Fin := True
+        else
+          begin
+            OutSize := ZLibDecompressBufSizeReEstimate(OutSize);
+            StreamRecOutBufResize(StreamRec, OutBuffer, OutSize, OutDone);
+          end;
+      until Fin;
     finally
       CheckZLibError(inflateEnd(StreamRec));
     end;
@@ -794,27 +800,34 @@ begin
   inherited Destroy;
 end;
 
-procedure TZLibCompressionStream.Flush;
+procedure TZLibCompressionStream.DoDeflate(const Flush: Integer);
 var
+  Fin : Boolean;
   Ret : Integer;
   OutDone : Integer;
 begin
+  Fin := False;
   repeat
     FStreamRec.next_out := FOutBuffer;
     FStreamRec.avail_out := ZLib_StreamBufferSize;
-    Ret := deflate(FStreamRec, Z_FINISH);
+    Ret := deflate(FStreamRec, Flush);
     OutDone := ZLib_StreamBufferSize - FStreamRec.avail_out;
     if OutDone > 0 then
       FStream.Write(FOutBuffer^, OutDone)
     else
       if FStreamRec.avail_in = 0 then
-        break
+        Fin := True
       else
       if (Ret = Z_OK) or (Ret = Z_STREAM_END) then
-        break
+        Fin := True
       else
         raise EZLibError.Create(ZLibErrorMessage(Ret));
-  until False;
+  until Fin;
+end;
+
+procedure TZLibCompressionStream.Flush;
+begin
+  DoDeflate(Z_FINISH);
 end;
 
 function TZLibCompressionStream.GetSize: Int64;
@@ -833,31 +846,13 @@ begin
 end;
 
 function TZLibCompressionStream.Write(const Buffer; Count: Longint): Longint;
-var
-  Ret : Integer;
-  OutDone : Integer;
 begin
   Result := 0;
   if Count <= 0 then
     exit;
   FStreamRec.next_in := @Buffer;
   FStreamRec.avail_in := Count;
-  repeat
-    FStreamRec.next_out := FOutBuffer;
-    FStreamRec.avail_out := ZLib_StreamBufferSize;
-    Ret := deflate(FStreamRec, Z_NO_FLUSH);
-    OutDone := ZLib_StreamBufferSize - FStreamRec.avail_out;
-    if OutDone > 0 then
-      FStream.Write(FOutBuffer^, OutDone)
-    else
-      if FStreamRec.avail_in = 0 then
-        break
-      else
-      if (Ret = Z_OK) or (Ret = Z_STREAM_END) then
-        break
-      else
-        raise EZLibError.Create(ZLibErrorMessage(Ret));
-  until False;
+  DoDeflate(Z_NO_FLUSH);
   Result := Count;
 end;
 
@@ -905,6 +900,7 @@ var
   P, Q : PByte;
   L, InBufUsed : Integer;
   Ret : Integer;
+  Fin : Boolean;
   PrevAvailOut, OutDone : Integer;
 begin
   Result := 0;
@@ -928,31 +924,33 @@ begin
         Dec(FOutAvailable, L);
         Inc(Result, L);
         if Result >= Count then
-          exit;
+          exit; // required data read
       end;
     // fill buffer
     InBufUsed := FStream.Read(FInBuffer^, ZLib_StreamBufferSize);
     if InBufUsed = 0 then
-      exit;
+      exit; // no more to read
     FStreamRec.next_in := FInBuffer;
     FStreamRec.avail_in := InBufUsed;
     Q := FOutBuffer;
     Inc(Q, FOutAvailable);
     FStreamRec.next_out := Pointer(Q);
     FStreamRec.avail_out := ZLib_StreamBufferSize - FOutAvailable;
+    Fin := False;
     repeat
       PrevAvailOut := FStreamRec.avail_out;
       Ret := inflate(FStreamRec, Z_NO_FLUSH);
       OutDone := PrevAvailOut - Integer(FStreamRec.avail_out);
       Inc(FOutAvailable, OutDone);
       if Ret = Z_STREAM_END then
-        break; // finished
+        Fin := True
+      else
       if OutDone = 0 then
         if Ret < 0 then
           raise EZLibError.Create(ZLibErrorMessage(Ret))
         else
-          break; // finished
-    until False;
+          Fin := True;
+    until Fin;
   until False;
 end;
 
