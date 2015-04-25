@@ -29,10 +29,8 @@
 {                     USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE             }
 {                     POSSIBILITY OF SUCH DAMAGE.                              }
 {                                                                              }
-{   Home page:        http://fundementals.sourceforge.net                      }
-{   Forum:            http://sourceforge.net/forum/forum.php?forum_id=2117     }
+{   Github:           https://github.com/fundamentalslib                       }
 {   E-mail:           fundamentalslib at gmail.com                             }
-{   Source:           https://github.com/fundamentalslib                       }
 {                                                                              }
 { Revision history:                                                            }
 {                                                                              }
@@ -679,56 +677,56 @@ function  FloatApproxCompare(const A, B: Float;
 {                                                                              }
 { Bit functions                                                                }
 {                                                                              }
-function  ClearBit(const Value, BitIndex: LongWord): LongWord;
-function  SetBit(const Value, BitIndex: LongWord): LongWord;
-function  IsBitSet(const Value, BitIndex: LongWord): Boolean;
-function  ToggleBit(const Value, BitIndex: LongWord): LongWord;
-function  IsHighBitSet(const Value: LongWord): Boolean;
+function  ClearBit32(const Value, BitIndex: Word32): Word32;
+function  SetBit32(const Value, BitIndex: Word32): Word32;
+function  IsBitSet32(const Value, BitIndex: Word32): Boolean;
+function  ToggleBit32(const Value, BitIndex: Word32): Word32;
+function  IsHighBitSet32(const Value: Word32): Boolean;
 
-function  SetBitScanForward(const Value: LongWord): Integer; overload;
-function  SetBitScanForward(const Value, BitIndex: LongWord): Integer; overload;
-function  SetBitScanReverse(const Value: LongWord): Integer; overload;
-function  SetBitScanReverse(const Value, BitIndex: LongWord): Integer; overload;
-function  ClearBitScanForward(const Value: LongWord): Integer; overload;
-function  ClearBitScanForward(const Value, BitIndex: LongWord): Integer; overload;
-function  ClearBitScanReverse(const Value: LongWord): Integer; overload;
-function  ClearBitScanReverse(const Value, BitIndex: LongWord): Integer; overload;
+function  SetBitScanForward32(const Value: Word32): Integer; overload;
+function  SetBitScanForward32(const Value, BitIndex: Word32): Integer; overload;
+function  SetBitScanReverse32(const Value: Word32): Integer; overload;
+function  SetBitScanReverse32(const Value, BitIndex: Word32): Integer; overload;
+function  ClearBitScanForward32(const Value: Word32): Integer; overload;
+function  ClearBitScanForward32(const Value, BitIndex: Word32): Integer; overload;
+function  ClearBitScanReverse32(const Value: Word32): Integer; overload;
+function  ClearBitScanReverse32(const Value, BitIndex: Word32): Integer; overload;
 
-function  ReverseBits(const Value: LongWord): LongWord; overload;
-function  ReverseBits(const Value: LongWord; const BitCount: Integer): LongWord; overload;
-function  SwapEndian(const Value: LongWord): LongWord;
+function  ReverseBits32(const Value: Word32): Word32; overload;
+function  ReverseBits32(const Value: Word32; const BitCount: Integer): Word32; overload;
+function  SwapEndian32(const Value: Word32): Word32;
 {$IFDEF ManagedCode}
-procedure SwapEndianBuf(var Buf: array of LongWord);
+procedure SwapEndianBuf32(var Buf: array of Word32);
 {$ELSE}
-procedure SwapEndianBuf(var Buf; const Count: Integer);
+procedure SwapEndianBuf32(var Buf; const Count: Integer);
 {$ENDIF}
-function  TwosComplement(const Value: LongWord): LongWord;
+function  TwosComplement32(const Value: Word32): Word32;
 
 function  RotateLeftBits16(const Value: Word; const Bits: Byte): Word;
-function  RotateLeftBits32(const Value: LongWord; const Bits: Byte): LongWord;
+function  RotateLeftBits32(const Value: Word32; const Bits: Byte): Word32;
 function  RotateRightBits16(const Value: Word; const Bits: Byte): Word;
-function  RotateRightBits32(const Value: LongWord; const Bits: Byte): LongWord;
+function  RotateRightBits32(const Value: Word32; const Bits: Byte): Word32;
 
-function  BitCount(const Value: LongWord): LongWord;
-function  IsPowerOfTwo(const Value: LongWord): Boolean;
+function  BitCount32(const Value: Word32): Word32;
+function  IsPowerOfTwo32(const Value: Word32): Boolean;
 
-function  LowBitMask(const HighBitIndex: LongWord): LongWord;
-function  HighBitMask(const LowBitIndex: LongWord): LongWord;
-function  RangeBitMask(const LowBitIndex, HighBitIndex: LongWord): LongWord;
+function  LowBitMask32(const HighBitIndex: Word32): Word32;
+function  HighBitMask32(const LowBitIndex: Word32): Word32;
+function  RangeBitMask32(const LowBitIndex, HighBitIndex: Word32): Word32;
 
-function  SetBitRange(const Value: LongWord;
-          const LowBitIndex, HighBitIndex: LongWord): LongWord;
-function  ClearBitRange(const Value: LongWord;
-          const LowBitIndex, HighBitIndex: LongWord): LongWord;
-function  ToggleBitRange(const Value: LongWord;
-          const LowBitIndex, HighBitIndex: LongWord): LongWord;
-function  IsBitRangeSet(const Value: LongWord;
-          const LowBitIndex, HighBitIndex: LongWord): Boolean;
-function  IsBitRangeClear(const Value: LongWord;
-          const LowBitIndex, HighBitIndex: LongWord): Boolean;
+function  SetBitRange32(const Value: Word32;
+          const LowBitIndex, HighBitIndex: Word32): Word32;
+function  ClearBitRange32(const Value: Word32;
+          const LowBitIndex, HighBitIndex: Word32): Word32;
+function  ToggleBitRange32(const Value: Word32;
+          const LowBitIndex, HighBitIndex: Word32): Word32;
+function  IsBitRangeSet32(const Value: Word32;
+          const LowBitIndex, HighBitIndex: Word32): Boolean;
+function  IsBitRangeClear32(const Value: Word32;
+          const LowBitIndex, HighBitIndex: Word32): Boolean;
 
 const
-  BitMaskTable: array[0..31] of LongWord =
+  BitMaskTable32: array[0..31] of Word32 =
     ($00000001, $00000002, $00000004, $00000008,
      $00000010, $00000020, $00000040, $00000080,
      $00000100, $00000200, $00000400, $00000800,
@@ -773,36 +771,8 @@ function  IsComplete(const C: CharSet): Boolean;
 function  CharCount(const C: CharSet): Integer; overload;
 procedure ConvertCaseInsensitive(var C: CharSet);
 function  CaseInsensitiveCharSet(const C: CharSet): CharSet;
-
-
-
-{                                                                              }
-{ Range functions                                                              }
-{                                                                              }
-{   RangeLength      Length of a range                                         }
-{   RangeAdjacent    True if ranges are adjacent                               }
-{   RangeOverlap     True if ranges overlap                                    }
-{   RangeHasElement  True if element is in range                               }
-{                                                                              }
-function  IntRangeLength(const Low, High: Integer): Int64;
-function  IntRangeAdjacent(const Low1, High1, Low2, High2: Integer): Boolean;
-function  IntRangeOverlap(const Low1, High1, Low2, High2: Integer): Boolean;
-function  IntRangeHasElement(const Low, High, Element: Integer): Boolean;
-
-function  IntRangeIncludeElement(var Low, High: Integer;
-          const Element: Integer): Boolean;
-function  IntRangeIncludeElementRange(var Low, High: Integer;
-          const LowElement, HighElement: Integer): Boolean;
-
-function  CardRangeLength(const Low, High: Cardinal): Int64;
-function  CardRangeAdjacent(const Low1, High1, Low2, High2: Cardinal): Boolean;
-function  CardRangeOverlap(const Low1, High1, Low2, High2: Cardinal): Boolean;
-function  CardRangeHasElement(const Low, High, Element: Cardinal): Boolean;
-
-function  CardRangeIncludeElement(var Low, High: Cardinal;
-          const Element: Cardinal): Boolean;
-function  CardRangeIncludeElementRange(var Low, High: Cardinal;
-          const LowElement, HighElement: Cardinal): Boolean;
+function  CharSetToStr(const C: CharSet): AnsiString;
+function  StrToCharSet(const S: AnsiString): CharSet;
 
 
 
@@ -1147,22 +1117,26 @@ function  ntoh64(const A: Int64): Int64;
 
 
 {                                                                              }
-{ Type conversion                                                              }
+{ Pointer-String conversions                                                   }
 {                                                                              }
 {$IFNDEF ManagedCode}
 function  PointerToStrA(const P: Pointer): AnsiString;
 function  PointerToStrB(const P: Pointer): RawByteString;
 function  PointerToStrW(const P: Pointer): WideString;
+function  PointerToStrU(const P: Pointer): UnicodeString;
 function  PointerToStr(const P: Pointer): String;
 
 function  StrToPointerA(const S: AnsiString): Pointer;
 function  StrToPointerB(const S: RawByteString): Pointer;
 function  StrToPointerW(const S: WideString): Pointer;
+function  StrToPointerU(const S: UnicodeString): Pointer;
 function  StrToPointer(const S: String): Pointer;
 
 {$IFDEF SupportInterface}
 function  InterfaceToStrA(const I: IInterface): AnsiString;
+function  InterfaceToStrB(const I: IInterface): RawByteString;
 function  InterfaceToStrW(const I: IInterface): WideString;
+function  InterfaceToStrU(const I: IInterface): UnicodeString;
 function  InterfaceToStr(const I: IInterface): String;
 {$ENDIF}
 {$ENDIF}
@@ -1170,8 +1144,6 @@ function  InterfaceToStr(const I: IInterface): String;
 function  ObjectClassName(const O: TObject): String;
 function  ClassClassName(const C: TClass): String;
 function  ObjectToStr(const O: TObject): String;
-function  CharSetToStr(const C: CharSet): AnsiString;
-function  StrToCharSet(const S: AnsiString): CharSet;
 
 
 
@@ -1262,6 +1234,55 @@ type
     function _Release: Integer; stdcall;
   end;
 {$ENDIF}
+
+
+
+{                                                                              }
+{ Dynamic arrays                                                               }
+{                                                                              }
+type
+  ByteArray = array of Byte;
+  WordArray = array of Word;
+  LongWordArray = array of LongWord;
+  CardinalArray = LongWordArray;
+  NativeUIntArray = array of NativeUInt;
+  ShortIntArray = array of ShortInt;
+  SmallIntArray = array of SmallInt;
+  LongIntArray = array of LongInt;
+  IntegerArray = LongIntArray;
+  NativeIntArray = array of NativeInt;
+  Int64Array = array of Int64;
+  SingleArray = array of Single;
+  DoubleArray = array of Double;
+  ExtendedArray = array of Extended;
+  CurrencyArray = array of Currency;
+  BooleanArray = array of Boolean;
+  AnsiStringArray = array of AnsiString;
+  RawByteStringArray = array of RawByteString;
+  WideStringArray = array of WideString;
+  UnicodeStringArray = array of UnicodeString;
+  StringArray = array of String;
+  {$IFNDEF ManagedCode}
+  PointerArray = array of Pointer;
+  {$ENDIF}
+  ObjectArray = array of TObject;
+  InterfaceArray = array of IInterface;
+  CharSetArray = array of CharSet;
+  ByteSetArray = array of ByteSet;
+
+  {$IFNDEF TBytesDeclared}
+  TBytes = ByteArray;
+  {$ENDIF}
+
+
+{$IFDEF ManagedCode}
+procedure FreeObjectArray(var V: ObjectArray); overload;
+procedure FreeObjectArray(var V: ObjectArray; const LoIdx, HiIdx: Integer); overload;
+{$ELSE}
+procedure FreeObjectArray(var V); overload;
+procedure FreeObjectArray(var V; const LoIdx, HiIdx: Integer); overload;
+{$ENDIF}
+procedure FreeAndNilObjectArray(var V: ObjectArray);
 
 
 
@@ -1370,51 +1391,6 @@ type
   PStaticCharSetArray = ^TStaticCharSetArray;
   PStaticByteSetArray = ^TStaticByteSetArray;
   {$ENDIF}
-
-
-
-{                                                                              }
-{ Dynamic arrays                                                               }
-{                                                                              }
-type
-  ByteArray = array of Byte;
-  WordArray = array of Word;
-  LongWordArray = array of LongWord;
-  CardinalArray = LongWordArray;
-  NativeUIntArray = array of NativeUInt;
-  ShortIntArray = array of ShortInt;
-  SmallIntArray = array of SmallInt;
-  LongIntArray = array of LongInt;
-  IntegerArray = LongIntArray;
-  NativeIntArray = array of NativeInt;
-  Int64Array = array of Int64;
-  SingleArray = array of Single;
-  DoubleArray = array of Double;
-  ExtendedArray = array of Extended;
-  CurrencyArray = array of Currency;
-  BooleanArray = array of Boolean;
-  AnsiStringArray = array of AnsiString;
-  RawByteStringArray = array of RawByteString;
-  WideStringArray = array of WideString;
-  UnicodeStringArray = array of UnicodeString;
-  StringArray = array of String;
-  {$IFNDEF ManagedCode}
-  PointerArray = array of Pointer;
-  {$ENDIF}
-  ObjectArray = array of TObject;
-  InterfaceArray = array of IInterface;
-  CharSetArray = array of CharSet;
-  ByteSetArray = array of ByteSet;
-
-
-{$IFDEF ManagedCode}
-procedure FreeObjectArray(var V: ObjectArray); overload;
-procedure FreeObjectArray(var V: ObjectArray; const LoIdx, HiIdx: Integer); overload;
-{$ELSE}
-procedure FreeObjectArray(var V); overload;
-procedure FreeObjectArray(var V; const LoIdx, HiIdx: Integer); overload;
-{$ENDIF}
-procedure FreeAndNilObjectArray(var V: ObjectArray);
 
 
 
@@ -1983,7 +1959,7 @@ end;
 { Bit functions                                                                }
 {                                                                              }
 {$IFDEF ASM386_DELPHI}
-function ReverseBits(const Value: LongWord): LongWord; register; assembler;
+function ReverseBits32(const Value: LongWord): LongWord; register; assembler;
 asm
       BSWAP   EAX
       MOV     EDX, EAX
@@ -2006,17 +1982,17 @@ asm
       OR      EAX, EDX
 end;
 {$ELSE}
-function ReverseBits(const Value: LongWord): LongWord;
+function ReverseBits32(const Value: LongWord): LongWord;
 var I : Byte;
 begin
   Result := 0;
   for I := 0 to 31 do
-    if Value and BitMaskTable[I] <> 0 then
-      Result := Result or BitMaskTable[31 - I];
+    if Value and BitMaskTable32[I] <> 0 then
+      Result := Result or BitMaskTable32[31 - I];
 end;
 {$ENDIF}
 
-function ReverseBits(const Value: LongWord; const BitCount: Integer): LongWord;
+function ReverseBits32(const Value: LongWord; const BitCount: Integer): LongWord;
 var I : Integer;
   V : LongWord;
 begin
@@ -2030,14 +2006,14 @@ begin
 end;
 
 {$IFDEF ASM386_DELPHI}
-function SwapEndian(const Value: LongWord): LongWord; register; assembler;
+function SwapEndian32(const Value: LongWord): LongWord; register; assembler;
 asm
       XCHG    AH, AL
       ROL     EAX, 16
       XCHG    AH, AL
 end;
 {$ELSE}
-function SwapEndian(const Value: LongWord): LongWord;
+function SwapEndian32(const Value: LongWord): LongWord;
 begin
   Result := ((Value and $000000FF) shl 24)  or
             ((Value and $0000FF00) shl 8)   or
@@ -2047,33 +2023,33 @@ end;
 {$ENDIF}
 
 {$IFDEF ManagedCode}
-procedure SwapEndianBuf(var Buf: array of LongWord);
+procedure SwapEndianBuf32(var Buf: array of LongWord);
 var I : Integer;
 begin
   for I := 0 to Length(Buf) - 1 do
     Buf[I] := SwapEndian(Buf[I]);
 end;
 {$ELSE}
-procedure SwapEndianBuf(var Buf; const Count: Integer);
+procedure SwapEndianBuf32(var Buf; const Count: Integer);
 var P : PLongWord;
     I : Integer;
 begin
   P := @Buf;
   for I := 1 to Count do
     begin
-      P^ := SwapEndian(P^);
+      P^ := SwapEndian32(P^);
       Inc(P);
     end;
 end;
 {$ENDIF}
 
 {$IFDEF ASM386_DELPHI}
-function TwosComplement(const Value: LongWord): LongWord; register; assembler;
+function TwosComplement32(const Value: LongWord): LongWord; register; assembler;
 asm
       NEG     EAX
 end;
 {$ELSE}
-function TwosComplement(const Value: LongWord): LongWord;
+function TwosComplement32(const Value: LongWord): LongWord;
 begin
   Result := LongWord(not Value + 1);
 end;
@@ -2180,7 +2156,7 @@ end;
 {$ENDIF}
 
 {$IFDEF ASM386_DELPHI}
-function SetBit(const Value, BitIndex: LongWord): LongWord;
+function SetBit32(const Value, BitIndex: Word32): Word32;
 asm
       {$IFOPT R+}
       CMP     BitIndex, BitsPerLongWord
@@ -2188,17 +2164,17 @@ asm
       JMP     RaiseRangeCheckError
   @RangeOk:
       {$ENDIF}
-      OR      EAX, DWORD PTR [BitIndex * 4 + BitMaskTable]
+      OR      EAX, DWORD PTR [BitIndex * 4 + BitMaskTable32]
 end;
 {$ELSE}
-function SetBit(const Value, BitIndex: LongWord): LongWord;
+function SetBit32(const Value, BitIndex: Word32): Word32;
 begin
-  Result := Value or BitMaskTable[BitIndex];
+  Result := Value or BitMaskTable32[BitIndex];
 end;
 {$ENDIF}
 
 {$IFDEF ASM386_DELPHI}
-function ClearBit(const Value, BitIndex: LongWord): LongWord;
+function ClearBit32(const Value, BitIndex: Word32): Word32;
 asm
       {$IFOPT R+}
       CMP     BitIndex, BitsPerLongWord
@@ -2206,20 +2182,20 @@ asm
       JMP     RaiseRangeCheckError
   @RangeOk:
       {$ENDIF}
-      MOV     ECX, DWORD PTR [BitIndex * 4 + BitMaskTable]
+      MOV     ECX, DWORD PTR [BitIndex * 4 + BitMaskTable32]
       NOT     ECX
       AND     EAX, ECX
   @Fin:
 end;
 {$ELSE}
-function ClearBit(const Value, BitIndex: LongWord): LongWord;
+function ClearBit32(const Value, BitIndex: Word32): Word32;
 begin
-  Result := Value and not BitMaskTable[BitIndex];
+  Result := Value and not BitMaskTable32[BitIndex];
 end;
 {$ENDIF}
 
 {$IFDEF ASM386_DELPHI}
-function ToggleBit(const Value, BitIndex: LongWord): LongWord;
+function ToggleBit32(const Value, BitIndex: Word32): Word32;
 asm
       {$IFOPT R+}
       CMP     BitIndex, BitsPerLongWord
@@ -2227,30 +2203,30 @@ asm
       JMP     RaiseRangeCheckError
   @RangeOk:
       {$ENDIF}
-      XOR     EAX, DWORD PTR [BitIndex * 4 + BitMaskTable]
+      XOR     EAX, DWORD PTR [BitIndex * 4 + BitMaskTable32]
 end;
 {$ELSE}
-function ToggleBit(const Value, BitIndex: LongWord): LongWord;
+function ToggleBit32(const Value, BitIndex: Word32): Word32;
 begin
-  Result := Value xor BitMaskTable[BitIndex];
+  Result := Value xor BitMaskTable32[BitIndex];
 end;
 {$ENDIF}
 
 {$IFDEF ASM386_DELPHI}
-function IsHighBitSet(const Value: LongWord): Boolean; register; assembler;
+function IsHighBitSet32(const Value: Word32): Boolean; register; assembler;
 asm
       TEST    Value, $80000000
       SETNZ   AL
 end;
 {$ELSE}
-function IsHighBitSet(const Value: LongWord): Boolean;
+function IsHighBitSet32(const Value: Word32): Boolean;
 begin
   Result := Value and $80000000 <> 0;
 end;
 {$ENDIF}
 
 {$IFDEF ASM386_DELPHI}
-function IsBitSet(const Value, BitIndex: LongWord): Boolean;
+function IsBitSet32(const Value, BitIndex: Word32): Boolean;
 asm
       {$IFOPT R+}
       CMP     BitIndex, BitsPerLongWord
@@ -2258,19 +2234,19 @@ asm
       JMP     RaiseRangeCheckError
   @RangeOk:
       {$ENDIF}
-      MOV     ECX, DWORD PTR BitMaskTable [BitIndex * 4]
+      MOV     ECX, DWORD PTR BitMaskTable32 [BitIndex * 4]
       TEST    Value, ECX
       SETNZ   AL
 end;
 {$ELSE}
-function IsBitSet(const Value, BitIndex: LongWord): Boolean;
+function IsBitSet32(const Value, BitIndex: Word32): Boolean;
 begin
-  Result := Value and BitMaskTable[BitIndex] <> 0;
+  Result := Value and BitMaskTable32[BitIndex] <> 0;
 end;
 {$ENDIF}
 
 {$IFDEF ASM386_DELPHI}
-function SetBitScanForward(const Value: LongWord): Integer;
+function SetBitScanForward32(const Value: Word32): Integer;
 asm
       OR      EAX, EAX
       JZ      @NoBits
@@ -2280,7 +2256,7 @@ asm
       MOV     EAX, -1
 end;
 
-function SetBitScanForward(const Value, BitIndex: LongWord): Integer;
+function SetBitScanForward32(const Value, BitIndex: Word32): Integer;
 asm
       CMP     BitIndex, BitsPerLongWord
       JAE     @NotFound
@@ -2295,12 +2271,12 @@ asm
       MOV     EAX, -1
 end;
 {$ELSE}
-function SetBitScanForward(const Value, BitIndex: LongWord): Integer;
+function SetBitScanForward32(const Value, BitIndex: Word32): Integer;
 var I : Integer;
 begin
   if BitIndex < BitsPerLongWord then
     for I := Integer(BitIndex) to 31 do
-      if Value and BitMaskTable[I] <> 0 then
+      if Value and BitMaskTable32[I] <> 0 then
         begin
           Result := I;
           exit;
@@ -2308,14 +2284,14 @@ begin
   Result := -1;
 end;
 
-function SetBitScanForward(const Value: LongWord): Integer;
+function SetBitScanForward32(const Value: Word32): Integer;
 begin
-  Result := SetBitScanForward(Value, 0);
+  Result := SetBitScanForward32(Value, 0);
 end;
 {$ENDIF}
 
 {$IFDEF ASM386_DELPHI}
-function SetBitScanReverse(const Value: LongWord): Integer;
+function SetBitScanReverse32(const Value: Word32): Integer;
 asm
       OR      EAX, EAX
       JZ      @NoBits
@@ -2325,7 +2301,7 @@ asm
       MOV     EAX, -1
 end;
 
-function SetBitScanReverse(const Value, BitIndex: LongWord): Integer;
+function SetBitScanReverse32(const Value, BitIndex: Word32): Integer;
 asm
       CMP     EDX, BitsPerLongWord
       JAE     @NotFound
@@ -2341,12 +2317,12 @@ asm
       MOV     EAX, -1
 end;
 {$ELSE}
-function SetBitScanReverse(const Value, BitIndex: LongWord): Integer;
+function SetBitScanReverse32(const Value, BitIndex: Word32): Integer;
 var I : Integer;
 begin
   if BitIndex < BitsPerLongWord then
     for I := Integer(BitIndex) downto 0 do
-      if Value and BitMaskTable[I] <> 0 then
+      if Value and BitMaskTable32[I] <> 0 then
         begin
           Result := I;
           exit;
@@ -2354,14 +2330,14 @@ begin
   Result := -1;
 end;
 
-function SetBitScanReverse(const Value: LongWord): Integer;
+function SetBitScanReverse32(const Value: Word32): Integer;
 begin
-  Result := SetBitScanReverse(Value, 31);
+  Result := SetBitScanReverse32(Value, 31);
 end;
 {$ENDIF}
 
 {$IFDEF ASM386_DELPHI}
-function ClearBitScanForward(const Value: LongWord): Integer;
+function ClearBitScanForward32(const Value: Word32): Integer;
 asm
       NOT     EAX
       OR      EAX, EAX
@@ -2372,7 +2348,7 @@ asm
       MOV     EAX, -1
 end;
 
-function ClearBitScanForward(const Value, BitIndex: LongWord): Integer;
+function ClearBitScanForward32(const Value, BitIndex: Word32): Integer;
 asm
       CMP     EDX, BitsPerLongWord
       JAE     @NotFound
@@ -2388,12 +2364,12 @@ asm
       MOV     EAX, -1
 end;
 {$ELSE}
-function ClearBitScanForward(const Value, BitIndex: LongWord): Integer;
+function ClearBitScanForward32(const Value, BitIndex: Word32): Integer;
 var I : Integer;
 begin
   if BitIndex < BitsPerLongWord then
     for I := Integer(BitIndex) to 31 do
-      if Value and BitMaskTable[I] = 0 then
+      if Value and BitMaskTable32[I] = 0 then
         begin
           Result := I;
           exit;
@@ -2401,14 +2377,14 @@ begin
   Result := -1;
 end;
 
-function ClearBitScanForward(const Value: LongWord): Integer;
+function ClearBitScanForward32(const Value: Word32): Integer;
 begin
-  Result := ClearBitScanForward(Value, 0);
+  Result := ClearBitScanForward32(Value, 0);
 end;
 {$ENDIF}
 
 {$IFDEF ASM386_DELPHI}
-function ClearBitScanReverse(const Value: LongWord): Integer;
+function ClearBitScanReverse32(const Value: Word32): Integer;
 asm
       NOT     EAX
       OR      EAX, EAX
@@ -2419,7 +2395,7 @@ asm
       MOV     EAX, -1
 end;
 
-function ClearBitScanReverse(const Value, BitIndex: LongWord): Integer;
+function ClearBitScanReverse32(const Value, BitIndex: Word32): Integer;
 asm
       CMP     EDX, BitsPerLongWord
       JAE     @NotFound
@@ -2436,12 +2412,12 @@ asm
       MOV     EAX, -1
 end;
 {$ELSE}
-function ClearBitScanReverse(const Value, BitIndex: LongWord): Integer;
+function ClearBitScanReverse32(const Value, BitIndex: Word32): Integer;
 var I : Integer;
 begin
   if BitIndex < BitsPerLongWord then
     for I := Integer(BitIndex) downto 0 do
-      if Value and BitMaskTable[I] = 0 then
+      if Value and BitMaskTable32[I] = 0 then
         begin
           Result := I;
           exit;
@@ -2449,14 +2425,14 @@ begin
   Result := -1;
 end;
 
-function ClearBitScanReverse(const Value: LongWord): Integer;
+function ClearBitScanReverse32(const Value: Word32): Integer;
 begin
-  Result := ClearBitScanReverse(Value, 31);
+  Result := ClearBitScanReverse32(Value, 31);
 end;
 {$ENDIF}
 
 const
-  BitCountTable : array[Byte] of Byte =
+  BitCountTable32 : array[Byte] of Byte =
     (0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
      1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
      1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
@@ -2475,51 +2451,51 @@ const
      4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8);
 
 {$IFDEF ASM386_DELPHI}
-function BitCount(const Value: LongWord): LongWord; register; assembler;
+function BitCount32(const Value: Word32): Word32; register; assembler;
 asm
       MOVZX   EDX, AL
-      MOVZX   EDX, BYTE PTR [EDX + BitCountTable]
+      MOVZX   EDX, BYTE PTR [EDX + BitCountTable32]
       MOVZX   ECX, AH
-      ADD     DL, BYTE PTR [ECX + BitCountTable]
+      ADD     DL, BYTE PTR [ECX + BitCountTable32]
       SHR     EAX, 16
       MOVZX   ECX, AH
-      ADD     DL, BYTE PTR [ECX + BitCountTable]
+      ADD     DL, BYTE PTR [ECX + BitCountTable32]
       AND     EAX, $FF
-      ADD     DL, BYTE PTR [EAX + BitCountTable]
+      ADD     DL, BYTE PTR [EAX + BitCountTable32]
       MOV     AL, DL
 end;
 {$ELSE}
-function BitCount(const Value: LongWord): LongWord;
+function BitCount32(const Value: Word32): Word32;
 begin
-  Result := BitCountTable[(Value and $000000FF)       ] +
-            BitCountTable[(Value and $0000FF00) shr 8 ] +
-            BitCountTable[(Value and $00FF0000) shr 16] +
-            BitCountTable[(Value and $FF000000) shr 24];
+  Result := BitCountTable32[(Value and $000000FF)       ] +
+            BitCountTable32[(Value and $0000FF00) shr 8 ] +
+            BitCountTable32[(Value and $00FF0000) shr 16] +
+            BitCountTable32[(Value and $FF000000) shr 24];
 end;
 {$ENDIF}
 
-function IsPowerOfTwo(const Value: LongWord): Boolean;
+function IsPowerOfTwo32(const Value: Word32): Boolean;
 begin
-  Result := BitCount(Value) = 1;
+  Result := BitCount32(Value) = 1;
 end;
 
-function LowBitMask(const HighBitIndex: LongWord): LongWord;
+function LowBitMask32(const HighBitIndex: Word32): Word32;
 begin
   if HighBitIndex >= BitsPerLongWord then
     Result := 0
   else
-    Result := BitMaskTable[HighBitIndex] - 1;
+    Result := BitMaskTable32[HighBitIndex] - 1;
 end;
 
-function HighBitMask(const LowBitIndex: LongWord): LongWord;
+function HighBitMask32(const LowBitIndex: Word32): Word32;
 begin
   if LowBitIndex >= BitsPerLongWord then
     Result := 0
   else
-    Result := not BitMaskTable[LowBitIndex] + 1;
+    Result := not BitMaskTable32[LowBitIndex] + 1;
 end;
 
-function RangeBitMask(const LowBitIndex, HighBitIndex: LongWord): LongWord;
+function RangeBitMask32(const LowBitIndex, HighBitIndex: Word32): Word32;
 begin
   if (LowBitIndex >= BitsPerLongWord) and (HighBitIndex >= BitsPerLongWord) then
     begin
@@ -2528,36 +2504,36 @@ begin
     end;
   Result := $FFFFFFFF;
   if LowBitIndex > 0 then
-    Result := Result xor (BitMaskTable[LowBitIndex] - 1);
+    Result := Result xor (BitMaskTable32[LowBitIndex] - 1);
   if HighBitIndex < 31 then
-    Result := Result xor (not BitMaskTable[HighBitIndex + 1] + 1);
+    Result := Result xor (not BitMaskTable32[HighBitIndex + 1] + 1);
 end;
 
-function SetBitRange(const Value: LongWord; const LowBitIndex, HighBitIndex: LongWord): LongWord;
+function SetBitRange32(const Value: Word32; const LowBitIndex, HighBitIndex: Word32): Word32;
 begin
-  Result := Value or RangeBitMask(LowBitIndex, HighBitIndex);
+  Result := Value or RangeBitMask32(LowBitIndex, HighBitIndex);
 end;
 
-function ClearBitRange(const Value: LongWord; const LowBitIndex, HighBitIndex: LongWord): LongWord;
+function ClearBitRange32(const Value: Word32; const LowBitIndex, HighBitIndex: Word32): Word32;
 begin
-  Result := Value and not RangeBitMask(LowBitIndex, HighBitIndex);
+  Result := Value and not RangeBitMask32(LowBitIndex, HighBitIndex);
 end;
 
-function ToggleBitRange(const Value: LongWord; const LowBitIndex, HighBitIndex: LongWord): LongWord;
+function ToggleBitRange32(const Value: Word32; const LowBitIndex, HighBitIndex: Word32): Word32;
 begin
-  Result := Value xor RangeBitMask(LowBitIndex, HighBitIndex);
+  Result := Value xor RangeBitMask32(LowBitIndex, HighBitIndex);
 end;
 
-function IsBitRangeSet(const Value: LongWord; const LowBitIndex, HighBitIndex: LongWord): Boolean;
-var M: LongWord;
+function IsBitRangeSet32(const Value: Word32; const LowBitIndex, HighBitIndex: Word32): Boolean;
+var M: Word32;
 begin
-  M := RangeBitMask(LowBitIndex, HighBitIndex);
+  M := RangeBitMask32(LowBitIndex, HighBitIndex);
   Result := Value and M = M;
 end;
 
-function IsBitRangeClear(const Value: LongWord; const LowBitIndex, HighBitIndex: LongWord): Boolean;
+function IsBitRangeClear32(const Value: Word32; const LowBitIndex, HighBitIndex: Word32): Boolean;
 begin
-  Result := Value and RangeBitMask(LowBitIndex, HighBitIndex) = 0;
+  Result := Value and RangeBitMask32(LowBitIndex, HighBitIndex) = 0;
 end;
 
 
@@ -2950,28 +2926,28 @@ asm
       MOV     EBX, EAX
       XOR     ESI, ESI
       MOV     EAX, [EBX]
-      CALL    BitCount
+      CALL    BitCount32
       ADD     ESI, EAX
       MOV     EAX, [EBX + 4]
-      CALL    BitCount
+      CALL    BitCount32
       ADD     ESI, EAX
       MOV     EAX, [EBX + 8]
-      CALL    BitCount
+      CALL    BitCount32
       ADD     ESI, EAX
       MOV     EAX, [EBX + 12]
-      CALL    BitCount
+      CALL    BitCount32
       ADD     ESI, EAX
       MOV     EAX, [EBX + 16]
-      CALL    BitCount
+      CALL    BitCount32
       ADD     ESI, EAX
       MOV     EAX, [EBX + 20]
-      CALL    BitCount
+      CALL    BitCount32
       ADD     ESI, EAX
       MOV     EAX, [EBX + 24]
-      CALL    BitCount
+      CALL    BitCount32
       ADD     ESI, EAX
       MOV     EAX, [EBX + 28]
-      CALL    BitCount
+      CALL    BitCount32
       ADD     EAX, ESI
       POP     ESI
       POP     EBX
@@ -3016,136 +2992,122 @@ begin
   ConvertCaseInsensitive(Result);
 end;
 
-
-
-{                                                                              }
-{ Range functions                                                              }
-{                                                                              }
-function IntRangeLength(const Low, High: Integer): Int64;
-begin
-  if Low > High then
-    Result := 0
-  else
-    Result := Int64(High - Low) + 1;
+{$IFDEF ASM386_DELPHI}
+function CharSetToStr(const C: CharSet): AnsiString; // Andrew N. Driazgov
+asm
+      PUSH    EBX
+      MOV     ECX, $100
+      MOV     EBX, EAX
+      PUSH    ESI
+      MOV     EAX, EDX
+      SUB     ESP, ECX
+      XOR     ESI, ESI
+      XOR     EDX, EDX
+@@lp: BT      [EBX], EDX
+      JC      @@mm
+@@nx: INC     EDX
+      DEC     ECX
+      JNE     @@lp
+      MOV     ECX, ESI
+      MOV     EDX, ESP
+      CALL    System.@LStrFromPCharLen
+      ADD     ESP, $100
+      POP     ESI
+      POP     EBX
+      RET
+@@mm: MOV     [ESP + ESI], DL
+      INC     ESI
+      JMP     @@nx
 end;
-
-function IntRangeAdjacent(const Low1, High1, Low2, High2: Integer): Boolean;
+{$ELSE}
+function CharSetToStr(const C: CharSet): AnsiString;
+// Implemented recursively to avoid multiple memory allocations
+  procedure CharMatch(const Start: AnsiChar; const Count: Integer);
+  var Ch : AnsiChar;
+  begin
+    for Ch := Start to #255 do
+      if Ch in C then
+        begin
+          if Ch = #255 then
+            SetLength(Result, Count + 1)
+          else
+            CharMatch(AnsiChar(Byte(Ch) + 1), Count + 1);
+          Result[Count + 1] := Ch;
+          exit;
+        end;
+    SetLength(Result, Count);
+  end;
 begin
-  Result := ((Low2 > MinInteger)  and (High1 = Low2 - 1)) or
-            ((High2 < MaxInteger) and (Low1 = High2 + 1));
+  CharMatch(#0, 0);
 end;
+{$ENDIF}
 
-function IntRangeOverlap(const Low1, High1, Low2, High2: Integer): Boolean;
-begin
-  Result := ((Low1 >= Low2) and (Low1 <= High2)) or
-            ((Low2 >= Low1) and (Low2 <= High1));
+{$IFDEF ASM386_DELPHI}
+function StrToCharSet(const S: AnsiString): CharSet; // Andrew N. Driazgov
+asm
+      XOR     ECX, ECX
+      MOV     [EDX], ECX
+      MOV     [EDX + 4], ECX
+      MOV     [EDX + 8], ECX
+      MOV     [EDX + 12], ECX
+      MOV     [EDX + 16], ECX
+      MOV     [EDX + 20], ECX
+      MOV     [EDX + 24], ECX
+      MOV     [EDX + 28], ECX
+      TEST    EAX, EAX
+      JE      @@qt
+      MOV     ECX, [EAX - 4]
+      PUSH    EBX
+      SUB     ECX, 8
+      JS      @@nx
+@@lp: MOVZX   EBX, BYTE PTR [EAX]
+      BTS     [EDX], EBX
+      MOVZX   EBX, BYTE PTR [EAX + 1]
+      BTS     [EDX], EBX
+      MOVZX   EBX, BYTE PTR [EAX + 2]
+      BTS     [EDX], EBX
+      MOVZX   EBX, BYTE PTR [EAX + 3]
+      BTS     [EDX], EBX
+      MOVZX   EBX, BYTE PTR [EAX + 4]
+      BTS     [EDX], EBX
+      MOVZX   EBX, BYTE PTR [EAX + 5]
+      BTS     [EDX], EBX
+      MOVZX   EBX, BYTE PTR [EAX + 6]
+      BTS     [EDX], EBX
+      MOVZX   EBX, BYTE PTR [EAX + 7]
+      BTS     [EDX], EBX
+      ADD     EAX, 8
+      SUB     ECX, 8
+      JNS     @@lp
+@@nx: JMP     DWORD PTR @@tV[ECX * 4 + 32]
+@@tV: DD      @@ex, @@t1, @@t2, @@t3
+      DD      @@t4, @@t5, @@t6, @@t7
+@@t7: MOVZX   EBX, BYTE PTR [EAX + 6]
+      BTS     [EDX], EBX
+@@t6: MOVZX   EBX, BYTE PTR [EAX + 5]
+      BTS     [EDX], EBX
+@@t5: MOVZX   EBX, BYTE PTR [EAX + 4]
+      BTS     [EDX], EBX
+@@t4: MOVZX   EBX, BYTE PTR [EAX + 3]
+      BTS     [EDX], EBX
+@@t3: MOVZX   EBX, BYTE PTR [EAX + 2]
+      BTS     [EDX], EBX
+@@t2: MOVZX   EBX, BYTE PTR [EAX + 1]
+      BTS     [EDX], EBX
+@@t1: MOVZX   EBX, BYTE PTR [EAX]
+      BTS     [EDX], EBX
+@@ex: POP     EBX
+@@qt:
 end;
-
-function IntRangeHasElement(const Low, High, Element: Integer): Boolean;
+{$ELSE}
+function StrToCharSet(const S: AnsiString): CharSet;
+var I : Integer;
 begin
-  Result := (Element >= Low) and (Element <= High);
+  ClearCharSet(Result);
+  for I := 1 to Length(S) do
+    Include(Result, S[I]);
 end;
-
-function IntRangeIncludeElement(var Low, High: Integer;
-    const Element: Integer): Boolean;
-begin
-  Result := (Element >= Low) and (Element <= High);
-  if Result then
-    exit;
-  if (Element < Low) and (Element + 1 = Low) then
-    begin
-      Low := Element;
-      Result := True;
-    end else
-  if (Element > High) and (Element - 1 = High) then
-    begin
-      High := Element;
-      Result := True;
-    end;
-end;
-
-function IntRangeIncludeElementRange(var Low, High: Integer;
-    const LowElement, HighElement: Integer): Boolean;
-begin
-  Result := (LowElement >= Low) and (HighElement <= High);
-  if Result then
-    exit;
-  if ((Low >= LowElement) and (Low <= HighElement)) or
-     ((Low > MinInteger) and (Low - 1 = HighElement)) then
-    begin
-      Low := LowElement;
-      Result := True;
-    end;
-  if ((High >= LowElement) and (High <= HighElement)) or
-     ((High < MaxInteger) and (High + 1 = LowElement)) then
-    begin
-      High := HighElement;
-      Result := True;
-    end;
-end;
-
-function CardRangeLength(const Low, High: Cardinal): Int64;
-begin
-  if Low > High then
-    Result := 0
-  else
-    Result := Int64(High - Low) + 1;
-end;
-
-function CardRangeAdjacent(const Low1, High1, Low2, High2: Cardinal): Boolean;
-begin
-  Result := ((Low2 > MinCardinal)  and (High1 = Low2 - 1)) or
-            ((High2 < MaxCardinal) and (Low1 = High2 + 1));
-end;
-
-function CardRangeOverlap(const Low1, High1, Low2, High2: Cardinal): Boolean;
-begin
-  Result := ((Low1 >= Low2) and (Low1 <= High2)) or
-            ((Low2 >= Low1) and (Low2 <= High1));
-end;
-
-function CardRangeHasElement(const Low, High, Element: Cardinal): Boolean;
-begin
-  Result := (Element >= Low) and (Element <= High);
-end;
-
-function CardRangeIncludeElement(var Low, High: Cardinal;
-    const Element: Cardinal): Boolean;
-begin
-  Result := (Element >= Low) and (Element <= High);
-  if Result then
-    exit;
-  if (Element < Low) and (Element + 1 = Low) then
-    begin
-      Low := Element;
-      Result := True;
-    end else
-  if (Element > High) and (Element - 1 = High) then
-    begin
-      High := Element;
-      Result := True;
-    end;
-end;
-
-function CardRangeIncludeElementRange(var Low, High: Cardinal;
-    const LowElement, HighElement: Cardinal): Boolean;
-begin
-  Result := (LowElement >= Low) and (HighElement <= High);
-  if Result then
-    exit;
-  if ((Low >= LowElement) and (Low <= HighElement)) or
-     ((Low > MinCardinal) and (Low - 1 = HighElement)) then
-    begin
-      Low := LowElement;
-      Result := True;
-    end;
-  if ((High >= LowElement) and (High <= HighElement)) or
-     ((High < MaxCardinal) and (High + 1 = LowElement)) then
-    begin
-      High := HighElement;
-      Result := True;
-    end;
-end;
+{$ENDIF}
 
 
 
@@ -6664,7 +6626,7 @@ end;
 
 
 {                                                                              }
-{ Type conversion                                                              }
+{ Pointer-String conversions                                                   }
 {                                                                              }
 {$IFNDEF ManagedCode}
 function PointerToStrA(const P: Pointer): AnsiString;
@@ -6680,6 +6642,11 @@ end;
 function PointerToStrW(const P: Pointer): WideString;
 begin
   Result := NativeUIntToBaseW(NativeUInt(P), NativeWordSize * 2, 16, True);
+end;
+
+function PointerToStrU(const P: Pointer): UnicodeString;
+begin
+  Result := NativeUIntToBaseU(NativeUInt(P), NativeWordSize * 2, 16, True);
 end;
 
 function PointerToStr(const P: Pointer): String;
@@ -6705,6 +6672,12 @@ begin
   Result := Pointer(BaseStrToNativeUIntW(S, 4, V));
 end;
 
+function StrToPointerU(const S: UnicodeString): Pointer;
+var V : Boolean;
+begin
+  Result := Pointer(BaseStrToNativeUIntU(S, 4, V));
+end;
+
 function StrToPointer(const S: String): Pointer;
 var V : Boolean;
 begin
@@ -6717,7 +6690,17 @@ begin
   Result := NativeUIntToBaseA(NativeUInt(I), NativeWordSize * 2, 16, True);
 end;
 
+function InterfaceToStrB(const I: IInterface): RawByteString;
+begin
+  Result := NativeUIntToBaseB(NativeUInt(I), NativeWordSize * 2, 16, True);
+end;
+
 function InterfaceToStrW(const I: IInterface): WideString;
+begin
+  Result := NativeUIntToBaseW(NativeUInt(I), NativeWordSize * 2, 16, True);
+end;
+
+function InterfaceToStrU(const I: IInterface): UnicodeString;
 begin
   Result := NativeUIntToBaseW(NativeUInt(I), NativeWordSize * 2, 16, True);
 end;
@@ -6750,125 +6733,8 @@ begin
   if not Assigned(O) then
     Result := 'nil'
   else
-    Result := O.ClassName{$IFNDEF CLR} + '@' + LongWordToHex(LongWord(O), 8){$ENDIF};
+    Result := O.ClassName{$IFNDEF CLR} + '@' + PointerToStr(Pointer(O)){$ENDIF};
 end;
-
-{$IFDEF ASM386_DELPHI}
-function CharSetToStr(const C: CharSet): AnsiString; // Andrew N. Driazgov
-asm
-      PUSH    EBX
-      MOV     ECX, $100
-      MOV     EBX, EAX
-      PUSH    ESI
-      MOV     EAX, EDX
-      SUB     ESP, ECX
-      XOR     ESI, ESI
-      XOR     EDX, EDX
-@@lp: BT      [EBX], EDX
-      JC      @@mm
-@@nx: INC     EDX
-      DEC     ECX
-      JNE     @@lp
-      MOV     ECX, ESI
-      MOV     EDX, ESP
-      CALL    System.@LStrFromPCharLen
-      ADD     ESP, $100
-      POP     ESI
-      POP     EBX
-      RET
-@@mm: MOV     [ESP + ESI], DL
-      INC     ESI
-      JMP     @@nx
-end;
-{$ELSE}
-function CharSetToStr(const C: CharSet): AnsiString;
-// Implemented recursively to avoid multiple memory allocations
-  procedure CharMatch(const Start: AnsiChar; const Count: Integer);
-  var Ch : AnsiChar;
-  begin
-    for Ch := Start to #255 do
-      if Ch in C then
-        begin
-          if Ch = #255 then
-            SetLength(Result, Count + 1)
-          else
-            CharMatch(AnsiChar(Byte(Ch) + 1), Count + 1);
-          Result[Count + 1] := Ch;
-          exit;
-        end;
-    SetLength(Result, Count);
-  end;
-begin
-  CharMatch(#0, 0);
-end;
-{$ENDIF}
-
-{$IFDEF ASM386_DELPHI}
-function StrToCharSet(const S: AnsiString): CharSet; // Andrew N. Driazgov
-asm
-      XOR     ECX, ECX
-      MOV     [EDX], ECX
-      MOV     [EDX + 4], ECX
-      MOV     [EDX + 8], ECX
-      MOV     [EDX + 12], ECX
-      MOV     [EDX + 16], ECX
-      MOV     [EDX + 20], ECX
-      MOV     [EDX + 24], ECX
-      MOV     [EDX + 28], ECX
-      TEST    EAX, EAX
-      JE      @@qt
-      MOV     ECX, [EAX - 4]
-      PUSH    EBX
-      SUB     ECX, 8
-      JS      @@nx
-@@lp: MOVZX   EBX, BYTE PTR [EAX]
-      BTS     [EDX], EBX
-      MOVZX   EBX, BYTE PTR [EAX + 1]
-      BTS     [EDX], EBX
-      MOVZX   EBX, BYTE PTR [EAX + 2]
-      BTS     [EDX], EBX
-      MOVZX   EBX, BYTE PTR [EAX + 3]
-      BTS     [EDX], EBX
-      MOVZX   EBX, BYTE PTR [EAX + 4]
-      BTS     [EDX], EBX
-      MOVZX   EBX, BYTE PTR [EAX + 5]
-      BTS     [EDX], EBX
-      MOVZX   EBX, BYTE PTR [EAX + 6]
-      BTS     [EDX], EBX
-      MOVZX   EBX, BYTE PTR [EAX + 7]
-      BTS     [EDX], EBX
-      ADD     EAX, 8
-      SUB     ECX, 8
-      JNS     @@lp
-@@nx: JMP     DWORD PTR @@tV[ECX * 4 + 32]
-@@tV: DD      @@ex, @@t1, @@t2, @@t3
-      DD      @@t4, @@t5, @@t6, @@t7
-@@t7: MOVZX   EBX, BYTE PTR [EAX + 6]
-      BTS     [EDX], EBX
-@@t6: MOVZX   EBX, BYTE PTR [EAX + 5]
-      BTS     [EDX], EBX
-@@t5: MOVZX   EBX, BYTE PTR [EAX + 4]
-      BTS     [EDX], EBX
-@@t4: MOVZX   EBX, BYTE PTR [EAX + 3]
-      BTS     [EDX], EBX
-@@t3: MOVZX   EBX, BYTE PTR [EAX + 2]
-      BTS     [EDX], EBX
-@@t2: MOVZX   EBX, BYTE PTR [EAX + 1]
-      BTS     [EDX], EBX
-@@t1: MOVZX   EBX, BYTE PTR [EAX]
-      BTS     [EDX], EBX
-@@ex: POP     EBX
-@@qt:
-end;
-{$ELSE}
-function StrToCharSet(const S: AnsiString): CharSet;
-var I : Integer;
-begin
-  ClearCharSet(Result);
-  for I := 1 to Length(S) do
-    Include(Result, S[I]);
-end;
-{$ENDIF}
 
 
 
@@ -7840,8 +7706,7 @@ end;
 {$IFDEF UTILS_SELFTEST}
 {$ASSERTIONS ON}
 procedure Test_Misc;
-var L, H : Cardinal;
-    A, B : Byte;
+var A, B : Byte;
     C, D : LongWord;
     P, Q : TObject;
 begin
@@ -7897,26 +7762,6 @@ begin
   SwapObjects(P, Q);
   Assert(Assigned(Q) and not Assigned(P),      'SwapObjects');
   Q.Free;
-
-  // Ranges
-  L := 10;
-  H := 20;
-  Assert(CardRangeIncludeElementRange(L, H, 10, 20),     'RangeInclude');
-  Assert((L = 10) and (H = 20),                          'RangeInclude');
-  Assert(CardRangeIncludeElementRange(L, H, 9, 21),      'RangeInclude');
-  Assert((L = 9) and (H = 21),                           'RangeInclude');
-  Assert(CardRangeIncludeElementRange(L, H, 7, 10),      'RangeInclude');
-  Assert((L = 7) and (H = 21),                           'RangeInclude');
-  Assert(CardRangeIncludeElementRange(L, H, 5, 6),       'RangeInclude');
-  Assert((L = 5) and (H = 21),                           'RangeInclude');
-  Assert(not CardRangeIncludeElementRange(L, H, 1, 3),   'RangeInclude');
-  Assert((L = 5) and (H = 21),                           'RangeInclude');
-  Assert(CardRangeIncludeElementRange(L, H, 20, 22),     'RangeInclude');
-  Assert((L = 5) and (H = 22),                           'RangeInclude');
-  Assert(CardRangeIncludeElementRange(L, H, 23, 24),     'RangeInclude');
-  Assert((L = 5) and (H = 24),                           'RangeInclude');
-  Assert(not CardRangeIncludeElementRange(L, H, 26, 27), 'RangeInclude');
-  Assert((L = 5) and (H = 24),                               'RangeInclude');
 
   // iif
   Assert(iif(True, 1, 2) = 1,         'iif');
@@ -7990,36 +7835,36 @@ end;
 
 procedure Test_BitFunctions;
 begin
-  Assert(SetBit($100F, 5) = $102F,            'SetBit');
-  Assert(ClearBit($102F, 5) = $100F,          'ClearBit');
-  Assert(ToggleBit($102F, 5) = $100F,         'ToggleBit');
-  Assert(ToggleBit($100F, 5) = $102F,         'ToggleBit');
-  Assert(IsBitSet($102F, 5),                  'IsBitSet');
-  Assert(not IsBitSet($100F, 5),              'IsBitSet');
-  Assert(IsHighBitSet($80000000),             'IsHighBitSet');
-  Assert(not IsHighBitSet($00000001),         'IsHighBitSet');
-  Assert(not IsHighBitSet($7FFFFFFF),         'IsHighBitSet');
+  Assert(SetBit32($100F, 5) = $102F,            'SetBit');
+  Assert(ClearBit32($102F, 5) = $100F,          'ClearBit');
+  Assert(ToggleBit32($102F, 5) = $100F,         'ToggleBit');
+  Assert(ToggleBit32($100F, 5) = $102F,         'ToggleBit');
+  Assert(IsBitSet32($102F, 5),                  'IsBitSet');
+  Assert(not IsBitSet32($100F, 5),              'IsBitSet');
+  Assert(IsHighBitSet32($80000000),             'IsHighBitSet');
+  Assert(not IsHighBitSet32($00000001),         'IsHighBitSet');
+  Assert(not IsHighBitSet32($7FFFFFFF),         'IsHighBitSet');
 
-  Assert(SetBitScanForward(0) = -1,           'SetBitScanForward');
-  Assert(SetBitScanForward($1020) = 5,        'SetBitScanForward');
-  Assert(SetBitScanReverse($1020) = 12,       'SetBitScanForward');
-  Assert(SetBitScanForward($1020, 6) = 12,    'SetBitScanForward');
-  Assert(SetBitScanReverse($1020, 11) = 5,    'SetBitScanForward');
-  Assert(ClearBitScanForward($FFFFFFFF) = -1, 'ClearBitScanForward');
-  Assert(ClearBitScanForward($1020) = 0,      'ClearBitScanForward');
-  Assert(ClearBitScanReverse($1020) = 31,     'ClearBitScanForward');
-  Assert(ClearBitScanForward($1020, 5) = 6,   'ClearBitScanForward');
-  Assert(ClearBitScanReverse($1020, 12) = 11, 'ClearBitScanForward');
+  Assert(SetBitScanForward32(0) = -1,           'SetBitScanForward');
+  Assert(SetBitScanForward32($1020) = 5,        'SetBitScanForward');
+  Assert(SetBitScanReverse32($1020) = 12,       'SetBitScanForward');
+  Assert(SetBitScanForward32($1020, 6) = 12,    'SetBitScanForward');
+  Assert(SetBitScanReverse32($1020, 11) = 5,    'SetBitScanForward');
+  Assert(ClearBitScanForward32($FFFFFFFF) = -1, 'ClearBitScanForward');
+  Assert(ClearBitScanForward32($1020) = 0,      'ClearBitScanForward');
+  Assert(ClearBitScanReverse32($1020) = 31,     'ClearBitScanForward');
+  Assert(ClearBitScanForward32($1020, 5) = 6,   'ClearBitScanForward');
+  Assert(ClearBitScanReverse32($1020, 12) = 11, 'ClearBitScanForward');
 
-  Assert(ReverseBits($12345678) = $1E6A2C48,  'ReverseBits');
-  Assert(ReverseBits($1) = $80000000,         'ReverseBits');
-  Assert(ReverseBits($80000000) = $1,         'ReverseBits');
-  Assert(SwapEndian($12345678) = $78563412,   'SwapEndian');
+  Assert(ReverseBits32($12345678) = $1E6A2C48,  'ReverseBits');
+  Assert(ReverseBits32($1) = $80000000,         'ReverseBits');
+  Assert(ReverseBits32($80000000) = $1,         'ReverseBits');
+  Assert(SwapEndian32($12345678) = $78563412,   'SwapEndian');
 
-  Assert(BitCount($12341234) = 10,            'BitCount');
-  Assert(IsPowerOfTwo(1),                     'IsPowerOfTwo');
-  Assert(IsPowerOfTwo(2),                     'IsPowerOfTwo');
-  Assert(not IsPowerOfTwo(3),                 'IsPowerOfTwo');
+  Assert(BitCount32($12341234) = 10,            'BitCount');
+  Assert(IsPowerOfTwo32(1),                     'IsPowerOfTwo');
+  Assert(IsPowerOfTwo32(2),                     'IsPowerOfTwo');
+  Assert(not IsPowerOfTwo32(3),                 'IsPowerOfTwo');
 
   Assert(RotateLeftBits32(0, 1) = 0,          'RotateLeftBits32');
   Assert(RotateLeftBits32(1, 0) = 1,          'RotateLeftBits32');
@@ -8035,17 +7880,17 @@ begin
   Assert(RotateRightBits32(2, 1) = 1,         'RotateRightBits32');
   Assert(RotateRightBits32(4, 2) = 1,         'RotateRightBits32');
 
-  Assert(LowBitMask(10) = $3FF,               'LowBitMask');
-  Assert(HighBitMask(28) = $F0000000,         'HighBitMask');
-  Assert(RangeBitMask(2, 6) = $7C,            'RangeBitMask');
+  Assert(LowBitMask32(10) = $3FF,               'LowBitMask');
+  Assert(HighBitMask32(28) = $F0000000,         'HighBitMask');
+  Assert(RangeBitMask32(2, 6) = $7C,            'RangeBitMask');
 
-  Assert(SetBitRange($101, 2, 6) = $17D,      'SetBitRange');
-  Assert(ClearBitRange($17D, 2, 6) = $101,    'ClearBitRange');
-  Assert(ToggleBitRange($17D, 2, 6) = $101,   'ToggleBitRange');
-  Assert(IsBitRangeSet($17D, 2, 6),           'IsBitRangeSet');
-  Assert(not IsBitRangeSet($101, 2, 6),       'IsBitRangeSet');
-  Assert(not IsBitRangeClear($17D, 2, 6),     'IsBitRangeClear');
-  Assert(IsBitRangeClear($101, 2, 6),         'IsBitRangeClear');
+  Assert(SetBitRange32($101, 2, 6) = $17D,      'SetBitRange');
+  Assert(ClearBitRange32($17D, 2, 6) = $101,    'ClearBitRange');
+  Assert(ToggleBitRange32($17D, 2, 6) = $101,   'ToggleBitRange');
+  Assert(IsBitRangeSet32($17D, 2, 6),           'IsBitRangeSet');
+  Assert(not IsBitRangeSet32($101, 2, 6),       'IsBitRangeSet');
+  Assert(not IsBitRangeClear32($17D, 2, 6),     'IsBitRangeClear');
+  Assert(IsBitRangeClear32($101, 2, 6),         'IsBitRangeClear');
 end;
 
 procedure Test_Float;

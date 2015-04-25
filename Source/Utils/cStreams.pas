@@ -1904,7 +1904,7 @@ begin
       exit;
     end;
   FirstNewLineCharsFromEOLTypes(EOLTypes, NewLineChars);
-  // Fin := False;
+  Fin := False;
   repeat
     I := Locate(NewLineChars^, False, MaxLineLength);
     if I < 0 then
@@ -2247,7 +2247,7 @@ end;
 
 
 
-{ ReadFileToStrA                                                               }
+{ ReadFileToStrB                                                               }
 function ReadFileToStrB(const FileName: String): RawByteString;
 var F : TFileReader;
 begin

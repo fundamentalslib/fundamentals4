@@ -10,10 +10,8 @@
 {                     All rights reserved.                                     }
 {                     See license below.                                       }
 {                                                                              }
-{   Home page:        http://fundementals.sourceforge.net                      }
-{   Forum:            http://sourceforge.net/forum/forum.php?forum_id=2117     }
+{   Github:           https://github.com/fundamentalslib                       }
 {   E-mail:           fundamentalslib at gmail.com                             }
-{   Source:           https://github.com/fundamentalslib                       }
 {                                                                              }
 {   This unit is also part of the Open XML Utility Library.                    }
 {   http://www.philo.de/xml/                                                   }
@@ -416,7 +414,7 @@ procedure RegisterCodecs(const Codecs: array of TUnicodeCodecClass);
 { Codec aliases                                                                }
 {                                                                              }
 function  GetCodecClassByAlias(const CodecAlias: String): TUnicodeCodecClass;
-function  GetCodecClassByAliasA(const CodecAlias: AnsiString): TUnicodeCodecClass;
+function  GetCodecClassByAliasA(const CodecAlias: RawByteString): TUnicodeCodecClass;
 function  GetCodecClassByAliasU(const CodecAlias: UnicodeString): TUnicodeCodecClass;
 
 
@@ -2596,7 +2594,7 @@ begin
   Result := nil;
 end;
 
-function GetCodecClassByAliasA(const CodecAlias: AnsiString): TUnicodeCodecClass;
+function GetCodecClassByAliasA(const CodecAlias: RawByteString): TUnicodeCodecClass;
 var S : String;
 begin
   S := String(CodecAlias);

@@ -1749,6 +1749,40 @@ type
 
 
 {                                                                              }
+{ THashedUnicodeStringArray                                                    }
+{   AUnicodeStringArray that maintains a hash lookup table of array values.    }
+{                                                                              }
+type
+  THashedUnicodeStringArray = class(TUnicodeStringArray)
+  protected
+    FLookup        : Array of IntegerArray;
+    FCaseSensitive : Boolean;
+
+    function  LocateItemHash(const Value: UnicodeString;
+              var LookupList, LookupIdx: Integer): Boolean;
+    procedure Rehash;
+
+    procedure Init; override;
+    procedure SetItem(const Idx: Integer; const Value: UnicodeString); override;
+    procedure SetData(const Data: UnicodeStringArray); override;
+
+  public
+    constructor Create(const CaseSensitive: Boolean = True);
+
+    procedure Assign(const Source: TObject); override;
+    procedure Clear; override;
+
+    procedure ExchangeItems(const Idx1, Idx2: Integer); override;
+    procedure Delete(const Idx: Integer; const Count: Integer = 1); override;
+    procedure Insert(const Idx: Integer; const Count: Integer = 1); override;
+    function  AppendItem(const Value: UnicodeString): Integer; override;
+
+    function  PosNext(const Find: UnicodeString; const PrevPos: Integer = -1): Integer;
+  end;
+
+
+
+{                                                                              }
 { DICTIONARY BASE CLASSES                                                      }
 {                                                                              }
 
@@ -13569,7 +13603,7 @@ begin
   Result := 0;
   for I := 0 to BitsPerLongWord - 1 do
     if Bit[Idx + I] then
-      Result := Result or BitMaskTable[I];
+      Result := Result or BitMaskTable32[I];
 end;
 
 procedure ABitArray.SetRangeL(const Idx: Integer; const Value: LongWord);
@@ -16173,7 +16207,7 @@ begin
   if (Idx < 0) or (Idx >= FCount) then
     RaiseIndexError(Idx);
   {$ENDIF}
-  Result := cUtils.IsBitSet(FData[Idx shr 5], Idx and 31);
+  Result := cUtils.IsBitSet32(FData[Idx shr 5], Idx and 31);
 end;
 
 procedure TBitArray.SetBit(const Idx: Integer; const Value: Boolean);
@@ -16185,9 +16219,9 @@ begin
   {$ENDIF}
   L := @FData[Idx shr 5];
   if Value then
-    L^ := cUtils.SetBit(L^, Idx and 31)
+    L^ := cUtils.SetBit32(L^, Idx and 31)
   else
-    L^ := cUtils.ClearBit(L^, Idx and 31);
+    L^ := cUtils.ClearBit32(L^, Idx and 31);
 end;
 
 function TBitArray.GetCount: Integer;
@@ -16237,10 +16271,10 @@ begin
     FData[I] := Value
   else
     begin
-      FData[I] := (FData[I] and LowBitMask(F))
+      FData[I] := (FData[I] and LowBitMask32(F))
                or (Value shl F);
       if I + 1 < Length(FData) then
-        FData[I + 1] := (FData[I + 1] and HighBitMask(F))
+        FData[I + 1] := (FData[I + 1] and HighBitMask32(F))
                      or (Value shr (BitsPerLongWord - F));
     end;
 end;
@@ -16256,7 +16290,7 @@ begin
   // Check bits in FData[IL]
   IL := LoIdx shr 5;
   IH := HiIdx shr 5;
-  B := HighBitMask(LoIdx and 31);
+  B := HighBitMask32(LoIdx and 31);
   I := FData[IL];
   if Value then
     Result := I or B = I else
@@ -16264,7 +16298,7 @@ begin
   if not Result or (IL = IH) then
     exit;
   // Check bits in FData[IH]
-  B := LowBitMask(HiIdx and 31);
+  B := LowBitMask32(HiIdx and 31);
   I := FData[IH];
   if Value then
     Result := I or B = I else
@@ -16294,8 +16328,8 @@ begin
   IH := HiIdx shr 5;
   // Set bits in FData[IL]
   if IH = IL then
-    B := RangeBitMask(LoIdx and 31, HiIdx and 31) else
-    B := HighBitMask(LoIdx and 31);
+    B := RangeBitMask32(LoIdx and 31, HiIdx and 31) else
+    B := HighBitMask32(LoIdx and 31);
   I := FData[IL];
   if Value then
     FData[IL] := I or B else
@@ -16303,7 +16337,7 @@ begin
   if IH = IL then
     exit;
   // Set bits in FData[IH]
-  B := LowBitMask(HiIdx and 31);
+  B := LowBitMask32(HiIdx and 31);
   I := FData[IH];
   if Value then
     FData[IH] := I or B else
@@ -16521,6 +16555,190 @@ begin
     begin
       Result := FLookup[I][F];
       if StrEqualA(Find, FData[Result], FCaseSensitive) then
+        // found
+        exit;
+    end;
+  // not found
+  Result := 1;
+end;
+
+
+
+{                                                                              }
+{ THashedUnicodeStringArray                                                    }
+{                                                                              }
+constructor THashedUnicodeStringArray.Create(const CaseSensitive: Boolean);
+begin
+  inherited Create(nil);
+  FCaseSensitive := CaseSensitive;
+end;
+
+procedure THashedUnicodeStringArray.Init;
+begin
+  inherited Init;
+  FCaseSensitive := True;
+end;
+
+procedure THashedUnicodeStringArray.Assign(const Source: TObject);
+begin
+  if Source is THashedUnicodeStringArray then
+    begin
+      // Assign array data
+      inherited Assign(Source);
+      // Assign hash lookup
+      FLookup := Copy(THashedUnicodeStringArray(Source).FLookup);
+      FCaseSensitive := THashedUnicodeStringArray(Source).FCaseSensitive;
+    end
+  else
+    inherited Assign(Source);
+end;
+
+procedure THashedUnicodeStringArray.Clear;
+begin
+  inherited Clear;
+  Rehash;
+end;
+
+function THashedUnicodeStringArray.LocateItemHash(const Value: UnicodeString;
+         var LookupList, LookupIdx: Integer): Boolean;
+var I: Integer;
+begin
+  // Hash value
+  LookupList := HashStrU(Value, 1, -1, FCaseSensitive, Length(FLookup));
+  // Locate value in hash lookup
+  for I := 0 to Length(FLookup[LookupList]) - 1 do
+    if StrEqualU(Value, FData[FLookup[LookupList][I]], FCaseSensitive) then
+      begin
+        LookupIdx := I;
+        Result := True;
+        exit;
+      end;
+  // Not found
+  LookupIdx := -1;
+  Result := False;
+end;
+
+procedure THashedUnicodeStringArray.Rehash;
+var I, C, L : Integer;
+begin
+  C := FCount;
+  L := ArrayRehashSize(C);
+  FLookup := nil;
+  SetLength(FLookup, L);
+  for I := 0 to C - 1 do
+    DynArrayAppend(FLookup[HashStrU(FData[I], 1, -1, FCaseSensitive, L)], I);
+end;
+
+procedure THashedUnicodeStringArray.ExchangeItems(const Idx1, Idx2: Integer);
+var L1, L2, I1, I2: Integer;
+begin
+  // Swap lookup
+  if LocateItemHash(FData[Idx1], L1, I1) and
+     LocateItemHash(FData[Idx2], L2, I2) then
+    Swap(FLookup[L1][I1], FLookup[L2][I2]);
+  // Swap array items
+  inherited ExchangeItems(Idx1, Idx2);
+end;
+
+procedure THashedUnicodeStringArray.Delete(const Idx: Integer; const Count: Integer);
+var I, L, V : Integer;
+    P : PInteger;
+begin
+  // Delete lookup
+  for I := MaxI(0, Idx) to MinI(FCount, Idx + Count - 1) do
+    if LocateItemHash(FData[I], L, V) then
+      DynArrayRemove(FLookup[L], V, 1);
+  // Delete array
+  inherited Delete(Idx, Count);
+  // Reindex
+  for I := 0 to Length(FLookup) - 1 do
+    for V := 0 to Length(FLookup[I]) - 1 do
+      begin
+        P := @FLookup[I][V];
+        if P^ >= Idx then
+          Dec(P^);
+      end;
+end;
+
+procedure THashedUnicodeStringArray.Insert(const Idx: Integer; const Count: Integer);
+begin
+  // Insert array
+  inherited Insert(Idx, Count);
+  // Rebuild hash table
+  Rehash;
+end;
+
+procedure THashedUnicodeStringArray.SetData(const Data: UnicodeStringArray);
+begin
+  inherited SetData(Data);
+  Rehash;
+end;
+
+procedure THashedUnicodeStringArray.SetItem(const Idx: Integer; const Value: UnicodeString);
+var S    : UnicodeString;
+    I, J : Integer;
+begin
+  {$IFOPT R+}
+  if (Idx < 0) or (Idx >= FCount) then
+    RaiseIndexError(Idx);
+  {$ENDIF}
+  // Remove old hash
+  S := FData[Idx];
+  if LocateItemHash(S, I, J) then
+    DynArrayRemove(FLookup[I], J, 1);
+  // Set array value
+  FData[Idx] := Value;
+  // Add new hash
+  DynArrayAppend(FLookup[HashStrU(Value, 1, -1, FCaseSensitive, Length(FLookup))], Idx);
+end;
+
+function THashedUnicodeStringArray.AppendItem(const Value: UnicodeString): Integer;
+var L : Integer;
+begin
+  // add to array
+  Result := Count;
+  Count := Result + 1;
+  FData[Result] := Value;
+  // add lookup
+  L := Length(FLookup);
+  DynArrayAppend(FLookup[HashStrU(Value, 1, -1, FCaseSensitive, L)], Result);
+  if (Result + 1) div ArrayAverageHashChainSize > L then
+    Rehash;
+end;
+
+function THashedUnicodeStringArray.PosNext(const Find: UnicodeString; const PrevPos: Integer): Integer;
+var I, J, F, L, P : Integer;
+begin
+  // locate first
+  if not LocateItemHash(Find, I, J) then
+    begin
+      Result := -1;
+      exit;
+    end;
+  if PrevPos < 0 then
+    begin
+      Result := FLookup[I][J];
+      exit;
+    end;
+  // locate previous
+  L := Length(FLookup[I]);
+  P := -1;
+  for F := J to L - 1 do
+    if FLookup[I][F] = PrevPos then
+      begin
+        P := F;
+        break;
+      end;
+  if P = -1 then
+    begin
+      Result := 1;
+      exit;
+    end;
+  // locate next
+  for F := P + 1 to L - 1 do
+    begin
+      Result := FLookup[I][F];
+      if StrEqualU(Find, FData[Result], FCaseSensitive) then
         // found
         exit;
     end;

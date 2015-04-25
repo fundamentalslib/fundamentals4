@@ -1,7 +1,7 @@
 {******************************************************************************}
 {                                                                              }
 {   File name:        cHugeInt.pas                                             }
-{   File version:     4.21                                                     }
+{   File version:     4.22                                                     }
 {   Description:      HugeInt functions                                        }
 {                                                                              }
 {   Copyright:        Copyright (c) 2001-2015, David J Butler                  }
@@ -28,10 +28,8 @@
 {                     USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE             }
 {                     POSSIBILITY OF SUCH DAMAGE.                              }
 {                                                                              }
-{   Home page:        http://fundementals.sourceforge.net                      }
-{   Forum:            http://sourceforge.net/forum/forum.php?forum_id=2117     }
+{   Github:           https://github.com/fundamentalslib                       }
 {   E-mail:           fundamentalslib at gmail.com                             }
-{   Source:           https://github.com/fundamentalslib                       }
 {                                                                              }
 { Revision history:                                                            }
 {                                                                              }
@@ -58,6 +56,7 @@
 {                     Wolfgang Ehrhardt.                                       }
 {   2015/03/29  4.20  Minor optimisations.                                     }
 {   2015/04/01  4.21  Compilable with FreePascal 2.6.2.                        }
+{   2015/04/20  4.22  Float-type conversion functions.                         }
 {                                                                              }
 { Supported compilers:                                                         }
 {   Delphi XE7 Win32                    4.20  2015/03/29                       }
@@ -165,6 +164,7 @@ procedure HugeWordInitOne(out A: HugeWord);
 procedure HugeWordInitWord32(out A: HugeWord; const B: LongWord);
 procedure HugeWordInitInt32(out A: HugeWord; const B: LongInt);
 procedure HugeWordInitInt64(out A: HugeWord; const B: Int64);
+procedure HugeWordInitDouble(out A: HugeWord; const B: Double);
 procedure HugeWordInitHugeWord(out A: HugeWord; const B: HugeWord);
 
 procedure HugeWordAssignZero(var A: HugeWord); {$IFDEF UseInline}inline;{$ENDIF}
@@ -172,6 +172,7 @@ procedure HugeWordAssignOne(var A: HugeWord); {$IFDEF UseInline}inline;{$ENDIF}
 procedure HugeWordAssignWord32(var A: HugeWord; const B: LongWord);
 procedure HugeWordAssignInt32(var A: HugeWord; const B: LongInt);
 procedure HugeWordAssignInt64(var A: HugeWord; const B: Int64);
+procedure HugeWordAssignDouble(var A: HugeWord; const B: Double);
 procedure HugeWordAssign(var A: HugeWord; const B: HugeWord);
 procedure HugeWordAssignHugeIntAbs(var A: HugeWord; const B: HugeInt);
 procedure HugeWordAssignBuf(var A: HugeWord; const Buf; const BufSize: Integer;
@@ -198,6 +199,7 @@ function  HugeWordIsInt256Range(const A: HugeWord): Boolean;
 function  HugeWordToWord32(const A: HugeWord): LongWord;
 function  HugeWordToInt32(const A: HugeWord): LongInt;
 function  HugeWordToInt64(const A: HugeWord): Int64;
+function  HugeWordToDouble(const A: HugeWord): Double;
 
 function  HugeWordEqualsWord32(const A: HugeWord; const B: LongWord): Boolean;
 function  HugeWordEqualsInt32(const A: HugeWord; const B: LongInt): Boolean;
@@ -321,6 +323,7 @@ procedure HugeIntInitMinusOne(out A: HugeInt);
 procedure HugeIntInitWord32(out A: HugeInt; const B: LongWord);
 procedure HugeIntInitInt32(out A: HugeInt; const B: LongInt);
 procedure HugeIntInitInt64(out A: HugeInt; const B: Int64);
+procedure HugeIntInitDouble(out A: HugeInt; const B: Double);
 procedure HugeIntInitHugeWord(out A: HugeInt; const B: HugeWord);
 procedure HugeIntInitHugeInt(out A: HugeInt; const B: HugeInt);
 
@@ -330,6 +333,7 @@ procedure HugeIntAssignMinusOne(var A: HugeInt);
 procedure HugeIntAssignWord32(var A: HugeInt; const B: LongWord);
 procedure HugeIntAssignInt32(var A: HugeInt; const B: LongInt);
 procedure HugeIntAssignInt64(var A: HugeInt; const B: Int64);
+procedure HugeIntAssignDouble(var A: HugeInt; const B: Double);
 procedure HugeIntAssignHugeWord(var A: HugeInt; const B: HugeWord);
 procedure HugeIntAssignHugeWordNegated(var A: HugeInt; const B: HugeWord);
 procedure HugeIntAssign(var A: HugeInt; const B: HugeInt);
@@ -363,6 +367,8 @@ function  HugeIntAbs(const A: HugeInt; var B: HugeWord): Boolean;
 function  HugeIntToWord32(const A: HugeInt): LongWord;
 function  HugeIntToInt32(const A: HugeInt): LongInt;
 function  HugeIntToInt64(const A: HugeInt): Int64;
+
+function  HugeIntToDouble(const A: HugeInt): Double;
 
 function  HugeIntEqualsWord32(const A: HugeInt; const B: LongWord): Boolean;
 function  HugeIntEqualsInt32(const A: HugeInt; const B: LongInt): Boolean;
@@ -833,6 +839,12 @@ begin
   HugeWordAssignInt64(A, B);
 end;
 
+procedure HugeWordInitDouble(out A: HugeWord; const B: Double);
+begin
+  HugeWordInit(A);
+  HugeWordAssignDouble(A, B);
+end;
+
 procedure HugeWordInitHugeWord(out A: HugeWord; const B: HugeWord);
 var L : Integer;
 begin
@@ -903,6 +915,39 @@ begin
       Inc(P);
       P^ := Int64Rec(B).Hi;
       HugeWordNormalise(A);
+    end;
+end;
+
+procedure HugeWordAssignDouble(var A: HugeWord; const B: Double);
+var C, D, E : Double;
+    V : LongWord;
+    L, I : Integer;
+    P : PLongWord;
+begin
+  if Abs(Frac(B)) > 1.0E-10 then
+    RaiseConvertError;
+  if B < -1.0E-10 then
+    RaiseConvertError;
+  L := 0;
+  C := Abs(B);
+  while C >= 1.0 do
+    begin
+      C := C / 4294967296.0;
+      Inc(L);
+    end;
+  HugeWordSetSize(A, L);
+  if L = 0 then
+    exit;
+  P := A.Data;
+  C := Abs(B);
+  for I := 0 to L - 1 do
+    begin
+      D := C / 4294967296.0;
+      E := C - Trunc(D) * 4294967296.0;
+      V := LongWord(Trunc(E));
+      P^ := V;
+      Inc(P);
+      C := D;
     end;
 end;
 
@@ -1185,6 +1230,40 @@ begin
   Inc(P);
   Int64Rec(Result).Hi := P^;
 end;
+
+function HugeWordToDouble(const A: HugeWord): Double;
+var L, I : Integer;
+    P  : PLongWord;
+    R, F, T : Double;
+{$IFOPT R+}
+const
+  MaxF = 1.7E+308 / 4294967296.0 / 4294967296.0;
+{$ENDIF}
+begin
+  L := A.Used;
+  if L = 0 then
+    begin
+      Result := 0.0;
+      exit;
+    end;
+  P := A.Data;
+  R := P^;
+  F := 1.0;
+  for I := 0 to L - 2 do
+    begin
+      Inc(P);
+      F := F * 4294967296.0;
+      {$IFOPT R+}
+      if F >= MaxF then
+        RaiseRangeError;
+      {$ENDIF}
+      T := P^;
+      R := R + F * T;
+    end;
+  Result := R;
+end;
+
+
 
 { HugeWord equals Word                                                         }
 {   Pre:   A normalised                                                        }
@@ -3708,6 +3787,12 @@ begin
   HugeIntAssignInt64(A, B);
 end;
 
+procedure HugeIntInitDouble(out A: HugeInt; const B: Double);
+begin
+  HugeIntInit(A);
+  HugeIntAssignDouble(A, B);
+end;
+
 procedure HugeIntInitHugeWord(out A: HugeInt; const B: HugeWord);
 begin
   if HugeWordIsZero(B) then
@@ -3804,6 +3889,18 @@ begin
       A.Sign := 1;
       HugeWordAssignInt64(A.Value, B);
     end;
+end;
+
+procedure HugeIntAssignDouble(var A: HugeInt; const B: Double);
+begin
+  HugeWordAssignDouble(A.Value, Abs(B));
+  if HugeWordIsZero(A.Value) then
+    A.Sign := 0
+  else
+    if B < 0.0 then
+      A.Sign := -1
+    else
+      A.Sign := 1;
 end;
 
 procedure HugeIntAssignHugeWord(var A: HugeInt; const B: HugeWord);
@@ -4144,6 +4241,15 @@ begin
     end
   else
     Result := 0;
+end;
+
+function HugeIntToDouble(const A: HugeInt): Double;
+var V : Double;
+begin
+  V := HugeWordToDouble(A.Value);
+  if A.Sign < 0 then
+    V := -V;
+  Result := V;
 end;
 
 function HugeIntEqualsWord32(const A: HugeInt; const B: LongWord): Boolean;
@@ -5133,6 +5239,7 @@ begin
   Assert(HugeWordSetBitScanReverse(A) = -1);
   Assert(HugeWordClearBitScanForward(A) = 0);
   Assert(HugeWordClearBitScanReverse(A) = 0);
+  Assert(HugeWordToDouble(A) = 0.0);
 
   // One
   HugeWordAssignOne(A);
@@ -5147,6 +5254,7 @@ begin
   Assert(HugeWordSetBitScanReverse(A) = 0);
   Assert(HugeWordClearBitScanForward(A) = 1);
   Assert(HugeWordClearBitScanReverse(A) = 1);
+  Assert(HugeWordToDouble(A) = 1.0);
 
   // $FFFFFFFF
   HugeWordAssignZero(A);
@@ -5183,6 +5291,7 @@ begin
   Assert(HugeWordSetBitScanReverse(A) = 31);
   Assert(HugeWordClearBitScanForward(A) = 32);
   Assert(HugeWordClearBitScanReverse(A) = 32);
+  Assert(HugeWordToDouble(A) = 4294967295.0);
 
   // $80000000
   HugeWordAssignWord32(A, $80000000);
@@ -5207,6 +5316,7 @@ begin
   Assert(HugeWordSetBitScanReverse(A) = 32);
   Assert(HugeWordClearBitScanForward(A) = 0);
   Assert(HugeWordClearBitScanReverse(A) = 33);
+  Assert(HugeWordToDouble(A) = 4294967296.0);
 
   // $1234567890ABCDEF
   HugeWordAssignInt64(A, $1234567890ABCDEF);
@@ -5215,6 +5325,7 @@ begin
   Assert(not HugeWordIsZero(A));
   Assert(HugeWordIsInt64Range(A));
   Assert(HugeWordToHexA(A) = '1234567890ABCDEF');
+  Assert(Abs(HugeWordToDouble(A) - 1311768467294899695.0) <= 1E12);
 
   // $7654321800000000
   HugeWordAssignInt64(A, $7654321800000000);
@@ -5224,6 +5335,7 @@ begin
   Assert(not HugeWordIsInt32Range(A));
   Assert(HugeWordIsInt64Range(A));
   Assert(HugeWordToStrA(A) = '8526495073179795456');
+  Assert(HugeWordToDouble(A) = 8526495073179795456.0);
   Assert(HugeWordToHexA(A) = '7654321800000000');
 
   // Swap
@@ -5514,6 +5626,16 @@ begin
   HugeWordPower(A, 1);
   Assert(HugeWordToInt32(A) = 1);
 
+  // AssignDouble
+  HugeWordAssignDouble(A, 0.0);
+  Assert(HugeWordToInt64(A) = 0);
+  HugeWordAssignDouble(A, 1.0);
+  Assert(HugeWordToInt64(A) = 1);
+  HugeWordAssignDouble(A, 4294967295.0);
+  Assert(HugeWordToInt64(A) = $FFFFFFFF);
+  HugeWordAssignDouble(A, 4294967296.0);
+  Assert(HugeWordToInt64(A) = $100000000);
+
   // HexTo/ToHex
   HexToHugeWordA('0', A);
   Assert(HugeWordToHexA(A) = '00000000');
@@ -5653,6 +5775,7 @@ begin
   Assert(HugeIntToHexA(A) = '00000000');
   Assert(HugeIntToWord32(A) = 0);
   Assert(HugeIntToInt32(A) = 0);
+  Assert(HugeIntToDouble(A) = 0.0);
   StrToHugeIntA('0', A);
   Assert(HugeIntIsZero(A));
   Assert(HugeIntCompareInt64(A, MinInt64 { -$8000000000000000 }) = 1);
@@ -5694,6 +5817,7 @@ begin
   Assert(not HugeIntIsNegative(A));
   Assert(HugeIntIsInt32Range(A));
   Assert(HugeIntIsWord32Range(A));
+  Assert(HugeIntToDouble(A) = 1.0);
   StrToHugeIntA('1', A);
   Assert(HugeIntIsOne(A));
   Assert(HugeIntCompareInt64(A, MinInt64 { -$8000000000000000 }) = 1);
@@ -5730,6 +5854,7 @@ begin
   Assert(HugeIntIsInt32Range(A));
   Assert(HugeIntIsInt64Range(A));
   Assert(not HugeIntIsWord32Range(A));
+  Assert(HugeIntToDouble(A) = -1.0);
   StrToHugeIntA('-1', A);
   Assert(HugeIntIsMinusOne(A));
   Assert(HugeIntCompareInt64(A, MinInt64 { -$8000000000000000 }) = 1);
@@ -5753,6 +5878,7 @@ begin
   Assert(HugeIntToInt64(A) = MinInt64 { -$8000000000000000 });
   Assert(HugeIntToStrA(A) = '-9223372036854775808');
   Assert(HugeIntToHexA(A) = '-8000000000000000');
+  Assert(HugeIntToDouble(A) = -9223372036854775808.0);
   Assert(HugeIntEqualsInt64(A, MinInt64 { -$8000000000000000 }));
   Assert(not HugeIntEqualsInt64(A, MinInt32 { -$80000000 }));
   Assert(HugeIntCompareInt64(A, MinInt64 { -$8000000000000000 }) = 0);
@@ -5775,6 +5901,9 @@ begin
   Assert(HugeIntToInt64(A) = -$7FFFFFFFFFFFFFFF);
   Assert(HugeIntToStrA(A) = '-9223372036854775807');
   Assert(HugeIntToHexA(A) = '-7FFFFFFFFFFFFFFF');
+  {$IFNDEF CPU_32}
+  Assert(HugeIntToDouble(A) = -9223372036854775807.0);
+  {$ENDIF}
   Assert(HugeIntEqualsInt64(A, -$7FFFFFFFFFFFFFFF));
   Assert(not HugeIntEqualsInt64(A, MinInt64 { -$8000000000000000 }));
   Assert(HugeIntCompareInt64(A, -$7FFFFFFFFFFFFFFE) = -1);
@@ -5797,6 +5926,9 @@ begin
   HugeIntSubtractInt32(A, 1);
   Assert(HugeIntToStrA(A) = '-9223372036854775809');
   Assert(HugeIntToHexA(A) = '-8000000000000001');
+  {$IFNDEF CPU_32}
+  Assert(HugeIntToDouble(A) = -9223372036854775809.0);
+  {$ENDIF}
   Assert(not HugeIntEqualsInt64(A, MinInt64 { -$8000000000000000 }));
   Assert(HugeIntCompareInt64(A, MinInt64 { -$8000000000000000 }) = -1);
   Assert(not HugeIntIsInt64Range(A));
@@ -6154,6 +6286,14 @@ begin
   HugeIntAssignMinusOne(A);
   HugeIntPower(A, 2);
   Assert(HugeIntToInt32(A) = 1);
+
+  // AssignDouble
+  HugeIntAssignDouble(A, 0.0);
+  Assert(HugeIntToDouble(A) = 0.0);
+  HugeIntAssignDouble(A, 1.0);
+  Assert(HugeIntToDouble(A) = 1.0);
+  HugeIntAssignDouble(A, -1.0);
+  Assert(HugeIntToDouble(A) = -1.0);
 
   // ToStr/StrTo
   StrToHugeIntA('-1234567890', A);

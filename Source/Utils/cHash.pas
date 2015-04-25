@@ -29,9 +29,8 @@
 {                     USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE             }
 {                     POSSIBILITY OF SUCH DAMAGE.                              }
 {                                                                              }
-{   Home page:        http://fundementals.sourceforge.net                      }
-{   Forum:            http://sourceforge.net/forum/forum.php?forum_id=2117     }
-{   E-mail:           fundamentals.library@gmail.com                           }
+{   Github:           https://github.com/fundamentalslib                       }
+{   E-mail:           fundamentalslib at gmail.com                             }
 {                                                                              }
 { Revision history:                                                            }
 {                                                                              }

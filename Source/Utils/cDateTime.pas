@@ -29,8 +29,7 @@
 {                     USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE             }
 {                     POSSIBILITY OF SUCH DAMAGE.                              }
 {                                                                              }
-{   Home page:        http://fundementals.sourceforge.net                      }
-{   Forum:            http://sourceforge.net/forum/forum.php?forum_id=2117     }
+{   Github:           https://github.com/fundamentalslib                       }
 {   E-mail:           fundamentalslib at gmail.com                             }
 {                                                                              }
 { Revision history:                                                            }
@@ -75,9 +74,10 @@
 
 {$INCLUDE ..\cFundamentals.inc}
 
-{$IFDEF FREEPASCAL}{$IFDEF DEBUG}
-  {$WARNINGS OFF}{$HINTS OFF}
-{$ENDIF}{$ENDIF}
+{$IFDEF FREEPASCAL}
+  {$WARNINGS OFF}
+  {$HINTS OFF}
+{$ENDIF}
 
 unit cDateTime;
 
@@ -298,28 +298,28 @@ function  DateTimeToUnixTime(const D: TDateTime): LongWord;
 {                  "June" | "July" | "August" | "September" | "October" |      }
 {                  "November" | "December"                                     }
 {                                                                              }
-function  EnglishShortDayOfWeekStrA(const DayOfWeek: Integer): AnsiString;
+function  EnglishShortDayOfWeekStrA(const DayOfWeek: Integer): RawByteString;
 function  EnglishShortDayOfWeekStrU(const DayOfWeek: Integer): UnicodeString;
 
-function  EnglishLongDayOfWeekStrA(const DayOfWeek: Integer): AnsiString;
+function  EnglishLongDayOfWeekStrA(const DayOfWeek: Integer): RawByteString;
 function  EnglishLongDayOfWeekStrU(const DayOfWeek: Integer): UnicodeString;
 
-function  EnglishShortMonthStrA(const Month: Integer): AnsiString;
+function  EnglishShortMonthStrA(const Month: Integer): RawByteString;
 function  EnglishShortMonthStrU(const Month: Integer): UnicodeString;
 
-function  EnglishLongMonthStrA(const Month: Integer): AnsiString;
+function  EnglishLongMonthStrA(const Month: Integer): RawByteString;
 function  EnglishLongMonthStrU(const Month: Integer): UnicodeString;
 
-function  EnglishShortDayOfWeekA(const S: AnsiString): Integer;
+function  EnglishShortDayOfWeekA(const S: RawByteString): Integer;
 function  EnglishShortDayOfWeekU(const S: UnicodeString): Integer;
 
-function  EnglishLongDayOfWeekA(const S: AnsiString): Integer;
+function  EnglishLongDayOfWeekA(const S: RawByteString): Integer;
 function  EnglishLongDayOfWeekU(const S: UnicodeString): Integer;
 
-function  EnglishShortMonthA(const S: AnsiString): Integer;
+function  EnglishShortMonthA(const S: RawByteString): Integer;
 function  EnglishShortMonthU(const S: UnicodeString): Integer;
 
-function  EnglishLongMonthA(const S: AnsiString): Integer;
+function  EnglishLongMonthA(const S: RawByteString): Integer;
 function  EnglishLongMonthU(const S: UnicodeString): Integer;
 
 
@@ -439,41 +439,41 @@ function  EnglishLongMonthU(const S: UnicodeString): Integer;
 {                      | "May" | "Jun" | "Jul" | "Aug"                         }
 {                      | "Sep" | "Oct" | "Nov" | "Dec"                      "  }
 {                                                                              }
-function  RFC850DayOfWeekA(const S: AnsiString): Integer;
+function  RFC850DayOfWeekA(const S: RawByteString): Integer;
 function  RFC850DayOfWeekU(const S: UnicodeString): Integer;
 
 function  RFC1123DayOfWeek(const S: String): Integer;
-function  RFC1123DayOfWeekA(const S: AnsiString): Integer;
+function  RFC1123DayOfWeekA(const S: RawByteString): Integer;
 function  RFC1123DayOfWeekU(const S: UnicodeString): Integer;
 
 function  RFCMonth(const S: String): Word;
-function  RFCMonthA(const S: AnsiString): Word;
+function  RFCMonthA(const S: RawByteString): Word;
 function  RFCMonthU(const S: UnicodeString): Word;
 
 function  GMTTimeToRFC1123Time(const D: TDateTime;
           const IncludeSeconds: Boolean = False): String;
 function  GMTTimeToRFC1123TimeA(const D: TDateTime;
-          const IncludeSeconds: Boolean = False): AnsiString;
+          const IncludeSeconds: Boolean = False): RawByteString;
 function  GMTTimeToRFC1123TimeU(const D: TDateTime;
           const IncludeSeconds: Boolean = False): UnicodeString;
 
 function  GMTDateTimeToRFC1123DateTime(const D: TDateTime;
           const IncludeDayOfWeek: Boolean = True): String;
 function  GMTDateTimeToRFC1123DateTimeA(const D: TDateTime;
-          const IncludeDayOfWeek: Boolean = True): AnsiString;
+          const IncludeDayOfWeek: Boolean = True): RawByteString;
 function  GMTDateTimeToRFC1123DateTimeU(const D: TDateTime;
           const IncludeDayOfWeek: Boolean = True): UnicodeString;
 
-function  DateTimeToRFCDateTimeA(const D: TDateTime): AnsiString;
+function  DateTimeToRFCDateTimeA(const D: TDateTime): RawByteString;
 function  DateTimeToRFCDateTimeU(const D: TDateTime): UnicodeString;
 
-function  NowAsRFCDateTimeA: AnsiString;
+function  NowAsRFCDateTimeA: RawByteString;
 function  NowAsRFCDateTimeU: UnicodeString;
 
-function  RFCDateTimeToGMTDateTime(const S: AnsiString): TDateTime;
-function  RFCDateTimeToDateTime(const S: AnsiString): TDateTime;
+function  RFCDateTimeToGMTDateTimeA(const S: RawByteString): TDateTime;
+function  RFCDateTimeToDateTimeA(const S: RawByteString): TDateTime;
 
-function  RFCTimeZoneToGMTBias(const Zone: AnsiString): Integer;
+function  RFCTimeZoneToGMTBiasA(const Zone: RawByteString): Integer;
 
 
 
@@ -492,7 +492,7 @@ const
 {                                                                              }
 { Natural language                                                             }
 {                                                                              }
-function  TimePeriodStr(const D: TDateTime): AnsiString;
+function  TimePeriodStr(const D: TDateTime): RawByteString;
 
 
 
@@ -1423,33 +1423,33 @@ end;
 { English Language DateTimes                                                   }
 {                                                                              }
 const
-  EnglishShortDayNamesA : array[1..7] of AnsiString = (
+  EnglishShortDayNamesA : array[1..7] of RawByteString = (
       'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat');
   EnglishShortDayNamesU : array[1..7] of UnicodeString = (
       'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat');
 
-  EnglishLongDayNamesA : array[1..7] of AnsiString = (
+  EnglishLongDayNamesA : array[1..7] of RawByteString = (
       'Sunday', 'Monday', 'Tuesday', 'Wednesday',
       'Thursday', 'Friday', 'Saturday');
   EnglishLongDayNamesU : array[1..7] of UnicodeString = (
       'Sunday', 'Monday', 'Tuesday', 'Wednesday',
       'Thursday', 'Friday', 'Saturday');
 
-  EnglishShortMonthNamesA : array[1..12] of AnsiString = (
+  EnglishShortMonthNamesA : array[1..12] of RawByteString = (
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec');
   EnglishShortMonthNamesU : array[1..12] of UnicodeString = (
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec');
 
-  EnglishLongMonthNamesA : array[1..12] of AnsiString = (
+  EnglishLongMonthNamesA : array[1..12] of RawByteString = (
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December');
   EnglishLongMonthNamesU : array[1..12] of UnicodeString = (
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December');
 
-function EnglishShortDayOfWeekStrA(const DayOfWeek: Integer): AnsiString;
+function EnglishShortDayOfWeekStrA(const DayOfWeek: Integer): RawByteString;
 begin
   if DayOfWeek in [1..7] then
     Result := EnglishShortDayNamesA[DayOfWeek]
@@ -1465,7 +1465,7 @@ begin
     Result := '';
 end;
 
-function EnglishLongDayOfWeekStrA(const DayOfWeek: Integer): AnsiString;
+function EnglishLongDayOfWeekStrA(const DayOfWeek: Integer): RawByteString;
 begin
   if DayOfWeek in [1..7] then
     Result := EnglishLongDayNamesA[DayOfWeek]
@@ -1481,7 +1481,7 @@ begin
     Result := '';
 end;
 
-function EnglishShortMonthStrA(const Month: Integer): AnsiString;
+function EnglishShortMonthStrA(const Month: Integer): RawByteString;
 begin
   if Month in [1..12] then
     Result := EnglishShortMonthNamesA[Month]
@@ -1497,7 +1497,7 @@ begin
     Result := '';
 end;
 
-function EnglishLongMonthStrA(const Month: Integer): AnsiString;
+function EnglishLongMonthStrA(const Month: Integer): RawByteString;
 begin
   if Month in [1..12] then
     Result := EnglishLongMonthNamesA[Month]
@@ -1513,11 +1513,11 @@ begin
     Result := '';
 end;
 
-function EnglishShortDayOfWeekA(const S: AnsiString): Integer;
+function EnglishShortDayOfWeekA(const S: RawByteString): Integer;
 var I : Integer;
 begin
   for I := 1 to 7 do
-    if StrEqualNoAsciiCaseA(EnglishShortDayNamesA[I], S) then
+    if StrEqualNoAsciiCaseB(EnglishShortDayNamesA[I], S) then
       begin
         Result := I;
         exit;
@@ -1537,11 +1537,11 @@ begin
   Result := -1;
 end;
 
-function EnglishLongDayOfWeekA(const S: AnsiString): Integer;
+function EnglishLongDayOfWeekA(const S: RawByteString): Integer;
 var I : Integer;
 begin
   for I := 1 to 7 do
-    if StrEqualNoAsciiCaseA(EnglishLongDayNamesA[I], S) then
+    if StrEqualNoAsciiCaseB(EnglishLongDayNamesA[I], S) then
       begin
         Result := I;
         exit;
@@ -1561,11 +1561,11 @@ begin
   Result := -1;
 end;
 
-function EnglishShortMonthA(const S: AnsiString): Integer;
+function EnglishShortMonthA(const S: RawByteString): Integer;
 var I : Integer;
 begin
   for I := 1 to 12 do
-    if StrEqualNoAsciiCaseA(EnglishShortMonthNamesA[I], S) then
+    if StrEqualNoAsciiCaseB(EnglishShortMonthNamesA[I], S) then
       begin
         Result := I;
         exit;
@@ -1585,11 +1585,11 @@ begin
   Result := -1;
 end;
 
-function EnglishLongMonthA(const S: AnsiString): Integer;
+function EnglishLongMonthA(const S: RawByteString): Integer;
 var I : Integer;
 begin
   for I := 1 to 12 do
-    if StrEqualNoAsciiCaseA(EnglishLongMonthNamesA[I], S) then
+    if StrEqualNoAsciiCaseB(EnglishLongMonthNamesA[I], S) then
       begin
         Result := I;
         exit;
@@ -1617,7 +1617,7 @@ end;
 const
   RFC_SPACE = csWhiteSpace;
 
-  RFC850DayNamesA : array[1..7] of AnsiString = (
+  RFC850DayNamesA : array[1..7] of RawByteString = (
       'Sunday', 'Monday', 'Tuesday', 'Wednesday',
       'Thursday', 'Friday', 'Saturday');
   RFC850DayNamesU : array[1..7] of UnicodeString = (
@@ -1626,7 +1626,7 @@ const
 
   RFC1123DayNames : array[1..7] of String = (
       'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat');
-  RFC1123DayNamesA : array[1..7] of AnsiString = (
+  RFC1123DayNamesA : array[1..7] of RawByteString = (
       'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat');
   RFC1123DayNamesU : array[1..7] of UnicodeString = (
       'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat');
@@ -1634,18 +1634,18 @@ const
   RFCMonthNames : array[1..12] of String = (
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec');
-  RFCMonthNamesA : array[1..12] of AnsiString = (
+  RFCMonthNamesA : array[1..12] of RawByteString = (
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec');
   RFCMonthNamesU : array[1..12] of UnicodeString = (
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec');
 
-function RFC850DayOfWeekA(const S: AnsiString): Integer;
+function RFC850DayOfWeekA(const S: RawByteString): Integer;
 var I : Integer;
 begin
   for I := 1 to 7 do
-    if StrEqualNoAsciiCaseA(RFC850DayNamesA[I], S) then
+    if StrEqualNoAsciiCaseB(RFC850DayNamesA[I], S) then
       begin
         Result := I;
         exit;
@@ -1677,7 +1677,7 @@ begin
   Result := -1;
 end;
 
-function RFC1123DayOfWeekA(const S: AnsiString): Integer;
+function RFC1123DayOfWeekA(const S: RawByteString): Integer;
 var I : Integer;
 begin
   for I := 1 to 7 do
@@ -1713,11 +1713,11 @@ begin
   Result := 0;
 end;
 
-function RFCMonthA(const S: AnsiString): Word;
+function RFCMonthA(const S: RawByteString): Word;
 var I : Word;
 begin
   for I := 1 to 12 do
-    if StrEqualNoAsciiCaseA(RFCMonthNamesA[I], S) then
+    if StrEqualNoAsciiCaseB(RFCMonthNamesA[I], S) then
       begin
         Result := I;
         exit;
@@ -1748,14 +1748,14 @@ begin
   Result := Result + ' GMT';
 end;
 
-function GMTTimeToRFC1123TimeA(const D: TDateTime; const IncludeSeconds: Boolean): AnsiString;
+function GMTTimeToRFC1123TimeA(const D: TDateTime; const IncludeSeconds: Boolean): RawByteString;
 var Ho, Mi, Se, Ms : Word;
 begin
   DecodeTime(D, Ho, Mi, Se, Ms);
-  Result := StrPadLeftA(IntToStringA(Ho), '0', 2) + ':' +
-            StrPadLeftA(IntToStringA(Mi), '0', 2);
+  Result := StrPadLeftB(IntToStringB(Ho), '0', 2) + ':' +
+            StrPadLeftB(IntToStringB(Mi), '0', 2);
   if IncludeSeconds then
-    Result := Result + ':' + StrPadLeftA(IntToStringA(Se), '0', 2);
+    Result := Result + ':' + StrPadLeftB(IntToStringB(Se), '0', 2);
   Result := Result + ' GMT';
 end;
 
@@ -1785,7 +1785,8 @@ begin
             GMTTimeToRFC1123Time(D, True);
 end;
 
-function GMTDateTimeToRFC1123DateTimeA(const D: TDateTime; const IncludeDayOfWeek: Boolean): AnsiString;
+function GMTDateTimeToRFC1123DateTimeA(const D: TDateTime;
+         const IncludeDayOfWeek: Boolean): RawByteString;
 var Ye, Mo, Da : Word;
 begin
   DecodeDate(D, Ye, Mo, Da);
@@ -1794,9 +1795,9 @@ begin
   else
     Result := '';
   Result := Result +
-            StrPadLeftA(IntToStringA(Da), '0', 2) + ' ' +
+            StrPadLeftB(IntToStringB(Da), '0', 2) + ' ' +
             RFCMonthNamesA[Mo] + ' ' +
-            IntToStringA(Ye) + ' ' +
+            IntToStringB(Ye) + ' ' +
             GMTTimeToRFC1123TimeA(D, True);
 end;
 
@@ -1815,7 +1816,7 @@ begin
             GMTTimeToRFC1123TimeU(D, True);
 end;
 
-function DateTimeToRFCDateTimeA(const D: TDateTime): AnsiString;
+function DateTimeToRFCDateTimeA(const D: TDateTime): RawByteString;
 begin
   Result := GMTDateTimeToRFC1123DateTimeA(LocalTimeToGMTTime(D), True);
 end;
@@ -1825,7 +1826,7 @@ begin
   Result := GMTDateTimeToRFC1123DateTimeU(LocalTimeToGMTTime(D), True);
 end;
 
-function NowAsRFCDateTimeA: AnsiString;
+function NowAsRFCDateTimeA: RawByteString;
 begin
   Result := DateTimeToRFCDateTimeA(Now);
 end;
@@ -1901,10 +1902,10 @@ begin
   Result := False;
 end;
 
-function RFCTimeZoneToGMTBias(const Zone: AnsiString): Integer;
+function RFCTimeZoneToGMTBiasA(const Zone: RawByteString): Integer;
 var
   C : AnsiChar;
-  S : AnsiString;
+  S : RawByteString;
 begin
   if Zone = '' then
     begin
@@ -1914,17 +1915,17 @@ begin
   C := Zone[1];
   if (C = '+') or (C = '-') then // +hhmm format
     begin
-      S := StrTrimA(Zone, RFC_SPACE);
-      Result := MaxI(-23, MinI(23, StringToIntDefA(Copy(S, 2, 2), 0))) * 60;
-      S := CopyFromA(S, 4);
+      S := StrTrimB(Zone, RFC_SPACE);
+      Result := MaxI(-23, MinI(23, StringToIntDefB(Copy(S, 2, 2), 0))) * 60;
+      S := CopyFromB(S, 4);
       if S <> '' then
-        Result := Result + MinI(59, MaxI(0, StringToIntDefA(S, 0)));
+        Result := Result + MinI(59, MaxI(0, StringToIntDefB(S, 0)));
       if Zone[1] = '-' then
         Result := -Result;
     end
   else
     begin // named format
-      S := StrTrimA(Zone, RFC_SPACE);
+      S := StrTrimB(Zone, RFC_SPACE);
       if not RFCNamedTimeZoneToGMTBiasA(S, Result) then
         Result := 0;
     end;
@@ -1949,7 +1950,7 @@ begin
   I := PosCharSetRevA(RFC_SPACE, T);
   if I > 0 then
     begin
-      Bias := RFCTimeZoneToGMTBias(CopyFromA(T, I + 1));
+      Bias := RFCTimeZoneToGMTBiasA(CopyFromA(T, I + 1));
       T := StrTrimA(CopyLeftA(T, I - 1), RFC_SPACE);
     end
   else
@@ -2006,45 +2007,44 @@ begin
 end;
 
 {$IFDEF DELPHI5}{$OPTIMIZATION OFF}{$ENDIF}
-function RFCDateTimeToGMTDateTime(const S: AnsiString): TDateTime;
+function RFCDateTimeToGMTDateTimeA(const S: RawByteString): TDateTime;
 var
-  T, U : AnsiString;
+  T, U : RawByteString;
   I : Integer;
   D, M, Y, DOW, Ho, Mi, Se : Integer;
-  V, W : AnsiStringArray;
-
+  V, W : RawByteStringArray;
 begin
   Result := 0.0;
 
   W := nil;
-  T := StrTrimA(S, RFC_SPACE);
+  T := StrTrimB(S, RFC_SPACE);
 
   // Extract Day of week
-  I := PosCharSetA(RFC_SPACE + [','], T);
+  I := PosCharSetB(RFC_SPACE + [','], T);
   if I > 0 then
     begin
-      U := CopyLeftA(T, I - 1);
+      U := CopyLeftB(T, I - 1);
       DOW := RFC850DayOfWeekA(U);
       if DOW = -1 then
         DOW := RFC1123DayOfWeekA(U);
       if DOW <> -1 then
-        T := StrTrimA(CopyFromA(S, I + 1), RFC_SPACE);
+        T := StrTrimB(CopyFromB(S, I + 1), RFC_SPACE);
     end;
 
-  V := StrSplitCharSetA(T, RFC_SPACE);
+  V := StrSplitCharSetB(T, RFC_SPACE);
   if Length(V) < 3 then
     exit;
 
-  if PosCharA('-', V[0]) > 0 then // RFC850 date, eg "Sunday, 06-Nov-94 08:49:37 GMT"
+  if PosCharB('-', V[0]) > 0 then // RFC850 date, eg "Sunday, 06-Nov-94 08:49:37 GMT"
     begin
-      W := StrSplitCharA(V[0], AnsiChar('-'));
+      W := StrSplitCharB(V[0], AnsiChar('-'));
       if Length(W) <> 3 then
         exit;
       M := RFCMonthA(W[1]);
       if M = 0 then
         exit;
-      D := StringToIntDefA(W[0], 0);
-      Y := StringToIntDefA(W[2], 0);
+      D := StringToIntDefB(W[0], 0);
+      Y := StringToIntDefB(W[2], 0);
       if Y < 100 then
         Y := TwoDigitRadix2000YearToYear(Y);
       RFCTimeToGMTTime(V[1] + ' ' + V[2], Ho, Mi, Se);
@@ -2055,8 +2055,8 @@ begin
   M := RFCMonthA(V[1]);
   if M >= 1 then // RFC822 date, eg Sun, 06 Nov 1994 08:49:37 GMT
     begin
-      D := StringToIntDefA(V[0], 0);
-      Y := StringToIntDefA(V[2], 0);
+      D := StringToIntDefB(V[0], 0);
+      Y := StringToIntDefB(V[2], 0);
       Ho := 0;
       Mi := 0;
       Se := 0;
@@ -2071,17 +2071,17 @@ begin
   M := RFCMonthA(V[0]);
   if M >= 1 then // ANSI C asctime() format, eg "Sun Nov  6 08:49:37 1994"
     begin
-      D := StringToIntDefA(V[1], 0);
-      Y := StringToIntDefA(V[3], 0);
+      D := StringToIntDefB(V[1], 0);
+      Y := StringToIntDefB(V[3], 0);
       RFCTimeToGMTTime(V[2], Ho, Mi, Se);
       Result := EncodeBiasedDateTime(Y, M, D, Ho, Mi, Se);
     end;
 end;
 {$IFDEF DELPHI5}{$OPTIMIZATION ON}{$ENDIF}
 
-function RFCDateTimeToDateTime(const S: AnsiString): TDateTime;
+function RFCDateTimeToDateTimeA(const S: RawByteString): TDateTime;
 begin
-  Result := GMTTimeToLocalTime(RFCDateTimeToGMTDateTime(S));
+  Result := GMTTimeToLocalTime(RFCDateTimeToGMTDateTimeA(S));
 end;
 
 
@@ -2089,7 +2089,7 @@ end;
 {                                                                              }
 { Natural language                                                             }
 {                                                                              }
-function TimePeriodStr(const D: TDateTime): AnsiString;
+function TimePeriodStr(const D: TDateTime): RawByteString;
 var E : TDateTime;
     I : Integer;
 begin
@@ -2102,7 +2102,7 @@ begin
       if I = 1 then
         Result := 'a week'
       else
-        Result := IntToStringA(I) + ' weeks';
+        Result := IntToStringB(I) + ' weeks';
     end else
   if E >= OneDay then
     begin
@@ -2110,7 +2110,7 @@ begin
       if I = 1 then
         Result := 'a day'
       else
-        Result := IntToStringA(I) + ' days';
+        Result := IntToStringB(I) + ' days';
     end else
   if E >= OneHour then
     begin
@@ -2118,7 +2118,7 @@ begin
       if I = 1 then
         Result := 'an hour'
       else
-        Result := IntToStringA(I) + ' hours';
+        Result := IntToStringB(I) + ' hours';
     end else
   if E >= OneMinute then
     begin
@@ -2126,7 +2126,7 @@ begin
       if I = 1 then
         Result := 'a minute'
       else
-        Result := IntToStringA(I) + ' minutes';
+        Result := IntToStringB(I) + ' minutes';
     end
   else
     begin
@@ -2134,7 +2134,7 @@ begin
       if I = 1 then
         Result := 'a second'
       else
-        Result := IntToStringA(I) + ' seconds';
+        Result := IntToStringB(I) + ' seconds';
     end;
 end;
 
@@ -2212,7 +2212,7 @@ begin
           begin
             A := EncodeDateTime(Ye, Mo, Da, Ho, 11, 10, 0);
             S := GMTDateTimeToRFC1123DateTimeA(A, True);
-            B := RFCDateTimeToGMTDateTime(S);
+            B := RFCDateTimeToGMTDateTimeA(S);
             Assert(IsEqual(A, B), 'RFCDateTimeToGMTDateTime');
           end;
 
@@ -2222,8 +2222,8 @@ begin
   Assert(RFCMonthA('Jan') = 1, 'RFCMonth');
   Assert(RFCMonthA('Nov') = 11, 'RFCMonth');
   Assert(EnglishLongMonthNamesA[12] = 'December', 'EnglishLongMonthNames');
-  Assert(RFCTimeZoneToGMTBias('GMT') = 0, 'RFCTimeZoneToGMTBias');
-  Assert(RFCTimeZoneToGMTBias('est') = -300, 'RFCTimeZoneToGMTBias');
+  Assert(RFCTimeZoneToGMTBiasA('GMT') = 0, 'RFCTimeZoneToGMTBias');
+  Assert(RFCTimeZoneToGMTBiasA('est') = -300, 'RFCTimeZoneToGMTBias');
 
   Assert(TickDelta(9, 9) = 0, 'TickDelta');
   Assert(TickDelta(100, 120) = 20, 'TickDelta');

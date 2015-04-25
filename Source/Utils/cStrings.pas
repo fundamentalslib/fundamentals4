@@ -2,7 +2,7 @@
 {                                                                              }
 {   Library:          Fundamentals 4.00                                        }
 {   File name:        cStrings.pas                                             }
-{   File version:     4.60                                                     }
+{   File version:     4.61                                                     }
 {   Description:      String utility functions                                 }
 {                                                                              }
 {   Copyright:        Copyright (c) 1999-2015, David J Butler                  }
@@ -29,9 +29,8 @@
 {                     USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE             }
 {                     POSSIBILITY OF SUCH DAMAGE.                              }
 {                                                                              }
-{   Home page:        http://fundementals.sourceforge.net                      }
-{   Forum:            http://sourceforge.net/forum/forum.php?forum_id=2117     }
-{   E-mail:           fundamentalslib@gmail.com                                }
+{   Github:           https://github.com/fundamentalslib                       }
+{   E-mail:           fundamentalslib at gmail.com                             }
 {                                                                              }
 { Revision history:                                                            }
 {                                                                              }
@@ -104,6 +103,7 @@
 {   2013/05/12  4.58  Move string type definitions to Utils unit.              }
 {   2014/08/26  4.59  StringBuilder unit tests.                                }
 {   2015/03/13  4.60  RawByteString functions.                                 }
+{   2015/04/11  4.61  UnicodeString functions.                                 }
 {                                                                              }
 { Supported compilers:                                                         }
 {                                                                              }
@@ -972,6 +972,7 @@ function  StrIsAlphaNumeric(const S: String): Boolean;
 function  StrIsIntegerA(const S: AnsiString): Boolean;
 function  StrIsIntegerB(const S: RawByteString): Boolean;
 function  StrIsIntegerW(const S: WideString): Boolean;
+function  StrIsIntegerU(const S: UnicodeString): Boolean;
 function  StrIsInteger(const S: String): Boolean;
 
 
@@ -980,10 +981,17 @@ function  StrIsInteger(const S: String): Boolean;
 { Pos                                                                          }
 {                                                                              }
 {$IFNDEF ManagedCode}
-function  StrPPosChar(const F: AnsiChar; const S: PAnsiChar; const Len: Integer): Integer; overload;
-function  StrPPosChar(const F: CharSet; const S: PAnsiChar; const Len: Integer): Integer; overload;
-function  StrPPos(const F, S: PAnsiChar; const LenF, LenS: Integer): Integer;
-function  StrPPosStr(const F: String; const S: PAnsiChar; const Len: Integer): Integer;
+function  StrPPosCharA(const F: AnsiChar; const S: PAnsiChar; const Len: Integer): Integer;
+function  StrPPosCharW(const F: WideChar; const S: PWideChar; const Len: Integer): Integer;
+
+function  StrPPosCharSetA(const F: CharSet; const S: PAnsiChar; const Len: Integer): Integer;
+function  StrPPosCharSetW(const F: CharSet; const S: PWideChar; const Len: Integer): Integer;
+
+function  StrPPosA(const F, S: PAnsiChar; const LenF, LenS: Integer): Integer;
+function  StrPPosW(const F, S: PWideChar; const LenF, LenS: Integer): Integer;
+
+function  StrPPosStrA(const F: AnsiString; const S: PAnsiChar; const Len: Integer): Integer;
+function  StrPPosStrB(const F: RawByteString; const S: PAnsiChar; const Len: Integer): Integer;
 
 function  StrZPosCharA(const F: AnsiChar; const S: PAnsiChar): Integer;
 function  StrZPosCharW(const F: WideChar; const S: PWideChar): Integer;
@@ -1200,6 +1208,7 @@ function  CopyRightU(const S: UnicodeString; const Count: Integer): UnicodeStrin
 function  CopyRight(const S: String; const Count: Integer): String;
 
 function  CopyLeftEllipsedA(const S: AnsiString; const Count: Integer): AnsiString;
+function  CopyLeftEllipsedU(const S: UnicodeString; const Count: Integer): UnicodeString;
 
 
 
@@ -1296,6 +1305,7 @@ procedure StrTrimInPlace(var S: String;         const C: CharSet{$IFNDEF CLR} = 
 procedure TrimStringsA(var S: AnsiStringArray; const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}); overload;
 procedure TrimStringsB(var S: RawByteStringArray; const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}); overload;
 procedure TrimStringsW(var S: WideStringArray; const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}); overload;
+procedure TrimStringsU(var S: UnicodeStringArray; const C: CharSet{$IFNDEF CLR} = csWhiteSpace{$ENDIF}); overload;
 
 
 
@@ -1404,6 +1414,15 @@ function  StrBetweenCharW(const S: WideString;
           const FirstOptional: Boolean = False;
           const SecondOptional: Boolean = False): WideString; overload;
 
+function  StrBetweenCharU(const S: UnicodeString;
+          const FirstDelim, SecondDelim: WideChar;
+          const FirstOptional: Boolean = False;
+          const SecondOptional: Boolean = False): UnicodeString; overload;
+function  StrBetweenCharU(const S: UnicodeString;
+          const FirstDelim, SecondDelim: CharSet;
+          const FirstOptional: Boolean = False;
+          const SecondOptional: Boolean = False): UnicodeString; overload;
+
 function  StrBetweenChar(const S: String;
           const FirstDelim, SecondDelim: Char;
           const FirstOptional: Boolean = False;
@@ -1449,6 +1468,18 @@ function  StrBetweenW(const S: WideString;
           const FirstDelimAsciiCaseSensitive: Boolean = True;
           const SecondDelimAsciiCaseSensitive: Boolean = True): WideString; overload;
 
+function  StrBetweenU(const S: UnicodeString;
+          const FirstDelim: UnicodeString; const SecondDelim: CharSet;
+          const FirstOptional: Boolean = False;
+          const SecondOptional: Boolean = False;
+          const FirstDelimAsciiCaseSensitive: Boolean = True): UnicodeString; overload;
+function  StrBetweenU(const S: UnicodeString;
+          const FirstDelim, SecondDelim: UnicodeString;
+          const FirstOptional: Boolean = False;
+          const SecondOptional: Boolean = False;
+          const FirstDelimAsciiCaseSensitive: Boolean = True;
+          const SecondDelimAsciiCaseSensitive: Boolean = True): UnicodeString; overload;
+
 function  StrBetween(const S: String;
           const FirstDelim: String; const SecondDelim: CharSet;
           const FirstOptional: Boolean = False;
@@ -1482,6 +1513,13 @@ function  StrBeforeRevW(const S, D: WideString;
           const Optional: Boolean = True;
           const AsciiCaseSensitive: Boolean = True): WideString;
 
+function  StrBeforeU(const S, D: UnicodeString;
+          const Optional: Boolean = True;
+          const AsciiCaseSensitive: Boolean = True): UnicodeString;
+function  StrBeforeRevU(const S, D: UnicodeString;
+          const Optional: Boolean = True;
+          const AsciiCaseSensitive: Boolean = True): UnicodeString;
+
 function  StrBefore(const S, D: String;
           const Optional: Boolean = True;
           const AsciiCaseSensitive: Boolean = True): String;
@@ -1514,6 +1552,9 @@ function  StrAfterRevB(const S, D: RawByteString; const Optional: Boolean = Fals
 function  StrAfterW(const S, D: WideString; const Optional: Boolean = False): WideString;
 function  StrAfterRevW(const S, D: WideString; const Optional: Boolean = False): WideString;
 
+function  StrAfterU(const S, D: UnicodeString; const Optional: Boolean = False): UnicodeString;
+function  StrAfterRevU(const S, D: UnicodeString; const Optional: Boolean = False): UnicodeString;
+
 function  StrAfter(const S, D: String; const Optional: Boolean = False): String;
 function  StrAfterRev(const S, D: String; const Optional: Boolean = False): String;
 
@@ -1525,6 +1566,9 @@ function  StrAfterCharB(const S: RawByteString; const D: AnsiChar): RawByteStrin
 
 function  StrAfterCharW(const S: WideString; const D: CharSet): WideString; overload;
 function  StrAfterCharW(const S: WideString; const D: WideChar): WideString; overload;
+
+function  StrAfterCharU(const S: UnicodeString; const D: CharSet): UnicodeString; overload;
+function  StrAfterCharU(const S: UnicodeString; const D: WideChar): UnicodeString; overload;
 
 function  StrAfterChar(const S: String; const D: CharSet): String; overload;
 function  StrAfterChar(const S: String; const D: Char): String; overload;
@@ -1557,6 +1601,9 @@ function  StrCopyFromCharB(const S: RawByteString; const D: AnsiChar): RawByteSt
 
 function  StrCopyFromCharW(const S: WideString; const D: CharSet): WideString; overload;
 function  StrCopyFromCharW(const S: WideString; const D: WideChar): WideString; overload;
+
+function  StrCopyFromCharU(const S: UnicodeString; const D: CharSet): UnicodeString; overload;
+function  StrCopyFromCharU(const S: UnicodeString; const D: WideChar): UnicodeString; overload;
 
 function  StrCopyFromChar(const S: String; const D: CharSet): String; overload;
 function  StrCopyFromChar(const S: String; const D: Char): String; overload;
@@ -1796,6 +1843,7 @@ function  StrHexEscapeB(const S: RawByteString; const C: CharSet;
           const EscSuffix: RawByteString = '';
           const UpperHex: Boolean = True;
           const TwoDigitHex: Boolean = True): RawByteString;
+
 function  StrHexUnescapeB(const S: RawByteString;
           const EscPrefix: RawByteString = '\x';
           const AsciiCaseSensitive: Boolean = True): RawByteString;
@@ -1803,10 +1851,16 @@ function  StrHexUnescapeB(const S: RawByteString;
 function  StrCharEscapeA(const S: AnsiString; const C: array of AnsiChar;
           const EscPrefix: AnsiString;
           const EscSeq: array of AnsiString): AnsiString;
+
 function  StrCharUnescapeA(const S: AnsiString; const EscPrefix: AnsiString;
           const C: array of AnsiChar; const Replace: array of AnsiString;
           const PrefixAsciiCaseSensitive: Boolean = True;
           const AlwaysDropPrefix: Boolean = True): AnsiString;
+
+function  StrCharUnescapeU(const S: UnicodeString; const EscPrefix: UnicodeString;
+          const C: array of WideChar; const Replace: array of UnicodeString;
+          const PrefixAsciiCaseSensitive: Boolean = True;
+          const AlwaysDropPrefix: Boolean = True): UnicodeString;
 
 function  StrCStyleEscapeA(const S: AnsiString): AnsiString;
 function  StrCStyleUnescapeA(const S: AnsiString): AnsiString;
@@ -1981,7 +2035,13 @@ function  StringsTotalLengthW(const S: array of WideString): Integer;
 function  StringsTotalLengthU(const S: array of UnicodeString): Integer;
 function  StringsTotalLength(const S: array of String): Integer;
 
-function  PosNextNoCase(const Find: AnsiString; const V: array of AnsiString;
+function  PosNextNoCaseA(const Find: AnsiString; const V: array of AnsiString;
+          const PrevPos: Integer = -1;
+          const IsSortedAscending: Boolean = False): Integer;
+function  PosNextNoCaseB(const Find: RawByteString; const V: array of RawByteString;
+          const PrevPos: Integer = -1;
+          const IsSortedAscending: Boolean = False): Integer;
+function  PosNextNoCaseU(const Find: UnicodeString; const V: array of UnicodeString;
           const PrevPos: Integer = -1;
           const IsSortedAscending: Boolean = False): Integer;
 
@@ -15599,6 +15659,25 @@ begin
   Result := (L > 0) and (StrPMatchLenW(P, L, csNumeric) = L);
 end;
 
+function StrIsIntegerU(const S: UnicodeString): Boolean;
+var L: Integer;
+    P: PWideChar;
+begin
+  L := Length(S);
+  Result := L > 0;
+  if not Result then
+    exit;
+  P := Pointer(S);
+  case P^ of
+    '+', '-' :
+      begin
+        Inc(P);
+        Dec(L);
+      end;
+  end;
+  Result := (L > 0) and (StrPMatchLenW(P, L, csNumeric) = L);
+end;
+
 function StrIsInteger(const S: String): Boolean;
 var L: Integer;
     P: PChar;
@@ -15626,7 +15705,7 @@ end;
 {                                                                              }
 
 {$IFNDEF ManagedCode}
-function StrPPosChar(const F: AnsiChar; const S: PAnsiChar; const Len: Integer): Integer;
+function StrPPosCharA(const F: AnsiChar; const S: PAnsiChar; const Len: Integer): Integer;
 var I : Integer;
     P : PAnsiChar;
 begin
@@ -15647,7 +15726,28 @@ begin
   Result := -1;
 end;
 
-function StrPPosChar(const F: CharSet; const S: PAnsiChar; const Len: Integer): Integer;
+function StrPPosCharW(const F: WideChar; const S: PWideChar; const Len: Integer): Integer;
+var I : Integer;
+    P : PWideChar;
+begin
+  if Len <= 0 then
+    begin
+      Result := -1;
+      exit;
+    end;
+  P := S;
+  for I := 0 to Len - 1 do
+    if P^ = F then
+      begin
+        Result := I;
+        exit;
+      end
+    else
+      Inc(P);
+  Result := -1;
+end;
+
+function StrPPosCharSetA(const F: CharSet; const S: PAnsiChar; const Len: Integer): Integer;
 var I : Integer;
     P : PAnsiChar;
 begin
@@ -15668,7 +15768,28 @@ begin
   Result := -1;
 end;
 
-function StrPPos(const F, S: PAnsiChar; const LenF, LenS: Integer): Integer;
+function StrPPosCharSetW(const F: CharSet; const S: PWideChar; const Len: Integer): Integer;
+var I : Integer;
+    P : PWideChar;
+begin
+  if Len <= 0 then
+    begin
+      Result := -1;
+      exit;
+    end;
+  P := S;
+  for I := 0 to Len - 1 do
+    if WideCharInCharSet(P^, F) then
+      begin
+        Result := I;
+        exit;
+      end
+    else
+      Inc(P);
+  Result := -1;
+end;
+
+function StrPPosA(const F, S: PAnsiChar; const LenF, LenS: Integer): Integer;
 var I : Integer;
     P : PAnsiChar;
 begin
@@ -15689,9 +15810,71 @@ begin
   Result := -1;
 end;
 
-function StrPPosStr(const F: String; const S: PAnsiChar; const Len: Integer): Integer;
+function StrPPosW(const F, S: PWideChar; const LenF, LenS: Integer): Integer;
+var I : Integer;
+    P : PWideChar;
 begin
-  Result := StrPPos(Pointer(F), S, Length(F), Len);
+  if (LenF <= 0) or (LenS <= 0) or (LenF > LenS) then
+    begin
+      Result := -1;
+      exit;
+    end;
+  P := S;
+  for I := 0 to LenS - LenF do
+    if StrPMatchW(P, F, LenF) then
+      begin
+        Result := I;
+        exit;
+      end
+    else
+      Inc(P);
+  Result := -1;
+end;
+
+function StrPPosStrA(const F: AnsiString; const S: PAnsiChar; const Len: Integer): Integer;
+var LenF : Integer;
+    I : Integer;
+    P : PAnsiChar;
+begin
+  LenF := Length(F);
+  if (LenF <= 0) or (Len <= 0) or (LenF > Len) then
+    begin
+      Result := -1;
+      exit;
+    end;
+  P := S;
+  for I := 0 to Len - LenF do
+    if StrPMatchStrA(P, LenF, F) then
+      begin
+        Result := I;
+        exit;
+      end
+    else
+      Inc(P);
+  Result := -1;
+end;
+
+function StrPPosStrB(const F: RawByteString; const S: PAnsiChar; const Len: Integer): Integer;
+var LenF : Integer;
+    I : Integer;
+    P : PAnsiChar;
+begin
+  LenF := Length(F);
+  if (LenF <= 0) or (Len <= 0) or (LenF > Len) then
+    begin
+      Result := -1;
+      exit;
+    end;
+  P := S;
+  for I := 0 to Len - LenF do
+    if StrPMatchStrB(P, LenF, F) then
+      begin
+        Result := I;
+        exit;
+      end
+    else
+      Inc(P);
+  Result := -1;
 end;
 
 function StrZPosCharA(const F: AnsiChar; const S: PAnsiChar): Integer;
@@ -18700,6 +18883,32 @@ begin
   Result := Copy(S, 1, Count - 3) + '...';
 end;
 
+function CopyLeftEllipsedU(const S: UnicodeString; const Count: Integer): UnicodeString;
+var L: Integer;
+begin
+  if Count < 0 then
+    begin
+      Result := S;
+      exit;
+    end;
+  if Count = 0 then
+    begin
+      Result := '';
+      exit;
+    end;
+  L := Length(S);
+  if L <= Count then
+    begin
+      Result := S;
+      exit;
+    end;
+  if Count <= 3 then
+    begin
+      Result := DupCharU(' ', Count);
+      exit;
+    end;
+  Result := Copy(S, 1, Count - 3) + '...';
+end;
 
 
 {                                                                              }
@@ -19591,6 +19800,13 @@ var I : Integer;
 begin
   for I := 0 to Length(S) - 1 do
     StrTrimInPlaceW(S[I], C);
+end;
+
+procedure TrimStringsU(var S : UnicodeStringArray; const C: CharSet);
+var I : Integer;
+begin
+  for I := 0 to Length(S) - 1 do
+    StrTrimInPlaceU(S[I], C);
 end;
 
 
@@ -20597,6 +20813,42 @@ begin
   Result := CopyRangeW(S, I + 1, J - 1);
 end;
 
+function StrBetweenCharU(const S: UnicodeString;
+    const FirstDelim, SecondDelim: WideChar;
+    const FirstOptional: Boolean; const SecondOptional: Boolean): UnicodeString;
+var I, J : Integer;
+begin
+  Result := '';
+  I := PosCharU(FirstDelim, S);
+  if (I = 0) and not FirstOptional then
+    exit;
+  J := PosCharU(SecondDelim, S, I + 1);
+  if J = 0 then
+    if not SecondOptional then
+      exit
+    else
+      J := Length(S) + 1;
+  Result := CopyRangeU(S, I + 1, J - 1);
+end;
+
+function StrBetweenCharU(const S: UnicodeString;
+    const FirstDelim, SecondDelim: CharSet;
+    const FirstOptional: Boolean; const SecondOptional: Boolean): UnicodeString;
+var I, J : Integer;
+begin
+  Result := '';
+  I := PosCharSetU(FirstDelim, S);
+  if (I = 0) and not FirstOptional then
+    exit;
+  J := PosCharSetU(SecondDelim, S, I + 1);
+  if J = 0 then
+    if not SecondOptional then
+      exit
+    else
+      J := Length(S) + 1;
+  Result := CopyRangeU(S, I + 1, J - 1);
+end;
+
 function StrBetweenChar(const S: String;
     const FirstDelim, SecondDelim: Char;
     const FirstOptional: Boolean; const SecondOptional: Boolean): String;
@@ -20753,6 +21005,46 @@ begin
   Result := CopyRangeW(S, I, J - 1);
 end;
 
+function StrBetweenU(const S: UnicodeString; const FirstDelim: UnicodeString;
+    const SecondDelim: CharSet; const FirstOptional: Boolean;
+    const SecondOptional: Boolean;
+    const FirstDelimAsciiCaseSensitive: Boolean): UnicodeString;
+var I, J : Integer;
+begin
+  Result := '';
+  I := PosStrU(FirstDelim, S, 1, FirstDelimAsciiCaseSensitive);
+  if (I = 0) and not FirstOptional then
+    exit;
+  Inc(I, Length(FirstDelim));
+  J := PosCharSetU(SecondDelim, S, I);
+  if J = 0 then
+    if not SecondOptional then
+      exit
+    else
+      J := Length(S) + 1;
+  Result := CopyRangeU(S, I, J - 1);
+end;
+
+function StrBetweenU(const S: UnicodeString;
+    const FirstDelim, SecondDelim: UnicodeString; const FirstOptional: Boolean;
+    const SecondOptional: Boolean ; const FirstDelimAsciiCaseSensitive: Boolean;
+    const SecondDelimAsciiCaseSensitive: Boolean): UnicodeString;
+var I, J : Integer;
+begin
+  Result := '';
+  I := PosStrU(FirstDelim, S, 1, FirstDelimAsciiCaseSensitive);
+  if (I = 0) and not FirstOptional then
+    exit;
+  Inc(I, Length(FirstDelim));
+  J := PosStrU(SecondDelim, S, I, SecondDelimAsciiCaseSensitive);
+  if J = 0 then
+    if not SecondOptional then
+      exit
+    else
+      J := Length(S) + 1;
+  Result := CopyRangeU(S, I, J - 1);
+end;
+
 function StrBetween(const S: String; const FirstDelim: String;
     const SecondDelim: CharSet; const FirstOptional: Boolean;
     const SecondOptional: Boolean;
@@ -20875,6 +21167,34 @@ begin
       Result := ''
   else
     Result := CopyLeftW(S, I - 1);
+end;
+
+function StrBeforeU(const S, D: UnicodeString; const Optional: Boolean;
+    const AsciiCaseSensitive: Boolean): UnicodeString;
+var I : Integer;
+begin
+  I := PosStrU(D, S, 1, AsciiCaseSensitive);
+  if I = 0 then
+    if Optional then
+      Result := S
+    else
+      Result := ''
+  else
+    Result := CopyLeftU(S, I - 1);
+end;
+
+function StrBeforeRevU(const S, D: UnicodeString; const Optional: Boolean;
+    const AsciiCaseSensitive: Boolean): UnicodeString;
+var I : Integer;
+begin
+  I := PosStrRevU(D, S, 1, AsciiCaseSensitive);
+  if I = 0 then
+    if Optional then
+      Result := S
+    else
+      Result := ''
+  else
+    Result := CopyLeftU(S, I - 1);
 end;
 
 function StrBefore(const S, D: String; const Optional: Boolean;
@@ -21151,6 +21471,32 @@ begin
     Result := CopyFromW(S, I + Length(D));
 end;
 
+function StrAfterU(const S, D: UnicodeString; const Optional: Boolean): UnicodeString;
+var I : Integer;
+begin
+  I := PosStrU(D, S);
+  if I = 0 then
+    if Optional then
+      Result := S
+    else
+      Result := ''
+  else
+    Result := CopyFromU(S, I + Length(D));
+end;
+
+function StrAfterRevU(const S, D: UnicodeString; const Optional: Boolean): UnicodeString;
+var I : Integer;
+begin
+  I := PosStrRevU(D, S);
+  if I = 0 then
+    if Optional then
+      Result := S
+    else
+      Result := ''
+  else
+    Result := CopyFromU(S, I + Length(D));
+end;
+
 function StrAfter(const S, D: String; const Optional: Boolean): String;
 var I : Integer;
 begin
@@ -21235,6 +21581,26 @@ begin
     Result := ''
   else
     Result := CopyFromW(S, I + 1);
+end;
+
+function StrAfterCharU(const S: UnicodeString; const D: CharSet): UnicodeString;
+var I : Integer;
+begin
+  I := PosCharSetU(D, S);
+  if I = 0 then
+    Result := ''
+  else
+    Result := CopyFromU(S, I + 1);
+end;
+
+function StrAfterCharU(const S: UnicodeString; const D: WideChar): UnicodeString;
+var I : Integer;
+begin
+  I := PosCharU(D, S);
+  if I = 0 then
+    Result := ''
+  else
+    Result := CopyFromU(S, I + 1);
 end;
 
 function StrAfterChar(const S: String; const D: CharSet): String;
@@ -21427,6 +21793,26 @@ begin
     Result := ''
   else
     Result := CopyFromW(S, I);
+end;
+
+function StrCopyFromCharU(const S: UnicodeString; const D: CharSet): UnicodeString;
+var I : Integer;
+begin
+  I := PosCharSetU(D, S);
+  if I = 0 then
+    Result := ''
+  else
+    Result := CopyFromU(S, I);
+end;
+
+function StrCopyFromCharU(const S: UnicodeString; const D: WideChar): UnicodeString;
+var I : Integer;
+begin
+  I := PosCharU(D, S);
+  if I = 0 then
+    Result := ''
+  else
+    Result := CopyFromU(S, I);
 end;
 
 function StrCopyFromChar(const S: String; const D: CharSet): String;
@@ -24995,8 +25381,8 @@ end;
 
 function StrCharUnescapeA(const S: AnsiString; const EscPrefix: AnsiString;
     const C: array of AnsiChar; const Replace: array of AnsiString;
-    const PrefixAsciiCaseSensitive: Boolean; const
-    AlwaysDropPrefix: Boolean): AnsiString;
+    const PrefixAsciiCaseSensitive: Boolean;
+    const AlwaysDropPrefix: Boolean): AnsiString;
 var I, J, L : Integer;
     F, G, M : Integer;
     D       : AnsiChar;
@@ -25040,6 +25426,55 @@ begin
     Result := S
   else
     Result := Result + CopyFromA(S, J);
+end;
+
+function StrCharUnescapeU(const S: UnicodeString; const EscPrefix: UnicodeString;
+    const C: array of WideChar; const Replace: array of UnicodeString;
+    const PrefixAsciiCaseSensitive: Boolean;
+    const AlwaysDropPrefix: Boolean): UnicodeString;
+var I, J, L : Integer;
+    F, G, M : Integer;
+    D       : WideChar;
+begin
+  if High(C) <> High(Replace) then
+    raise EStrInvalidArgument.Create('Invalid arguments');
+  L := Length(EscPrefix);
+  M := Length(S);
+  if (L = 0) or (M <= L) then
+    begin
+      Result := S;
+      exit;
+    end;
+  // Replace
+  Result := '';
+  J := 1;
+  repeat
+    I := PosStrU(EscPrefix, S, J, PrefixAsciiCaseSensitive);
+    if I > 0 then
+      begin
+        G := -1;
+        if I < Length(S) then
+          begin
+            D := S[I + L];
+            for F := 0 to High(C) do
+              if C[F] = D then
+                begin
+                  G := F;
+                  break;
+                end;
+          end;
+        Result := Result + CopyRangeU(S, J, I - 1);
+        if G >= 0 then
+          Result := Result + Replace[G] else
+          if not AlwaysDropPrefix then
+            Result := Result + EscPrefix;
+        J := I + L + 1;
+      end;
+  until I = 0;
+  if (I = 0) and (J = 0) then
+    Result := S
+  else
+    Result := Result + CopyFromU(S, J);
 end;
 
 function StrCStyleEscapeA(const S: AnsiString): AnsiString;
@@ -27181,7 +27616,7 @@ begin
     Inc(Result, Length(S[I]));
 end;
 
-function PosNextNoCase(const Find: AnsiString; const V: array of AnsiString;
+function PosNextNoCaseA(const Find: AnsiString; const V: array of AnsiString;
     const PrevPos: Integer; const IsSortedAscending: Boolean): Integer;
 var I, L, H : Integer;
 begin
@@ -27215,6 +27650,90 @@ begin
     begin // linear search
       for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
         if StrEqualNoAsciiCaseA(V[I], Find) then
+          begin
+            Result := I;
+            exit;
+          end;
+      Result := -1;
+    end;
+end;
+
+function PosNextNoCaseB(const Find: RawByteString; const V: array of RawByteString;
+    const PrevPos: Integer; const IsSortedAscending: Boolean): Integer;
+var I, L, H : Integer;
+begin
+  if IsSortedAscending then // binary search
+    begin
+      if MaxI(PrevPos + 1, 0) = 0 then // find first
+        begin
+          L := 0;
+          H := Length(V) - 1;
+          repeat
+            I := (L + H) div 2;
+            if StrEqualNoAsciiCaseB(V[I], Find) then
+              begin
+                while (I > 0) and StrEqualNoAsciiCaseB(V[I - 1], Find) do
+                  Dec(I);
+                Result := I;
+                exit;
+              end else
+            if StrCompareNoAsciiCaseB(V[I], Find) = 1 then
+              H := I - 1 else
+              L := I + 1;
+          until L > H;
+          Result := -1;
+        end else // find next
+        if PrevPos >= Length(V) - 1 then
+          Result := -1 else
+          if StrEqualNoAsciiCaseB(V[PrevPos + 1], Find) then
+            Result := PrevPos + 1 else
+            Result := -1;
+    end else
+    begin // linear search
+      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+        if StrEqualNoAsciiCaseB(V[I], Find) then
+          begin
+            Result := I;
+            exit;
+          end;
+      Result := -1;
+    end;
+end;
+
+function PosNextNoCaseU(const Find: UnicodeString; const V: array of UnicodeString;
+    const PrevPos: Integer; const IsSortedAscending: Boolean): Integer;
+var I, L, H : Integer;
+begin
+  if IsSortedAscending then // binary search
+    begin
+      if MaxI(PrevPos + 1, 0) = 0 then // find first
+        begin
+          L := 0;
+          H := Length(V) - 1;
+          repeat
+            I := (L + H) div 2;
+            if StrEqualNoAsciiCaseU(V[I], Find) then
+              begin
+                while (I > 0) and StrEqualNoAsciiCaseU(V[I - 1], Find) do
+                  Dec(I);
+                Result := I;
+                exit;
+              end else
+            if StrCompareNoAsciiCaseU(V[I], Find) = 1 then
+              H := I - 1 else
+              L := I + 1;
+          until L > H;
+          Result := -1;
+        end else // find next
+        if PrevPos >= Length(V) - 1 then
+          Result := -1 else
+          if StrEqualNoAsciiCaseU(V[PrevPos + 1], Find) then
+            Result := PrevPos + 1 else
+            Result := -1;
+    end else
+    begin // linear search
+      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+        if StrEqualNoAsciiCaseU(V[I], Find) then
           begin
             Result := I;
             exit;

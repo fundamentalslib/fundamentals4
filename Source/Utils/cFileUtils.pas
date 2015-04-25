@@ -29,8 +29,7 @@
 {                     USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE             }
 {                     POSSIBILITY OF SUCH DAMAGE.                              }
 {                                                                              }
-{   Home page:        http://fundementals.sourceforge.net                      }
-{   Forum:            http://sourceforge.net/forum/forum.php?forum_id=2117     }
+{   Github:           https://github.com/fundamentalslib                       }
 {   E-mail:           fundamentalslib at gmail.com                             }
 {                                                                              }
 { Revision history:                                                            }
@@ -447,6 +446,22 @@ function  ReadFileStr(
           const FileCreationMode: TFileCreationMode = fcOpenExisting;
           const FileOpenWait: PFileOpenWait = nil): RawByteString;
 
+function  ReadFileBytesA(
+          const FileName: AnsiString;
+          const FileSharing: TFileSharing = fsDenyNone;
+          const FileCreationMode: TFileCreationMode = fcOpenExisting;
+          const FileOpenWait: PFileOpenWait = nil): TBytes;
+function  ReadFileBytesU(
+          const FileName: UnicodeString;
+          const FileSharing: TFileSharing = fsDenyNone;
+          const FileCreationMode: TFileCreationMode = fcOpenExisting;
+          const FileOpenWait: PFileOpenWait = nil): TBytes;
+function  ReadFileBytes(
+          const FileName: String;
+          const FileSharing: TFileSharing = fsDenyNone;
+          const FileCreationMode: TFileCreationMode = fcOpenExisting;
+          const FileOpenWait: PFileOpenWait = nil): TBytes;
+
 procedure WriteFileBufA(
           const FileName: AnsiString;
           const Buf; const BufSize: Integer;
@@ -481,6 +496,25 @@ procedure WriteFileStrU(
 procedure WriteFileStr(
           const FileName: String;
           const Buf: RawByteString;
+          const FileSharing: TFileSharing = fsDenyReadWrite;
+          const FileCreationMode: TFileCreationMode = fcCreateAlways;
+          const FileOpenWait: PFileOpenWait = nil);
+
+procedure WriteFileBytesA(
+          const FileName: AnsiString;
+          const Buf: TBytes;
+          const FileSharing: TFileSharing = fsDenyReadWrite;
+          const FileCreationMode: TFileCreationMode = fcCreateAlways;
+          const FileOpenWait: PFileOpenWait = nil);
+procedure WriteFileBytesU(
+          const FileName: UnicodeString;
+          const Buf: TBytes;
+          const FileSharing: TFileSharing = fsDenyReadWrite;
+          const FileCreationMode: TFileCreationMode = fcCreateAlways;
+          const FileOpenWait: PFileOpenWait = nil);
+procedure WriteFileBytes(
+          const FileName: String;
+          const Buf: TBytes;
           const FileSharing: TFileSharing = fsDenyReadWrite;
           const FileCreationMode: TFileCreationMode = fcCreateAlways;
           const FileOpenWait: PFileOpenWait = nil);
@@ -2833,6 +2867,8 @@ begin
   RenameFile(OldFileName, NewFileName);
 end;
 
+{ ReadFileBuf }
+
 function ReadFileBufA(
          const FileName: AnsiString;
          var Buf; const BufSize: Integer;
@@ -2916,6 +2952,8 @@ begin
     FileClose(FileHandle);
   end;
 end;
+
+{ ReadFileStr }
 
 function ReadFileStrA(
          const FileName: AnsiString;
@@ -3001,6 +3039,94 @@ begin
   end;
 end;
 
+{ ReadFileBytes }
+
+function ReadFileBytesA(
+         const FileName: AnsiString;
+         const FileSharing: TFileSharing;
+         const FileCreationMode: TFileCreationMode;
+         const FileOpenWait: PFileOpenWait): TBytes;
+var FileHandle : Integer;
+    FileSize   : Int64;
+    ReadBytes  : Integer;
+begin
+  FileHandle := FileOpenExA(FileName, faRead, FileSharing,
+      [foSequentialScanHint], FileCreationMode, FileOpenWait);
+  try
+    FileSize := FileGetSize(ToStringA(FileName));
+    if FileSize < 0 then
+      raise EFileError.CreateFmt(feFileSizeError, SFileSizeError, [FileName]);
+    if FileSize > MaxInteger then
+      raise EFileError.CreateFmt(feFileSizeError, SFileSizeError, [FileName]);
+    SetLength(Result, FileSize);
+    if FileSize = 0 then
+      exit;
+    ReadBytes := FileReadEx(FileHandle, Result[0], FileSize);
+    if ReadBytes < FileSize then
+      SetLength(Result, ReadBytes);
+  finally
+    FileClose(FileHandle);
+  end;
+end;
+
+function ReadFileBytesU(
+         const FileName: UnicodeString;
+         const FileSharing: TFileSharing;
+         const FileCreationMode: TFileCreationMode;
+         const FileOpenWait: PFileOpenWait): TBytes;
+var FileHandle : Integer;
+    FileSize   : Int64;
+    ReadBytes  : Integer;
+begin
+  FileHandle := FileOpenExU(FileName, faRead, FileSharing,
+      [foSequentialScanHint], FileCreationMode, FileOpenWait);
+  try
+    FileSize := FileGetSizeU(FileName);
+    if FileSize < 0 then
+      raise EFileError.CreateFmt(feFileSizeError, SFileSizeError, [FileName]);
+    if FileSize > MaxInteger then
+      raise EFileError.CreateFmt(feFileSizeError, SFileSizeError, [FileName]);
+    SetLength(Result, FileSize);
+    if FileSize = 0 then
+      exit;
+    ReadBytes := FileReadEx(FileHandle, Result[0], FileSize);
+    if ReadBytes < FileSize then
+      SetLength(Result, ReadBytes);
+  finally
+    FileClose(FileHandle);
+  end;
+end;
+
+function ReadFileBytes(
+         const FileName: String;
+         const FileSharing: TFileSharing;
+         const FileCreationMode: TFileCreationMode;
+         const FileOpenWait: PFileOpenWait): TBytes;
+var FileHandle : Integer;
+    FileSize   : Int64;
+    ReadBytes  : Integer;
+begin
+  FileHandle := FileOpenEx(FileName, faRead, FileSharing,
+      [foSequentialScanHint], FileCreationMode, FileOpenWait);
+  try
+    FileSize := FileGetSize(FileName);
+    if FileSize < 0 then
+      raise EFileError.CreateFmt(feFileSizeError, SFileSizeError, [FileName]);
+    if FileSize > MaxInteger then
+      raise EFileError.CreateFmt(feFileSizeError, SFileSizeError, [FileName]);
+    SetLength(Result, FileSize);
+    if FileSize = 0 then
+      exit;
+    ReadBytes := FileReadEx(FileHandle, Result[0], FileSize);
+    if ReadBytes < FileSize then
+      SetLength(Result, ReadBytes);
+  finally
+    FileClose(FileHandle);
+  end;
+end;
+
+{ WtiteFileBuf }
+
 procedure WriteFileBufA(
           const FileName: AnsiString;
           const Buf; const BufSize: Integer;
@@ -3061,6 +3187,8 @@ begin
   end;
 end;
 
+{ WriteFileStr }
+
 procedure WriteFileStrA(
           const FileName: AnsiString;
           const Buf: RawByteString;
@@ -3102,6 +3230,52 @@ begin
     exit;
   WriteFileBuf(FileName, Buf[1], BufSize, FileSharing, FileCreationMode, FileOpenWait);
 end;
+
+{ WriteFileBytes }
+
+procedure WriteFileBytesA(
+          const FileName: AnsiString;
+          const Buf: TBytes;
+          const FileSharing: TFileSharing;
+          const FileCreationMode: TFileCreationMode;
+          const FileOpenWait: PFileOpenWait);
+var BufSize    : Integer;
+begin
+  BufSize := Length(Buf);
+  if BufSize <= 0 then
+    exit;
+  WriteFileBufA(FileName, Buf[0], BufSize, FileSharing, FileCreationMode, FileOpenWait);
+end;
+
+procedure WriteFileBytesU(
+          const FileName: UnicodeString;
+          const Buf: TBytes;
+          const FileSharing: TFileSharing;
+          const FileCreationMode: TFileCreationMode;
+          const FileOpenWait: PFileOpenWait);
+var BufSize    : Integer;
+begin
+  BufSize := Length(Buf);
+  if BufSize <= 0 then
+    exit;
+  WriteFileBufU(FileName, Buf[0], BufSize, FileSharing, FileCreationMode, FileOpenWait);
+end;
+
+procedure WriteFileBytes(
+          const FileName: String;
+          const Buf: TBytes;
+          const FileSharing: TFileSharing;
+          const FileCreationMode: TFileCreationMode;
+          const FileOpenWait: PFileOpenWait);
+var BufSize    : Integer;
+begin
+  BufSize := Length(Buf);
+  if BufSize <= 0 then
+    exit;
+  WriteFileBuf(FileName, Buf[0], BufSize, FileSharing, FileCreationMode, FileOpenWait);
+end;
+
+{ AppendFile }
 
 procedure AppendFileA(
           const FileName: AnsiString;
@@ -3162,6 +3336,8 @@ begin
     FileClose(FileHandle);
   end;
 end;
+
+{ AppendFileStr }
 
 procedure AppendFileStrA(
           const FileName: AnsiString;
@@ -3605,7 +3781,7 @@ begin
   Result := D in ['A'..'Z'];
   if not Result then
     exit;
-  Result := IsBitSet(GetLogicalDrives, Ord(D) - Ord('A'));
+  Result := IsBitSet32(GetLogicalDrives, Ord(D) - Ord('A'));
 end;
 
 function DriveGetType(const Path: AnsiString): TLogicalDriveType;

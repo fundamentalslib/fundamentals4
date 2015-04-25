@@ -1,7 +1,7 @@
 {******************************************************************************}
 {                                                                              }
 {   File name:        cFundamentals.inc                                        }
-{   File updated:     2015/03/14                                               }
+{   File updated:     2015/04/12                                               }
 {                                                                              }
 {   Library:          Fundamentals 4.00                                        }
 {   Home page:        http://fundementals.sourceforge.net                      }
@@ -41,6 +41,7 @@
 {     DELPHIXE5       - Delphi XE5.                                            }
 {     DELPHIXE6       - Delphi XE6.                                            }
 {     DELPHIXE7       - Delphi XE7.                                            }
+{     DELPHIXE8       - Delphi XE8.                                            }
 {                                                                              }
 {     DELPHI2_UP      - Delphi 2 or later.                                     }
 {     DELPHI3_UP      - Delphi 3 or later.                                     }
@@ -61,6 +62,7 @@
 {     DELPHIXE5_UP    - Delphi XE5 or later.                                   }
 {     DELPHIXE6_UP    - Delphi XE6 or later.                                   }
 {     DELPHIXE7_UP    - Delphi XE7 or later.                                   }
+{     DELPHIXE8_UP    - Delphi XE8 or later.                                   }
 {                                                                              }
 {     DELPHI3_DOWN    - Delphi 3 or earlier.                                   }
 {     DELPHI4_DOWN    - Delphi 4 or earlier.                                   }
@@ -115,6 +117,7 @@
 {   StringIsUnicode   - Default String type is UnicodeString.                  }
 {   ExtendedIsDouble  - Extended type is Double.                               }
 {   StringIsZeroBased - String types are zero based.                           }
+{   TBytesDeclared    - System defines TBytes type.                            }
 {                                                                              }
 {   UseInline         - SupportInline and not PurePascal.                      }
 {                                                                              }
@@ -627,11 +630,38 @@
 
 
 {                                                                              }
-{ Future Delphi versions                                                       }
+{ Delphi XE8                                                                   }
 {                                                                              }
 {$IFDEF VER290}
-  {$DEFINE DELPHI_Future}
+  {$DEFINE DELPHI}
+  {$DEFINE DELPHIXE8}
+  {$DEFINE DELPHI2_UP}
+  {$DEFINE DELPHI3_UP}
+  {$DEFINE DELPHI4_UP}
+  {$DEFINE DELPHI5_UP}
+  {$DEFINE DELPHI6_UP}
+  {$DEFINE DELPHI7_UP}
+  {$DEFINE DELPHI8_UP}
+  {$DEFINE DELPHI2005_UP}
+  {$DEFINE DELPHI2006_UP}
+  {$DEFINE DELPHI2007_UP}
+  {$DEFINE DELPHI2009_UP}
+  {$DEFINE DELPHI2010_UP}
+  {$DEFINE DELPHIXE_UP}
+  {$DEFINE DELPHIXE2_UP}
+  {$DEFINE DELPHIXE3_UP}
+  {$DEFINE DELPHIXE4_UP}
+  {$DEFINE DELPHIXE5_UP}
+  {$DEFINE DELPHIXE6_UP}
+  {$DEFINE DELPHIXE7_UP}
+  {$DEFINE DELPHIXE8_UP}
 {$ENDIF}
+
+
+
+{                                                                              }
+{ Future Delphi versions                                                       }
+{                                                                              }
 {$IFDEF VER300}
   {$DEFINE DELPHI_Future}
 {$ENDIF}
@@ -639,6 +669,9 @@
   {$DEFINE DELPHI_Future}
 {$ENDIF}
 {$IFDEF VER320}
+  {$DEFINE DELPHI_Future}
+{$ENDIF}
+{$IFDEF VER330}
   {$DEFINE DELPHI_Future}
 {$ENDIF}
 
@@ -663,6 +696,7 @@
   {$DEFINE DELPHIXE5_UP}
   {$DEFINE DELPHIXE6_UP}
   {$DEFINE DELPHIXE7_UP}
+  {$DEFINE DELPHIXE8_UP}
 {$ENDIF}
 
 
@@ -816,6 +850,7 @@
 
 {$IFDEF DELPHI2007_UP}
   {$DEFINE SupportForIn}
+  {$DEFINE TBytesDeclared}
 {$ENDIF}
 
 {$IFDEF DELPHI2009_UP}

@@ -2,10 +2,10 @@
 {                                                                              }
 {   Library:          Fundamentals 4.00                                        }
 {   File name:        cRandom.pas                                              }
-{   File version:     4.13                                                     }
+{   File version:     4.15                                                     }
 {   Description:      Random number functions                                  }
 {                                                                              }
-{   Copyright:        Copyright (c) 1999-2011, David J Butler                  }
+{   Copyright:        Copyright (c) 1999-2015, David J Butler                  }
 {                     All rights reserved.                                     }
 {                     Redistribution and use in source and binary forms, with  }
 {                     or without modification, are permitted provided that     }
@@ -29,8 +29,7 @@
 {                     USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE             }
 {                     POSSIBILITY OF SUCH DAMAGE.                              }
 {                                                                              }
-{   Home page:        http://fundementals.sourceforge.net                      }
-{   Forum:            http://sourceforge.net/forum/forum.php?forum_id=2117     }
+{   Github:           https://github.com/fundamentalslib                       }
 {   E-mail:           fundamentalslib at gmail.com                             }
 {                                                                              }
 { Revision history:                                                            }
@@ -48,6 +47,8 @@
 {   2005/08/27  4.11  Revised for Fundamentals 4.                              }
 {   2007/06/08  4.12  Compilable with FreePascal 2.04 Win32 i386               }
 {   2010/06/27  4.13  Compilable with FreePascal 2.4.0 OSX x86-64              }
+{   2015/04/19  4.14  Changes for 64-bit compilers and RawByteString           }
+{   2015/04/20  4.15  Revise RandomSeed                                        }
 {                                                                              }
 { Supported compilers:                                                         }
 {                                                                              }
@@ -67,27 +68,21 @@ unit cRandom;
 
 interface
 
-
-
-{                                                                              }
-{ UnicodeString                                                                }
-{                                                                              }
-{$IFNDEF SupportUnicodeString}
-type
-  UnicodeString = WideString;
-{$ENDIF}
+uses
+  { Fundamentals }
+  cUtils;
 
 
 
 {                                                                              }
 { RandomSeed                                                                   }
 {                                                                              }
-{   Returns a random seed value based on various system states.                }
+{   RandomSeed returns a random seed value based on various system states.     }
 {   AddEntropy can be called to add additional random state to the values      }
 {     returned by RandomSeed.                                                  }
 {                                                                              }
+procedure AddEntropy(const Value: Int64);
 function  RandomSeed: LongWord;
-procedure AddEntropy(const Value: LongWord);
 
 
 
@@ -111,16 +106,16 @@ function  RandomInt64: Int64; overload;
 function  RandomInt64(const N: Int64): Int64; overload;
 
 function  RandomHex(const Digits: Integer; const UpperCase: Boolean = True): String;
-function  RandomHexA(const Digits: Integer; const UpperCase: Boolean = True): AnsiString;
+function  RandomHexA(const Digits: Integer; const UpperCase: Boolean = True): RawByteString;
 function  RandomHexW(const Digits: Integer; const UpperCase: Boolean = True): WideString;
 function  RandomHexU(const Digits: Integer; const UpperCase: Boolean = True): UnicodeString;
 
 function  RandomFloat: Extended;
 
-function  RandomUpperAlphaStrA(const Length: Integer): AnsiString;
-function  RandomPseudoWordA(const Length: Integer): AnsiString;
+function  RandomUpperAlphaStrA(const Length: Integer): RawByteString;
+function  RandomPseudoWordA(const Length: Integer): RawByteString;
 function  RandomPasswordA(const MinLength, MaxLength: Integer;
-          const CaseSensitive, UseSymbols, UseNumbers: Boolean): AnsiString;
+          const CaseSensitive, UseSymbols, UseNumbers: Boolean): RawByteString;
 
 
 
@@ -210,21 +205,8 @@ end;
 
 
 {                                                                              }
-{ RandomSeed                                                                   }
-{   The random seed is generated from a startup seed, a fixed seed, a          }
-{   variable seed and an entropy seed.                                         }
-{   The startup seed is initialised on module initialisation.                  }
-{   The fixed seed is randomised on the first call to RandomSeed.              }
-{   The variable seed is randomised on every call to RandomSeed.               }
-{   The entropy seed is randomised by calls to AddEntropy.                     }
+{ System sources of pseudo-randomness                                          }
 {                                                                              }
-var
-  StartupSeed   : Int64 = 0;
-  FixedSeedInit : Boolean = False;
-  FixedSeed     : Int64 = 0;
-  VariableSeed  : Int64 = 0;
-  EntropySeed   : Int64 = 0;
-
 {$IFDEF WindowsPlatform}
 function GetHighPrecisionCounter: Int64;
 begin
@@ -264,50 +246,27 @@ end;
 {$ENDIF}{$ENDIF}
 
 function RandomState: Int64;
-var H, Mi, S, S1 : Word;
-    Ye, Mo, Da   : Word;
-    Registers    : LongWord;
+var
+  H, Mi, S, S1 : Word;
+  Ye, Mo, Da   : Word;
 begin
-  { CPU Registers }
-  {$IFDEF ASM386}
-  asm
-    lahf
-    add eax, ebx
-    adc eax, ecx
-    adc eax, edx
-    adc eax, esi
-    adc eax, edi
-    mov [Registers], eax
-  end;
-  {$ELSE}
-  Registers := 0;
-  {$ENDIF}
-  Result := Int64(Registers);
+  Result := 0;
   { Counters }
-  Result := Result xor GetHighPrecisionCounter xor GetTick;
+  Result := Result xor GetHighPrecisionCounter;
+  Result := Result xor (Int64(GetTick) shl 32);
   { System Time }
   DecodeTime(Time, H, Mi, S, S1);
-  Result := Result xor H xor (Mi shl 8) xor (S1 shl 16) xor (S shl 24);
+  Result := Result xor Int64(H) xor (Int64(Mi) shl 8) xor (Int64(S1) shl 16) xor (Int64(S) shl 24);
   { System Date }
   DecodeDate(Date, Ye, Mo, Da);
-  Result := Result xor Ye xor (Mo shl 16) xor (Da shl 24);
-end;
-
-// The StartupSeed is used to initialise the FixedSeed. It is based on state
-// change between startup and fixed seed initialisation.
-procedure InitStartupSeed;
-begin
-  StartupSeed := RandomState;
-  {$IFNDEF DOT_NET}
-  Int64Rec(StartupSeed).Lo := lcRandom1(Int64Rec(StartupSeed).Lo);
-  Int64Rec(StartupSeed).Hi := lcRandom2(Int64Rec(StartupSeed).Hi);
-  {$ENDIF}
+  Result := Result xor (Int64(Ye) shl 32) xor (Int64(Mo) shl 48) xor (Int64(Da) shl 56);
 end;
 
 {$IFNDEF DOT_NET}
-function BufferHash(const Buffer: PByte; const Len: Integer): LongWord;
-var I : Integer;
-    P : PByte;
+function HashBuffer(const Buffer: PByte; const Len: Integer): LongWord;
+var
+  I : Integer;
+  P : PByte;
 begin
   Result := 0;
   P := Buffer;
@@ -317,125 +276,349 @@ begin
       Inc(P);
     end;
 end;
+
+function StrHashB(const S: RawByteString): LongWord;
+var
+  L : Integer;
+begin
+  Result := 0;
+  L := Length(S);
+  if L <= 0 then
+    exit;
+  Result := HashBuffer(@S[1], Length(S));
+end;
 {$ENDIF}
 
-// The FixedSeed is initialised on the first call to RandomSeed. It is based
-// on the StartupSeed and various system states that don't change while the
-// application is running.
-{$Q-}{$IFDEF DELPHI5}{$OPTIMIZATION OFF}{$ENDIF}
+{$IFDEF MSWIN}
+function GetCPUFrequency: Int64;
+var
+  F : Int64;
+begin
+  F := 0;
+  if not QueryPerformanceFrequency(F) then
+    F := 0;
+  Result := F;
+end;
+{$ENDIF}
+
+{$IFDEF MSWIN}
+{$IFNDEF DOT_NET}
+function StrLenA(const A: PAnsiChar): Integer;
+var L : Integer;
+begin
+  if not Assigned(A) then
+    begin
+      Result := 0;
+      exit;
+    end;
+  L := 0;
+  while A[L] <> #0 do
+    Inc(L);
+  Result := L;
+end;
+
+function StrPasB(const A: PAnsiChar): RawByteString;
+var
+  I, L : Integer;
+begin
+  L := StrLenA(A);
+  SetLength(Result, L);
+  if L = 0 then
+    exit;
+  I := 0;
+  while I < L do
+    begin
+      Result[I + 1] := A[I];
+      Inc(I);
+    end;
+end;
+
+function GetOSUserName: RawByteString;
+var
+  L : LongWord;
+  B : array[0..258] of Byte;
+begin
+  L := 256;
+  FillChar(B[0], Sizeof(B), 0);
+  if GetUserNameA(@B, L) then
+    Result := StrPasB(@B)
+  else
+    Result := '';
+end;
+
+function GetOSComputerName: RawByteString;
+var
+  L : LongWord;
+  B : array[0..258] of Byte;
+begin
+  L := 256;
+  FillChar(B[0], Sizeof(B), 0);
+  if GetComputerNameA(@B, L) then
+    Result := StrPasB(@B)
+  else
+    Result := '';
+end;
+{$ENDIF}
+{$ENDIF}
+
+{$IFDEF UNIX}
+function GetOSUserName: RawByteString;
+var
+  T : RawByteString;
+begin
+  T := GetEnvironmentVariable('USER');
+  if T = '' then
+    T := GetEnvironmentVariable('USERNAME');
+  Result := T;
+end;
+
+function GetOSComputerName: RawByteString;
+begin
+  Result := GetEnvironmentVariable('HOSTNAME');
+end;
+{$ENDIF}
+
+{$IFDEF MSWIN}
+function WinRandomState: Int64;
+var
+  F : LongWord;
+  H : THandle;
+  T1, T2, T3, T4 : TFileTime;
+  A, B : LongWord;
+  S : Int64;
+begin
+  S := 0;
+  { Thread times }
+  F := GetCurrentThreadID;
+  S := S xor F;
+  H := GetCurrentThread;
+  S := S xor H;
+  GetThreadTimes(H, T1, T2, T3, T4);
+  A := T1.dwLowDateTime  xor T2.dwLowDateTime  xor T3.dwLowDateTime  xor T4.dwLowDateTime;
+  B := T1.dwHighDateTime xor T2.dwHighDateTime xor T3.dwHighDateTime xor T4.dwHighDateTime;
+  S := S xor A;
+  S := S xor (Int64(B) shl 32);
+  { Process times }
+  F := GetCurrentProcessId;
+  S := S xor F;
+  H := GetCurrentProcess;
+  S := S xor H;
+  GetProcessTimes(H, T1, T2, T3, T4);
+  A := T1.dwLowDateTime  xor T2.dwLowDateTime  xor T3.dwLowDateTime  xor T4.dwLowDateTime;
+  B := T1.dwHighDateTime xor T2.dwHighDateTime xor T3.dwHighDateTime xor T4.dwHighDateTime;
+  S := S xor A;
+  S := S xor (Int64(B) shl 32);
+  { System times }
+  GetSystemTimes(T1, T2, T3);
+  A := T1.dwLowDateTime  xor T2.dwLowDateTime  xor T3.dwLowDateTime;
+  B := T1.dwHighDateTime xor T2.dwHighDateTime xor T3.dwHighDateTime;
+  S := S xor A;
+  S := S xor (Int64(B) shl 32);
+  Result := S;
+end;
+{$ENDIF}
+
+
+
+{                                                                              }
+{ RandomSeed                                                                   }
+{   The random seed is generated from a startup seed, a fixed seed, a          }
+{   variable seed and an entropy seed.                                         }
+{   The startup seed is initialised on module initialisation.                  }
+{   The fixed seed is randomised on the first call to RandomSeed.              }
+{   The variable seed is randomised on every call to RandomSeed.               }
+{                                                                              }
+var
+  EntropySeed   : Int64 = 0;
+  StartupSeed   : Int64 = 0;
+  FixedSeedInit : Boolean = False;
+  FixedSeed     : Int64 = 0;
+  VariableSeed  : Int64 = 0;
+
+function SeedMix1(const A, B: LongWord): Int64;
+begin
+  Result :=
+       Int64(lcRandom3(A)) or
+      (Int64(lcRandom4(B)) shl 32);
+end;
+
+function SeedMix2(const A, B: LongWord): Int64;
+begin
+  Result :=
+       Int64(lcRandom1(A)) or
+      (Int64(lcRandom2(B)) shl 32);
+end;
+
+function SeedMix3(const A, B: LongWord): Int64;
+begin
+  Result :=
+       Int64(lcRandom2(A)) or
+      (Int64(lcRandom5(B)) shl 32);
+end;
+
+function SeedMix4(const A, B: LongWord): Int64;
+begin
+  Result :=
+       Int64(lcRandom4(A)) or
+      (Int64(lcRandom2(B)) shl 32);
+end;
+
+function SeedMix5(const A, B: LongWord): Int64;
+begin
+  Result :=
+       Int64(lcRandom5(A)) or
+      (Int64(lcRandom1(B)) shl 32);
+end;
+
+function SeedMix1_64(const S: Int64): Int64;
+begin
+  Result := SeedMix1(LongWord(S), LongWord(S shr 32));
+end;
+
+function SeedMix2_64(const S: Int64): Int64;
+begin
+  Result := SeedMix2(LongWord(S), LongWord(S shr 32));
+end;
+
+function SeedMix3_64(const S: Int64): Int64;
+begin
+  Result := SeedMix3(LongWord(S), LongWord(S shr 32));
+end;
+
+function SeedMix4_64(const S: Int64): Int64;
+begin
+  Result := SeedMix4(LongWord(S), LongWord(S shr 32));
+end;
+
+function SeedMix5_64(const S: Int64): Int64;
+begin
+  Result := SeedMix5(LongWord(S), LongWord(S shr 32));
+end;
+
+procedure AddEntropy(const Value: Int64);
+var
+  S : Int64;
+begin
+  S := EntropySeed xor Value;
+  S := SeedMix1_64(S);
+  EntropySeed := S;
+end;
+
+// The StartupSeed is initialised on module initialisation
+procedure InitStartupSeed;
+var
+  S : Int64;
+begin
+  { Initialise startup seed }
+  S := RandomState;
+  S := SeedMix2_64(S);
+  StartupSeed := S;
+  { Initialise entropy seed }
+  AddEntropy(RandomState);
+end;
+
+// The FixedSeed is initialised on the first call to RandomSeed
+{$IFDEF DELPHI5}{$OPTIMIZATION OFF}{$ENDIF}
+{$IFOPT Q+}{$DEFINE QOn}{$Q-}{$ELSE}{$UNDEF QOn}{$ENDIF}
 procedure InitFixedSeed;
-var S : Int64;
-    {$IFNDEF DOT_NET}
-    Q : Pointer;
-    {$ENDIF}
-    B : Array[0..258] of Byte;
-    {$IFDEF MSWIN}
-    {$IFNDEF DOT_NET}
-    L : LongWord;
-    {$ENDIF}
-    P : Int64;
-    {$ENDIF}
-    {$IFDEF UNIX}
-    T : AnsiString;
-    {$ENDIF}
+var
+  S : Int64;
+  {$IFNDEF DOT_NET}
+  Q : Pointer;
+  {$ENDIF}
+  {$IFDEF UNIX}
+  T : RawByteString;
+  {$ENDIF}
 begin
   { Startup Seed }
   S := StartupSeed;
   { System State }
   S := S xor RandomState;
-  { Pointer Values }
-  {$IFNDEF DOT_NET}
-  Q := @FixedSeed; // Global variable
-  S := Int64(S + Integer(Q));
-  Q := @B; // Local variable
-  S := Int64(S + Integer(Q));
+  {$IFDEF MSWIN}
+  S := S xor WinRandomState;
   {$ENDIF}
-  { OS Timing }
-  Sleep(0);
-  S := Int64(S + RandomState);
+  { Pointer Values }
+  {$IFNDEF ManagedCode}
+  Q := @FixedSeed; // Global variable
+  S := Int64(S + NativeUInt(Q));
+  Q := @S; // Local variable
+  S := Int64(S + NativeUInt(Q));
+  {$ENDIF}
   {$IFDEF MSWIN}
   { CPU Frequency }
-  if QueryPerformanceFrequency(P) then
-    S := S xor P;
+  S := S xor GetCPUFrequency;
   {$IFNDEF DOT_NET}
   { OS User Name }
-  L := 256;
-  FillChar(B[0], Sizeof(B), #0);
-  if GetUserName(@B, L) then
-    S := Int64(S + BufferHash(@B, L));
+  S := Int64(S + StrHashB(GetOSUserName));
   { OS Computer Name }
-  L := 256;
-  FillChar(B[0], Sizeof(B), #0);
-  if GetComputerName(@B, L) then
-    S := Int64(S + BufferHash(@B, L));
+  S := Int64(S + StrHashB(GetOSComputerName));
   {$ENDIF}
-  { Process ID }
-  S := S xor GetCurrentProcessID;
   {$ENDIF}
   {$IFDEF UNIX}
   { OS User Name }
-  T := GetEnvironmentVariable('USER');
-  if T = '' then
-    T := GetEnvironmentVariable('USERNAME');
-  if T <> '' then
-    S := Int64(S + BufferHash(Pointer(T), Length(T)));
+  S := Int64(S + StrHashB(GetOSUserName));
   { OS Computer Name }
-  T := GetEnvironmentVariable('HOSTNAME');
-  if T <> '' then
-    S := Int64(S + BufferHash(Pointer(T), Length(T)));
+  S := Int64(S + StrHashB(GetOSComputerName));
   { PPID }
-  T := GetEnvironmentVariable('PPID');
-  if T <> '' then
-    S := Int64(S + BufferHash(Pointer(T), Length(T)));
+  S := Int64(S + StrHashB(GetEnvironmentVariable('PPID'));
   {$ENDIF}
-  { Randomize bits }
-  {$IFNDEF DOT_NET}
-  Int64Rec(S).Lo := lcRandom3(Int64Rec(S).Lo);
-  Int64Rec(S).Hi := lcRandom4(Int64Rec(S).Hi);
+  { System Timing }
+  S := Int64(S + RandomState);
+  Sleep(0);
+  S := Int64(S + RandomState);
+  Sleep(1);
+  S := Int64(S + RandomState);
+  {$IFDEF MSWIN}
+  S := Int64(S + WinRandomState);
   {$ENDIF}
+  Sleep(0);
+  S := Int64(S + RandomState);
+  { Mix bits }
+  S := SeedMix3_64(S);
   { Save fixed seed }
   FixedSeed := S;
   FixedSeedInit := True;
 end;
-{$IFDEF DEBUG}{$Q+}{$ENDIF}{$IFDEF DELPHI5}{$OPTIMIZATION ON}{$ENDIF}
+{$IFDEF QOn}{$Q+}{$ENDIF}
+{$IFDEF DELPHI5}{$OPTIMIZATION ON}{$ENDIF}
 
-{$Q-}{$IFDEF DELPHI5}{$OPTIMIZATION OFF}{$ENDIF}
+{$IFDEF DELPHI5}{$OPTIMIZATION OFF}{$ENDIF}
+{$IFOPT Q+}{$DEFINE QOn}{$Q-}{$ELSE}{$UNDEF QOn}{$ENDIF}
 function RandomSeed: LongWord;
-var S : Int64;
+var
+  S : Int64;
 begin
   { Fixed Seed }
   if not FixedSeedInit then
     InitFixedSeed;
   S := FixedSeed;
-  { System State }
-  S := S xor RandomState;
-  {$IFDEF MSWIN}
-  { OS Handles }
-  S := S xor GetCurrentThreadID;
-  {$ENDIF}
   { Entropy Seed }
   S := Int64(S + EntropySeed);
   { Variable Seed }
   S := Int64(S + VariableSeed);
-  {$IFNDEF DOT_NET}
-  Int64Rec(VariableSeed).Lo := lcRandom5(Int64Rec(S).Lo);
-  Int64Rec(VariableSeed).Hi := lcRandom2(Int64Rec(S).Hi);
+  { System State }
+  S := Int64(S + RandomState);
+  {$IFDEF MSWIN}
+  S := Int64(S + WinRandomState);
   {$ENDIF}
-  { Randomise bits }
-  {$IFDEF DOT_NET}
-  Result := lcRandom1(LongWord(S and $FFFFFFFF));
-  {$ELSE}
-  Result := LongWord(lcRandom1(Int64Rec(S).Lo) + lcRandom3(Int64Rec(S).Hi));
-  {$ENDIF}
+  { Mix bits }
+  S := SeedMix5_64(S);
+  { Update variable seed }
+  VariableSeed := VariableSeed xor S;
+  VariableSeed := SeedMix4_64(VariableSeed);
+  { Mix/Reduce seed into result }
+  Result := LongWord(S) xor
+            LongWord(S shr 32);
 end;
-{$IFDEF DEBUG}{$Q+}{$ENDIF}{$IFDEF DELPHI5}{$OPTIMIZATION ON}{$ENDIF}
+{$IFDEF QOn}{$Q+}{$ENDIF}
+{$IFDEF DELPHI5}{$OPTIMIZATION ON}{$ENDIF}
 
-procedure AddEntropy(const Value: LongWord);
+procedure RandomSeedFinalise;
 begin
-  {$IFNDEF DOT_NET}
-  Int64Rec(EntropySeed).Lo := lcRandom4(Int64Rec(EntropySeed).Lo xor Value);
-  Int64Rec(EntropySeed).Hi := lcRandom1(Int64Rec(EntropySeed).Hi xor Value);
-  {$ENDIF}
+  EntropySeed  := 0;
+  StartupSeed  := 0;
+  FixedSeed    := 0;
+  VariableSeed := 0;
 end;
 
 
@@ -448,12 +631,13 @@ end;
 {                                                                              }
 var
   moaSeeded : Boolean = False;
-  moaX      : Array[0..3] of LongWord;
+  moaX      : array[0..3] of LongWord;
   moaC      : LongWord;
 
 procedure moaInitSeed(const Seed: LongWord);
-var I : Integer;
-    S : LongWord;
+var
+  I : Integer;
+  S : LongWord;
 begin
   S := Seed;
   for I := 0 to 3 do
@@ -466,8 +650,9 @@ begin
 end;
 
 function moaRandomLongWord: LongWord;
-var S  : Int64;
-    Xn : LongWord;
+var
+  S  : Int64;
+  Xn : LongWord;
 begin
   if not moaSeeded then
     moaInitSeed(RandomSeed);
@@ -488,6 +673,18 @@ end;
 function moaRandomFloat: Extended;
 begin
   Result := moaRandomLongWord / High(LongWord);
+end;
+
+procedure moaFinalise;
+begin
+  if moaSeeded then
+    begin
+      moaX[0] := 0;
+      moaX[1] := 0;
+      moaX[2] := 0;
+      moaX[3] := 0;
+      moaC := 0;
+    end;
 end;
 
 
@@ -537,6 +734,16 @@ begin
   Result := mwcRandomLongWord / High(LongWord);
 end;
 
+procedure mwcFinalise;
+begin
+  if mwcSeeded then
+    begin
+      mwcX := 0;
+      mwcY := 0;
+      mwcC := 0;
+    end;
+end;
+
 
 
 {                                                                              }
@@ -550,7 +757,7 @@ end;
 {                                                                              }
 var
   urnSeeded : Boolean = False;
-  urnU      : Array[1..97] of Double;
+  urnU      : array[1..97] of Double;
   urnC      : Double;
   urnCD     : Double;
   urnCM     : Double;
@@ -626,6 +833,22 @@ begin
   Result := LongWord(Trunc(urnRandomFloat * 4294967295.0));
 end;
 
+procedure urnFinalise;
+var
+  I : Integer;
+begin
+  if urnSeeded then
+    begin
+      for I := 1 to 97 do
+        urnU[I] := 0.0;
+      urnC := 0.0;
+      urnCD := 0.0;
+      urnCM := 0.0;
+      urnI := 0;
+      urnJ := 0;
+    end;
+end;
+
 
 
 {                                                                              }
@@ -679,12 +902,9 @@ end;
 
 function RandomInt64: Int64;
 begin
-  {$IFDEF DOT_NET}
-  Result := RandomUniform + Int64(RandomUniform) shl 31;
-  {$ELSE}
-  Int64Rec(Result).Lo := RandomUniform;
-  Int64Rec(Result).Hi := RandomUniform;
-  {$ENDIF}
+  Result :=
+     Int64(RandomUniform) or
+    (Int64(RandomUniform) shl 32);
 end;
 
 function RandomInt64(const N: Int64): Int64;
@@ -702,16 +922,17 @@ end;
 
 const
   HexDigitsHi  : String        = '0123456789ABCDEF';
-  HexDigitsHiA : AnsiString    = '0123456789ABCDEF';
+  HexDigitsHiA : RawByteString = '0123456789ABCDEF';
   HexDigitsHiU : UnicodeString = '0123456789ABCDEF';
   HexDigitsLo  : String        = '0123456789abcdef';
-  HexDigitsLoA : AnsiString    = '0123456789abcdef';
+  HexDigitsLoA : RawByteString = '0123456789abcdef';
   HexDigitsLoU : UnicodeString = '0123456789abcdef';
 
 function RandomHex(const Digits: Integer; const UpperCase: Boolean): String;
-var I : Integer;
-    D : Integer;
-    C : Char;
+var
+  I : Integer;
+  D : Integer;
+  C : Char;
 begin
   if Digits <= 0 then
     begin
@@ -730,10 +951,11 @@ begin
     end;
 end;
 
-function RandomHexA(const Digits: Integer; const UpperCase: Boolean): AnsiString;
-var I : Integer;
-    D : Integer;
-    C : AnsiChar;
+function RandomHexA(const Digits: Integer; const UpperCase: Boolean): RawByteString;
+var
+  I : Integer;
+  D : Integer;
+  C : AnsiChar;
 begin
   if Digits <= 0 then
     begin
@@ -753,9 +975,10 @@ begin
 end;
 
 function RandomHexW(const Digits: Integer; const UpperCase: Boolean): WideString;
-var I : Integer;
-    D : Integer;
-    C : WideChar;
+var
+  I : Integer;
+  D : Integer;
+  C : WideChar;
 begin
   if Digits <= 0 then
     begin
@@ -775,9 +998,10 @@ begin
 end;
 
 function RandomHexU(const Digits: Integer; const UpperCase: Boolean): UnicodeString;
-var I : Integer;
-    D : Integer;
-    C : WideChar;
+var
+  I : Integer;
+  D : Integer;
+  C : WideChar;
 begin
   if Digits <= 0 then
     begin
@@ -796,8 +1020,9 @@ begin
     end;
 end;
 
-function RandomUpperAlphaStrA(const Length: Integer): AnsiString;
-var I : Integer;
+function RandomUpperAlphaStrA(const Length: Integer): RawByteString;
+var
+  I : Integer;
 begin
   if Length <= 0 then
     begin
@@ -815,8 +1040,9 @@ const
   Consonants     = 'BCDFGHJKLMNPQRSTVWXZ';
   ConsonantCount = Length(Consonants);
 
-function RandomPseudoWordA(const Length: Integer): AnsiString;
-var I, A, P, T : Integer;
+function RandomPseudoWordA(const Length: Integer): RawByteString;
+var
+  I, A, P, T : Integer;
 begin
   if Length <= 0 then
     begin
@@ -848,9 +1074,10 @@ const
   PasswordNumberCharCount = Length(PasswordNumberChars);
 
 function RandomPasswordA(const MinLength, MaxLength: Integer;
-         const CaseSensitive, UseSymbols, UseNumbers: Boolean): AnsiString;
-var I, J, K, N, Length : Integer;
-    C : AnsiChar;
+         const CaseSensitive, UseSymbols, UseNumbers: Boolean): RawByteString;
+var
+  I, J, K, N, Length : Integer;
+  C : AnsiChar;
 begin
   if (MaxLength <= 0) or (MaxLength < MinLength) then
     begin
@@ -905,7 +1132,8 @@ var
   ARandomNormal   : Extended;
 
 function RandomNormalF: Extended;
-var fac, r, v1, v2: Extended;
+var
+  fac, r, v1, v2: Extended;
 begin
   if not HasRandomNormal then
     begin
@@ -918,11 +1146,18 @@ begin
       ARandomNormal := v1 * fac;
       Result := v2 * fac;
       HasRandomNormal := True;
-    end else
+    end
+  else
     begin
       Result := ARandomNormal;
       HasRandomNormal := False;
     end;
+end;
+
+procedure RandomNormalFinalise;
+begin
+  if HasRandomNormal then
+    ARandomNormal := 0.0;
 end;
 
 
@@ -935,16 +1170,21 @@ end;
 procedure SelfTest;
 var I, L : Integer;
     A, B, C : LongWord;
+    V, W : Int64;
     T1, T2 : Int64;
 begin
   Assert(Length(RandomPasswordA(0, 0, True, True, True)) = 0);
   Assert(Length(RandomPasswordA(1, 1, True, True, True)) = 1);
   for I := 1 to 100 do
-  begin
-    L := Length(RandomPasswordA(5, 16, True, True, True));
-    Assert((L >= 5) and (L <= 16));
-  end;
-  // Note: These are primitive sanity tests that may fail occasionally
+    begin
+      L := Length(RandomPasswordA(5, 16, True, True, True));
+      Assert((L >= 5) and (L <= 16));
+    end;
+  Assert(Length(RandomHexA(32)) = 32);
+  // Note: These are simple sanity tests that may fail occasionally
+  // RandomSeed/RandomUniform
+  // - Check for unique numbers
+  // - Check average value of random numbers
   T1 := 0;
   T2 := 0;
   for I := 1 to 10000 do
@@ -964,6 +1204,15 @@ begin
   Assert((T1 > 1600000000) and (T1 < 2800000000), 'RandomSeed');
   T2 := T2 div 30000;
   Assert((T2 > 1600000000) and (T2 < 2800000000), 'RandomUniform');
+  // RandomInt64
+  // - Check sign
+  I := 0;
+  repeat
+    Inc(I);
+    V := RandomInt64;
+    W := RandomInt64;
+  until ((V < 0) and (W > 0)) or (I = 32);
+  Assert((V < 0) and (W > 0), 'RandomInt64');
 end;
 {$ENDIF}
 
@@ -971,5 +1220,8 @@ end;
 
 initialization
   InitStartupSeed;
+finalization
+  RandomSeedFinalise;
+  moaFinalise;
 end.
 

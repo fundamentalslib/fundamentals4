@@ -484,7 +484,7 @@ begin
   N := FBufLen - FBufPos;
   if N <= 0 then
     N := BufferChars(1);
-  Repeat
+  repeat
     if N <= 0 then // eof
       exit;
     // skip
@@ -500,7 +500,7 @@ begin
         end;
     // buffer more
     N := BufferChars(1);
-  Until False;
+  until False;
 end;
 
 function TUnicodeReader.MatchChar(const CharMatchFunc: TWideCharMatchFunction;
@@ -606,7 +606,7 @@ begin
   N := FBufLen - FBufPos;
   if N <= 0 then
     N := BufferChars(1);
-  Repeat
+  repeat
     if N < Result + 1 then // eof
       exit;
     // match
@@ -621,7 +621,7 @@ begin
         end;
     // buffer more
     N := BufferChars(Result + 1);
-  Until False;
+  until False;
 end;
 
 function TUnicodeReader.MatchRawByteChars(const C: CharSet): Integer;
@@ -633,7 +633,7 @@ begin
   N := FBufLen - FBufPos;
   if N <= 0 then
     N := BufferChars(1);
-  Repeat
+  repeat
     if N < Result + 1 then // eof
       exit;
     // match
@@ -641,14 +641,15 @@ begin
     Inc(P, FBufPos + Result);
     For I := Result + 1 to N do
       if (Ord(P^) > $FF) or not (AnsiChar(Byte(P^)) in C) then
-        exit else
+        exit
+      else
         begin
           Inc(Result);
           Inc(P);
         end;
     // buffer more
     N := BufferChars(Result + 1);
-  Until False;
+  until False;
 end;
 
 function TUnicodeReader.LocateRawByteChar(const C: CharSet;
@@ -662,7 +663,7 @@ begin
   N := FBufLen - FBufPos;
   if N <= 0 then
     N := BufferChars(1);
-  Repeat
+  repeat
     if N < Result + 1 then
       begin
         // eof
@@ -685,7 +686,7 @@ begin
       end;
     // buffer more
     N := BufferChars(Result + 1);
-  Until False;
+  until False;
 end;
 
 function TUnicodeReader.LocateRawByteStr(const S: RawByteString;
@@ -702,7 +703,7 @@ begin
   N := FBufLen - FBufPos;
   if N < M then
     N := BufferChars(M);
-  Repeat
+  repeat
     if N < Result + M then
       begin
         // eof
@@ -723,7 +724,7 @@ begin
         end;
     // buffer more characters
     N := BufferChars(Result + M);
-  Until False;
+  until False;
 end;
 
 function TUnicodeReader.PeekChar: WideChar;
@@ -809,7 +810,8 @@ begin
   // calculate length
   L := MatchChars(CharMatchFunc);
   if L = 0 then
-    Result := '' else
+    Result := ''
+  else
     begin
       // read
       SetLength(Result, L);
@@ -827,7 +829,8 @@ begin
   // calculate length
   L := MatchRawByteChars(C);
   if L = 0 then
-    Result := '' else
+    Result := ''
+  else
     begin
       // read
       SetLength(Result, L);
