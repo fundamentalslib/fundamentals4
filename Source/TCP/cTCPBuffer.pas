@@ -337,7 +337,7 @@ begin
 end;
 
 // Peek TCP buffer
-// Returns the number of bytes actually available to peek (up to requested size)
+// Returns the number of bytes available to peek
 function TCPBufferPeekPtr(
          const TCPBuf: TTCPBuffer;
          var BufPtr: Pointer): Integer; {$IFDEF UseInline}inline;{$ENDIF}

@@ -1830,7 +1830,7 @@ begin
   Assert(Assigned(FTCPClient));
   Assert(FState in [hcsSendingRequest, hcsSendingContent]);
   //
-  FTCPClient.Connection.WriteStrA(S);
+  FTCPClient.Connection.WriteStrB(S);
 end;
 
 procedure TF4HTTPClient.SendRequest;

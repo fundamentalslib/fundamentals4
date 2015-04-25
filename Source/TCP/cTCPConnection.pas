@@ -2,7 +2,7 @@
 {                                                                              }
 {   Library:          Fundamentals 4.00                                        }
 {   File name:        cTCPConnection.pas                                       }
-{   File version:     4.21                                                     }
+{   File version:     4.22                                                     }
 {   Description:      TCP connection.                                          }
 {                                                                              }
 {   Copyright:        Copyright (c) 2007-2015, David J Butler                  }
@@ -58,6 +58,7 @@
 {   2011/09/15  4.19  Improve polling efficiency.                              }
 {   2011/10/06  4.20  Fix TCPTick frequency.                                   }
 {   2015/03/14  4.21  RawByteString changes.                                   }
+{   2015/04/09  4.22  TBytes functions.                                        }
 {                                                                              }
 {******************************************************************************}
 
@@ -177,6 +178,9 @@ type
     FOnClose            : TTCPConnectionNotifyEvent;
     FOnReadBufferFull   : TTCPConnectionNotifyEvent;
     FOnWriteBufferEmpty : TTCPConnectionNotifyEvent;
+
+    FUserTag            : NativeInt;
+    FUserObject         : TObject;
 
     FLock               : TCriticalSection;
     FState              : TTCPConnectionState;
@@ -305,12 +309,14 @@ type
 
     function  Read(var Buf; const BufSize: Integer): Integer;
     function  ReadStr(const StrLen: Integer): RawByteString;
+    function  ReadBytes(const Len: Integer): TBytes;
 
     function  Discard(const Size: Integer): Integer;
 
     function  Peek(var Buf; const BufSize: Integer): Integer;
     function  PeekByte(out B: Byte): Boolean;
     function  PeekStr(const StrLen: Integer): RawByteString;
+    function  PeekBytes(const Len: Integer): TBytes;
 
     function  PeekDelimited(var Buf; const BufSize: Integer; const Delimiter: TRawByteCharSet; const MaxSize: Integer = -1): Integer; overload;
     function  PeekDelimited(var Buf; const BufSize: Integer; const Delimiter: RawByteString; const MaxSize: Integer = -1): Integer; overload;
@@ -318,12 +324,18 @@ type
     function  ReadLine(var Line: RawByteString; const Delimiter: RawByteString; const MaxLineLength: Integer = -1): Boolean;
 
     function  Write(const Buf; const BufSize: Integer): Integer;
-    function  WriteStrA(const Str: RawByteString): Integer;
-    function  WriteStrW(const Str: WideString): Integer;
+    function  WriteStrA(const Str: AnsiString): Integer;
+    function  WriteStrB(const Str: RawByteString): Integer;
+    function  WriteStrWideW(const Str: WideString): Integer;
     function  WriteStr(const Str: String): Integer;
+    function  WriteBytes(const B: TBytes): Integer;
 
     procedure Close;
     procedure Shutdown;
+
+    // User defined values
+    property  UserTag: NativeInt read FUserTag write FUserTag;
+    property  UserObject: TObject read FUserObject write FUserObject;
   end;
 
   TTCPConnectionClass = class of TTCPConnection;
@@ -1636,6 +1648,20 @@ begin
     SetLength(Result, ReadLen);
 end;
 
+function TTCPConnection.ReadBytes(const Len: Integer): TBytes;
+var ReadLen : Integer;
+begin
+  if Len <= 0 then
+    begin
+      Result := nil;
+      exit;
+    end;
+  SetLength(Result, Len);
+  ReadLen := Read(Result[0], Len);
+  if ReadLen < Len then
+    SetLength(Result, ReadLen);
+end;
+
 // Discard a number of bytes from the read buffer
 // Returns the number of bytes actually discarded
 // Similar to Read; no throttling; no reading directly from socket
@@ -1756,7 +1782,7 @@ begin
   Assert(Result = BufSize);
 end;
 
-function TTCPConnection.WriteStrA(const Str: RawByteString): Integer;
+function TTCPConnection.WriteStrA(const Str: AnsiString): Integer;
 var StrLen : Integer;
 begin
   StrLen := Length(Str);
@@ -1768,7 +1794,19 @@ begin
   Result := Write(Str[1], StrLen);
 end;
 
-function TTCPConnection.WriteStrW(const Str: WideString): Integer;
+function TTCPConnection.WriteStrB(const Str: RawByteString): Integer;
+var StrLen : Integer;
+begin
+  StrLen := Length(Str);
+  if StrLen <= 0 then
+    begin
+      Result := 0;
+      exit;
+    end;
+  Result := Write(Str[1], StrLen);
+end;
+
+function TTCPConnection.WriteStrWideW(const Str: WideString): Integer;
 var StrLen : Integer;
 begin
   StrLen := Length(Str);
@@ -1783,10 +1821,22 @@ end;
 function TTCPConnection.WriteStr(const Str: String): Integer;
 begin
   {$IFDEF StringIsUnicode}
-  Result := WriteStrA(UTF8Encode(Str));
+  Result := WriteStrB(UTF8Encode(Str));
   {$ELSE}
-  Result := WriteStrA(Str);
+  Result := WriteStrB(Str);
   {$ENDIF}
+end;
+
+function TTCPConnection.WriteBytes(const B: TBytes): Integer;
+var Len : Integer;
+begin
+  Len := Length(B);
+  if Len <= 0 then
+    begin
+      Result := 0;
+      exit;
+    end;
+  Result := Write(B[0], Len);
 end;
 
 function TTCPConnection.Peek(var Buf; const BufSize: Integer): Integer;
@@ -1820,6 +1870,20 @@ begin
   SetLength(Result, StrLen);
   PeekLen := Peek(Result[1], StrLen);
   if PeekLen < StrLen then
+    SetLength(Result, PeekLen);
+end;
+
+function TTCPConnection.PeekBytes(const Len: Integer): TBytes;
+var PeekLen : Integer;
+begin
+  if Len <= 0 then
+    begin
+      Result := nil;
+      exit;
+    end;
+  SetLength(Result, Len);
+  PeekLen := Peek(Result[0], Len);
+  if PeekLen < Len then
     SetLength(Result, PeekLen);
 end;
 

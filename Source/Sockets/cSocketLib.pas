@@ -2,7 +2,7 @@
 {                                                                              }
 {   Library:          Fundamentals 4.00                                        }
 {   File name:        cSocketLib.pas                                           }
-{   File version:     4.15                                                     }
+{   File version:     4.16                                                     }
 {   Description:      Socket library.                                          }
 {                                                                              }
 {   Copyright:        Copyright (c) 2001-2015, David J Butler                  }
@@ -52,6 +52,7 @@
 {   2007/12/29  4.13  Revision.                                                }
 {   2010/09/12  4.14  Revision.                                                }
 {   2014/04/23  4.15  Revision.                                                }
+{   2015/04/24  4.16  SocketAddrArray help functions.                          }
 {                                                                              }
 { Supported compilers:                                                         }
 {                                                                              }
@@ -219,6 +220,12 @@ function  SocketAddrIPStr(const Addr: TSocketAddr): String;
 
 function  SocketAddrStrA(const Addr: TSocketAddr): RawByteString;
 function  SocketAddrStr(const Addr: TSocketAddr): String;
+
+function  SocketAddrEqual(const Addr1, Addr2: TSocketAddr): Boolean;
+
+procedure SocketAddrArrayAppend(var AddrArray: TSocketAddrArray; const Addr: TSocketAddr);
+function  SocketAddrArrayGetAddrIndex(const AddrArray: TSocketAddrArray; const Addr: TSocketAddr): Integer;
+function  SocketAddrArrayHasAddr(const AddrArray: TSocketAddrArray; const Addr: TSocketAddr): Boolean;
 
 type
   TSocketHost = record
@@ -977,6 +984,47 @@ end;
 function SocketAddrStr(const Addr: TSocketAddr): String;
 begin
   Result := Format('%s:%d', [SocketAddrIPStr(Addr), Addr.Port]);
+end;
+
+function SocketAddrEqual(const Addr1, Addr2: TSocketAddr): Boolean;
+begin
+  if Addr1.AddrFamily <> Addr2.AddrFamily then
+    Result := False
+  else
+  if Addr1.Port <> Addr2.Port then
+    Result := False
+  else
+  case Addr1.AddrFamily of
+    iaIP4 : Result := Addr1.AddrIP4.Addr32 = Addr2.AddrIP4.Addr32;
+    iaIP6 : Result := IP6AddrIsEqual(Addr1.AddrIP6, Addr2.AddrIP6)
+  else
+    Result := False;
+  end;
+end;
+
+procedure SocketAddrArrayAppend(var AddrArray: TSocketAddrArray; const Addr: TSocketAddr);
+var L : Integer;
+begin
+  L := Length(AddrArray);
+  SetLength(AddrArray, L + 1);
+  AddrArray[L] := Addr;
+end;
+
+function SocketAddrArrayGetAddrIndex(const AddrArray: TSocketAddrArray; const Addr: TSocketAddr): Integer;
+var I : Integer;
+begin
+  for I := 0 to Length(AddrArray) - 1 do
+    if SocketAddrEqual(AddrArray[I], Addr) then
+      begin
+        Result := I;
+        exit;
+      end;
+  Result := -1;
+end;
+
+function SocketAddrArrayHasAddr(const AddrArray: TSocketAddrArray; const Addr: TSocketAddr): Boolean;
+begin
+  Result := SocketAddrArrayGetAddrIndex(AddrArray, Addr) >= 0;
 end;
 
 function HostEntToSocketHost(const HostEnt: PHostEnt): TSocketHost;

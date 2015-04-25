@@ -833,7 +833,7 @@ begin
       end;
     // read & write (small block): client to server
     for K := 0 to TestClientCount - 1 do
-      C[K].Connection.WriteStrA('Fundamentals');
+      C[K].Connection.WriteStrB('Fundamentals');
     for K := 0 to TestClientCount - 1 do
       begin
         DebugObj.Log('{RWS:' + IntToStr(K + 1) + ':A}');
@@ -854,7 +854,7 @@ begin
       end;
     // read & write (small block): server to client
     for K := 0 to TestClientCount - 1 do
-      T[K].Connection.WriteStrA('123');
+      T[K].Connection.WriteStrB('123');
     for K := 0 to TestClientCount - 1 do
       begin
         C[K].WaitReceive(3, 5000);
@@ -867,7 +867,7 @@ begin
         SetLength(F, LargeBlockSize);
         FillChar(F[1], LargeBlockSize, #1);
         for K := 0 to TestClientCount - 1 do
-          C[K].Connection.WriteStrA(F);
+          C[K].Connection.WriteStrB(F);
         for K := 0 to TestClientCount - 1 do
           begin
             J := LargeBlockSize;
@@ -894,7 +894,7 @@ begin
         SetLength(F, LargeBlockSize);
         FillChar(F[1], LargeBlockSize, #1);
         for K := 0 to TestClientCount - 1 do
-          T[K].Connection.WriteStrA(F);
+          T[K].Connection.WriteStrB(F);
         for K := 0 to TestClientCount - 1 do
           begin
             J := LargeBlockSize;

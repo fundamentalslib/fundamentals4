@@ -5,7 +5,7 @@
 {   File version:     4.11                                                     }
 {   Description:      TCP server.                                              }
 {                                                                              }
-{   Copyright:        Copyright (c) 2007-2013, David J Butler                  }
+{   Copyright:        Copyright (c) 2007-2015, David J Butler                  }
 {                     All rights reserved.                                     }
 {                     This file is licensed under the BSD License.             }
 {                     See http://www.opensource.org/licenses/bsd-license.php   }
@@ -51,6 +51,7 @@
 {                                                                              }
 { Todo:                                                                        }
 { - Multiple processing threads                                                }
+{ - Black/White list IPs ?                                                     }
 {                                                                              }
 {******************************************************************************}
 
@@ -176,7 +177,7 @@ type
 
     property  ClientID: Integer read FClientID;
 
-    // User defined identifiers
+    // User defined values
     property  UserTag: NativeInt read FUserTag write FUserTag;
     property  UserObject: TObject read FUserObject write FUserObject;
   end;
@@ -1110,7 +1111,7 @@ begin
   if Assigned(FOnIdle) then
     FOnIdle(self, Thread)
   else
-    Sleep(1);
+    Sleep(10);
 end;
 
 procedure TF4TCPServer.ServerSocketLog(Sender: TSysSocket; LogType: TSysSocketLogType; Msg: String);
@@ -1508,9 +1509,7 @@ begin
     end;
   // process client
   try
-    // Log(tlDebug, 'Process:C[%d]:Start', [ClientIdx + 1]);
     D.Process(ClientIdle, ClientTerminated);
-    // Log(tlDebug, 'Process:C[%d]:Fin', [ClientIdx + 1]);
   finally
     D.ReleaseReference;
   end;

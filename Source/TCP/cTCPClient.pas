@@ -454,7 +454,7 @@ type
               const TransmitTimeOut: Integer;
               const CloseTimeOut: Integer);
 
-    // User defined identifiers
+    // User defined values
     property  UserTag: NativeInt read FUserTag write FUserTag;
     property  UserObject: TObject read FUserObject write FUserObject;
   end;

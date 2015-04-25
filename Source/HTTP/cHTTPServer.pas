@@ -180,6 +180,7 @@ type
 
     procedure SetRequestComplete;
 
+    procedure InitResponse;
     procedure PrepareResponse;
     procedure InitResponseContent;
     procedure SendResponseContent;
@@ -261,9 +262,11 @@ type
     property  ResponseContentFileName: String read GetResponseContentFileName write SetResponseContentFileName;
     property  ResponseReady: Boolean read FResponseReady write SetResponseReady;
 
-    procedure SetResponseOK_HtmlStr(const HtmlStr: RawByteString);
-    procedure SetResponseOK_File(const ContentType: THTTPContentTypeEnum;
+    procedure SetResponseOKHtmlStr(const HtmlStr: RawByteString);
+    procedure SetResponseOKFile(const ContentType: THTTPContentTypeEnum;
               const FileName: String);
+    procedure SetResponseNotFound;
+    procedure SetResponseRedirect(const Location: RawByteString);
 
     procedure Disconnect;
   end;
@@ -794,7 +797,7 @@ end;
 procedure THTTPServerClient.SendStr(const S: RawByteString);
 begin
   Assert(Assigned(FTCPClient));
-  FTCPClient.Connection.WriteStrA(S);
+  FTCPClient.Connection.WriteStrB(S);
 end;
 
 procedure THTTPServerClient.Start;
@@ -875,6 +878,7 @@ end;
 procedure THTTPServerClient.SetRequestComplete;
 begin
   SetState(hscsRequestComplete);
+  InitResponse;
   TriggerRequestContentComplete;
   SetState(hscsPreparingResponse);
   PrepareResponse;
@@ -886,10 +890,10 @@ begin
   ResponsePrepared;
 end;
 
-procedure THTTPServerClient.PrepareResponse;
+procedure THTTPServerClient.InitResponse;
 begin
   {$IFDEF HTTP_DEBUG}
-  Log(sltDebug, 'PrepareResponse');
+  Log(sltDebug, 'InitResponse');
   {$ENDIF}
   FResponse.StartLine.Version := FRequest.StartLine.Version;
   if FRequest.StartLine.Version.Version = hvHTTP11 then
@@ -901,42 +905,32 @@ begin
   FResponse.Header.CommonHeaders.Date.DateTime := Now;
   if FHTTPServer.FServerName <> '' then
     FResponse.Header.FixedHeaders[hntServer] := FHTTPServer.FServerName;
+end;
+
+procedure THTTPServerClient.PrepareResponse;
+begin
+  {$IFDEF HTTP_DEBUG}
+  Log(sltDebug, 'PrepareResponse');
+  {$ENDIF}
+  TriggerPrepareResponse;
   if FResponse.StartLine.Msg = hslmNone then
     FResponse.StartLine.Msg := HTTPResponseCodeToStartLineMessage(FResponse.StartLine.Code);
-  TriggerPrepareResponse;
 end;
 
 procedure THTTPServerClient.InitResponseContent;
 var HasContent : Boolean;
     ContentLen : Int64;
-    V : THTTPContentLengthEnum;
     B : Int64;
 begin
   FResponseContentWriter.InitContent(HasContent, ContentLen);
   if not HasContent then
-    begin
-      // no content
-      // if content-type set, add content-length: 0
-      if FResponse.Header.CommonHeaders.ContentType.Value <> hctNone then
-        begin
-          V := hcltByteCount;
-          B := 0;
-        end
-      else
-        begin
-          V := hcltNone;
-          B := 0;
-        end;
-    end
+    B := 0
   else
-    begin
-      V := hcltByteCount;
-      B := ContentLen;
-    end;
-  FResponse.Header.CommonHeaders.ContentLength.Value := V;
+    B := ContentLen;
+  FResponse.Header.CommonHeaders.ContentLength.Value := hcltByteCount;
   FResponse.Header.CommonHeaders.ContentLength.ByteCount := B;
   {$IFDEF HTTP_DEBUG}
-  Log(sltDebug, Format('InitResponseContent:%d:%d:%db', [ContentLen, Ord(V), B]));
+  Log(sltDebug, Format('InitResponseContent:%d:%db:%db', [Ord(HasContent), ContentLen, B]));
   {$ENDIF}
 end;
 
@@ -983,6 +977,9 @@ begin
      (FRequest.Header.CommonHeaders.Connection.Value = hcfClose) or
      (FResponse.Header.CommonHeaders.Connection.Value = hcfClose) then
     begin
+      {$IFDEF HTTP_DEBUG}
+      Log(sltDebug, 'SetResponseComplete:ConnectionClose');
+      {$ENDIF}
       FTCPClient.Connection.Shutdown;
       SetState(hscsResponseCompleteAndClosing);
     end;
@@ -1145,7 +1142,7 @@ begin
     ResponsePrepared;
 end;
 
-procedure THTTPServerClient.SetResponseOK_HtmlStr(const HtmlStr: RawByteString);
+procedure THTTPServerClient.SetResponseOKHtmlStr(const HtmlStr: RawByteString);
 var ContentType : THTTPContentTypeEnum;
 begin
   ResponseCode := HTTP_ResponseCode_OK;
@@ -1159,13 +1156,27 @@ begin
   ResponseReady := True;
 end;
 
-procedure THTTPServerClient.SetResponseOK_File(const ContentType: THTTPContentTypeEnum;
+procedure THTTPServerClient.SetResponseOKFile(const ContentType: THTTPContentTypeEnum;
           const FileName: String);
 begin
   ResponseCode := HTTP_ResponseCode_OK;
   ResponseRecordPtr^.Header.CommonHeaders.ContentType.Value := ContentType;
   ResponseContentMechanism := hctmFile;
   ResponseContentFileName := FileName;
+  ResponseReady := True;
+end;
+
+procedure THTTPServerClient.SetResponseNotFound;
+begin
+  ResponseCode := HTTP_ResponseCode_NotFound;
+  ResponseRecordPtr^.Header.CommonHeaders.Connection.Value := hcfClose;
+  ResponseReady := True;
+end;
+
+procedure THTTPServerClient.SetResponseRedirect(const Location: RawByteString);
+begin
+  ResponseCode := HTTP_ResponseCode_SeeOther;
+  ResponseRecordPtr^.Header.FixedHeaders[hntLocation] := Location;
   ResponseReady := True;
 end;
 
