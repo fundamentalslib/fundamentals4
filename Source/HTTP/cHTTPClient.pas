@@ -2,10 +2,10 @@
 {                                                                              }
 {   Library:          Fundamentals 4.00                                        }
 {   File name:        cHTTPClient.pas                                          }
-{   File version:     4.09                                                     }
+{   File version:     4.10                                                     }
 {   Description:      HTTP client.                                             }
 {                                                                              }
-{   Copyright:        Copyright (c) 2009-2013, David J Butler                  }
+{   Copyright:        Copyright (c) 2009-2015, David J Butler                  }
 {                     All rights reserved.                                     }
 {                     This file is licensed under the BSD License.             }
 {                     See http://www.opensource.org/licenses/bsd-license.php   }
@@ -47,6 +47,7 @@
 {  2011/10/06  4.08  SynchronisedEvents option.                                }
 {  2013/03/23  4.09  CustomHeader property.                                    }
 {  2013/03/24  4.10  SetRequestContentWwwFormUrlEncodedField method.           }
+{  2015/05/05  4.11  RawByteString changes.                                    }
 {                                                                              }
 {******************************************************************************}
 
@@ -169,17 +170,17 @@ type
 
     // http request
     FMethod        : THTTPClientMethod;
-    FMethodCustom  : AnsiString;
-    FURI           : AnsiString;
-    FUserAgent     : AnsiString;
+    FMethodCustom  : RawByteString;
+    FURI           : RawByteString;
+    FUserAgent     : RawByteString;
     FKeepAlive     : THTTPKeepAliveOption;
-    FReferer       : AnsiString;
-    FCookie        : AnsiString;
-    FAuthorization : AnsiString;
+    FReferer       : RawByteString;
+    FCookie        : RawByteString;
+    FAuthorization : RawByteString;
     FCustomHeaders : THTTPCustomHeaders;
 
     // request content parameters
-    FRequestContentType   : AnsiString;
+    FRequestContentType   : RawByteString;
     FRequestContentWriter : THTTPContentWriter;
 
     // other parameters
@@ -256,24 +257,24 @@ type
     procedure SetHTTPProxyPort(const HTTPProxyPort: AnsiString);
 
     procedure SetMethod(const Method: THTTPClientMethod);
-    procedure SetMethodCustom(const MethodCustom: AnsiString);
-    procedure SetURI(const URI: AnsiString);
+    procedure SetMethodCustom(const MethodCustom: RawByteString);
+    procedure SetURI(const URI: RawByteString);
 
-    procedure SetUserAgent(const UserAgent: AnsiString);
+    procedure SetUserAgent(const UserAgent: RawByteString);
     procedure SetKeepAlive(const KeepAlive: THTTPKeepAliveOption);
-    procedure SetReferer(const Referer: AnsiString);
-    procedure SetAuthorization(const Authorization: AnsiString);
+    procedure SetReferer(const Referer: RawByteString);
+    procedure SetAuthorization(const Authorization: RawByteString);
 
-    function  GetCustomHeaderByName(const FieldName: AnsiString): PHTTPCustomHeader;
-    function  AddCustomHeader(const FieldName: AnsiString): PHTTPCustomHeader;
-    function  GetCustomHeader(const FieldName: AnsiString): AnsiString;
-    procedure SetCustomHeader(const FieldName: AnsiString; const FieldValue: AnsiString);
+    function  GetCustomHeaderByName(const FieldName: RawByteString): PHTTPCustomHeader;
+    function  AddCustomHeader(const FieldName: RawByteString): PHTTPCustomHeader;
+    function  GetCustomHeader(const FieldName: RawByteString): RawByteString;
+    procedure SetCustomHeader(const FieldName: RawByteString; const FieldValue: RawByteString);
 
-    procedure SetRequestContentType(const RequestContentType: AnsiString);
+    procedure SetRequestContentType(const RequestContentType: RawByteString);
     function  GetRequestContentMechanism: THTTPContentWriterMechanism;
     procedure SetRequestContentMechanism(const RequestContentMechanism: THTTPContentWriterMechanism);
-    function  GetRequestContentStr: AnsiString;
-    procedure SetRequestContentStr(const RequestContentStr: AnsiString);
+    function  GetRequestContentStr: RawByteString;
+    procedure SetRequestContentStr(const RequestContentStr: RawByteString);
     function  GetRequestContentStream: TStream;
     procedure SetRequestContentStream(const RequestContentStream: TStream);
     function  GetRequestContentFileName: String;
@@ -323,9 +324,12 @@ type
     procedure TCPClientRead(Client: TF4TCPClient);
     procedure TCPClientWrite(Client: TF4TCPClient);
     procedure TCPClientClose(Client: TF4TCPClient);
+    procedure TCPClientMainThreadWait(Client: TF4TCPClient);
+    procedure TCPClientThreadWait(Client: TF4TCPClient);
 
     procedure ResetRequest;
 
+    procedure SetErrorMsg(const ErrorMsg: String);
     procedure SetRequestFailedFromException(const E: Exception);
 
     function  InitRequestContent(out HasContent: Boolean): Int64;
@@ -362,7 +366,7 @@ type
     procedure DoStop;
     procedure SetActive(const Active: Boolean);
 
-    function  GetResponseContentStr: AnsiString;
+    function  GetResponseContentStr: RawByteString;
 
     procedure Wait;
 
@@ -403,20 +407,20 @@ type
     property  HTTPProxyPort: AnsiString read FHTTPProxyPort write SetHTTPProxyPort;
 
     property  Method: THTTPClientMethod read FMethod write SetMethod default cmGET;
-    property  MethodCustom: AnsiString read FMethodCustom write SetMethodCustom;
-    property  URI: AnsiString read FURI write SetURI;
+    property  MethodCustom: RawByteString read FMethodCustom write SetMethodCustom;
+    property  URI: RawByteString read FURI write SetURI;
 
-    property  UserAgent: AnsiString read FUserAgent write SetUserAgent;
+    property  UserAgent: RawByteString read FUserAgent write SetUserAgent;
     property  KeepAlive: THTTPKeepAliveOption read FKeepAlive write SetKeepAlive default kaDefault;
-    property  Referer: AnsiString read FReferer write SetReferer;
-    property  Cookie: AnsiString read FCookie write FCookie;
-    property  Authorization: AnsiString read FAuthorization write SetAuthorization;
-    procedure SetBasicAuthorization(const Username, Password: AnsiString);
-    property  CustomHeader[const FieldName: AnsiString]: AnsiString read GetCustomHeader write SetCustomHeader;
+    property  Referer: RawByteString read FReferer write SetReferer;
+    property  Cookie: RawByteString read FCookie write FCookie;
+    property  Authorization: RawByteString read FAuthorization write SetAuthorization;
+    procedure SetBasicAuthorization(const Username, Password: RawByteString);
+    property  CustomHeader[const FieldName: RawByteString]: RawByteString read GetCustomHeader write SetCustomHeader;
 
-    property  RequestContentType: AnsiString read FRequestContentType write SetRequestContentType;
+    property  RequestContentType: RawByteString read FRequestContentType write SetRequestContentType;
     property  RequestContentMechanism: THTTPContentWriterMechanism read GetRequestContentMechanism write SetRequestContentMechanism default hctmString;
-    property  RequestContentStr: AnsiString read GetRequestContentStr write SetRequestContentStr;
+    property  RequestContentStr: RawByteString read GetRequestContentStr write SetRequestContentStr;
     property  RequestContentStream: TStream read GetRequestContentStream write SetRequestContentStream;
     property  RequestContentFileName: String read GetRequestContentFileName write SetRequestContentFileName;
 
@@ -439,7 +443,7 @@ type
     property  ResponseRecord: THTTPResponse read FResponse;
     property  ResponseCode: Integer read FResponseCode;
     property  ResponseCookies: TStrings read FResponseCookies;
-    property  ResponseContentStr: AnsiString read GetResponseContentStr;
+    property  ResponseContentStr: RawByteString read GetResponseContentStr;
 
     property  UserObject: TObject read FUserObject write FUserObject;
     property  UserData: Pointer read FUserData write FUserData;
@@ -902,7 +906,7 @@ begin
   FMethod := Method;
 end;
 
-procedure TF4HTTPClient.SetMethodCustom(const MethodCustom: AnsiString);
+procedure TF4HTTPClient.SetMethodCustom(const MethodCustom: RawByteString);
 begin
   if MethodCustom = FMethodCustom then
     exit;
@@ -910,7 +914,7 @@ begin
   FMethodCustom := MethodCustom;
 end;
 
-procedure TF4HTTPClient.SetURI(const URI: AnsiString);
+procedure TF4HTTPClient.SetURI(const URI: RawByteString);
 begin
   if URI = FURI then
     exit;
@@ -918,7 +922,7 @@ begin
   FURI := URI;
 end;
 
-procedure TF4HTTPClient.SetUserAgent(const UserAgent: AnsiString);
+procedure TF4HTTPClient.SetUserAgent(const UserAgent: RawByteString);
 begin
   if UserAgent = FUserAgent then
     exit;
@@ -934,7 +938,7 @@ begin
   FKeepAlive := KeepAlive;
 end;
 
-procedure TF4HTTPClient.SetReferer(const Referer: AnsiString);
+procedure TF4HTTPClient.SetReferer(const Referer: RawByteString);
 begin
   if Referer = FReferer then
     exit;
@@ -942,7 +946,7 @@ begin
   FReferer := Referer;
 end;
 
-procedure TF4HTTPClient.SetAuthorization(const Authorization: AnsiString);
+procedure TF4HTTPClient.SetAuthorization(const Authorization: RawByteString);
 begin
   if Authorization = FAuthorization then
     exit;
@@ -950,17 +954,17 @@ begin
   FAuthorization := Authorization;
 end;
 
-procedure TF4HTTPClient.SetBasicAuthorization(const Username, Password: AnsiString);
+procedure TF4HTTPClient.SetBasicAuthorization(const Username, Password: RawByteString);
 begin
   SetAuthorization('Basic ' + MIMEBase64Encode(Username + ':' + Password));
 end;
 
-function TF4HTTPClient.GetCustomHeaderByName(const FieldName: AnsiString): PHTTPCustomHeader;
+function TF4HTTPClient.GetCustomHeaderByName(const FieldName: RawByteString): PHTTPCustomHeader;
 begin
   Result := HTTPCustomHeadersGetByName(FCustomHeaders, FieldName);
 end;
 
-function TF4HTTPClient.AddCustomHeader(const FieldName: AnsiString): PHTTPCustomHeader;
+function TF4HTTPClient.AddCustomHeader(const FieldName: RawByteString): PHTTPCustomHeader;
 var P : PHTTPCustomHeader;
 begin
   Assert(FieldName <> '');
@@ -969,7 +973,7 @@ begin
   Result := P;
 end;
 
-function TF4HTTPClient.GetCustomHeader(const FieldName: AnsiString): AnsiString;
+function TF4HTTPClient.GetCustomHeader(const FieldName: RawByteString): RawByteString;
 var P : PHTTPCustomHeader;
 begin
   P := GetCustomHeaderByName(FieldName);
@@ -979,7 +983,7 @@ begin
     Result := '';
 end;
 
-procedure TF4HTTPClient.SetCustomHeader(const FieldName: AnsiString; const FieldValue: AnsiString);
+procedure TF4HTTPClient.SetCustomHeader(const FieldName: RawByteString; const FieldValue: RawByteString);
 var P : PHTTPCustomHeader;
 begin
   P := GetCustomHeaderByName(FieldName);
@@ -993,7 +997,7 @@ begin
   P^.FieldValue := FieldValue;
 end;
 
-procedure TF4HTTPClient.SetRequestContentType(const RequestContentType: AnsiString);
+procedure TF4HTTPClient.SetRequestContentType(const RequestContentType: RawByteString);
 begin
   if RequestContentType = FRequestContentType then
     exit;
@@ -1014,12 +1018,12 @@ begin
   FRequestContentWriter.Mechanism := RequestContentMechanism;
 end;
 
-function TF4HTTPClient.GetRequestContentStr: AnsiString;
+function TF4HTTPClient.GetRequestContentStr: RawByteString;
 begin
   Result := FRequestContentWriter.ContentString;
 end;
 
-procedure TF4HTTPClient.SetRequestContentStr(const RequestContentStr: AnsiString);
+procedure TF4HTTPClient.SetRequestContentStr(const RequestContentStr: RawByteString);
 begin
   if RequestContentStr = FRequestContentWriter.ContentString then
     exit;
@@ -1376,13 +1380,15 @@ begin
     FTCPClient.OnLog := TCPClientLog;
     FTCPClient.OnStateChanged := TCPClientStateChanged;
     FTCPClient.OnError := TCPClientError;
-    FTCPClient.OnIdle := TCPClientIdle;
+    FTCPClient.OnProcessThreadIdle := TCPClientIdle;
     FTCPClient.OnConnected := TCPClientConnected;
     FTCPClient.OnConnectFailed := TCPClientConnectFailed;
     FTCPClient.OnReady := TCPClientReady;
     FTCPClient.OnRead := TCPClientRead;
     FTCPClient.OnWrite := TCPClientWrite;
     FTCPClient.OnClose := TCPClientClose;
+    FTCPClient.OnMainThreadWait := TCPClientMainThreadWait;
+    FTCPClient.OnThreadWait := TCPClientThreadWait;
     FTCPClient.SocksEnabled := False;
     FTCPClient.SynchronisedEvents := False;
     {$IFDEF HTTP_TLS}
@@ -1442,6 +1448,7 @@ begin
   {$IFDEF HTTP_DEBUG}
   Log(cltDebug, 'TCP_ConnectFailed');
   {$ENDIF}
+  SetErrorMsg(Client.ErrorMessage);
   SetState(hcsConnectFailed);
 end;
 
@@ -1528,9 +1535,26 @@ begin
   end;
 end;
 
+procedure TF4HTTPClient.TCPClientMainThreadWait(Client: TF4TCPClient);
+begin
+  if Assigned(FOnMainThreadWait) then
+    FOnMainThreadWait(self);
+end;
+
+procedure TF4HTTPClient.TCPClientThreadWait(Client: TF4TCPClient);
+begin
+  if Assigned(FOnThreadWait) then
+    FOnThreadWait(self);
+end;
+
+procedure TF4HTTPClient.SetErrorMsg(const ErrorMsg: String);
+begin
+  FErrorMsg := ErrorMsg;
+end;
+
 procedure TF4HTTPClient.SetRequestFailedFromException(const E: Exception);
 begin
-  FErrorMsg := E.Message;
+  SetErrorMsg(E.Message);
   SetState(hcsRequestFailed);
 end;
 
@@ -1926,13 +1950,14 @@ begin
   Result := GetState in HTTPClientState_ResponseComplete;
 end;
 
-function TF4HTTPClient.GetResponseContentStr: AnsiString;
+function TF4HTTPClient.GetResponseContentStr: RawByteString;
 begin
   Result := FResponseContentReader.ContentString;
 end;
 
 procedure TF4HTTPClient.Wait;
 begin
+  {$IFDEF OS_MSWIN}
   if GetCurrentThreadID = MainThreadID then
     begin
       if Assigned(OnMainThreadWait) then
@@ -1943,7 +1968,11 @@ begin
       if Assigned(FOnThreadWait) then
         FOnThreadWait(self);
     end;
-  Sleep(1);
+  {$ELSE}
+  if Assigned(FOnThreadWait) then
+    FOnThreadWait(self);
+  {$ENDIF}
+  Sleep(5);
 end;
 
 function TF4HTTPClient.WaitRequestNotBusy(const Timeout: Integer): Boolean;
