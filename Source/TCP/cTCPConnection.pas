@@ -2,7 +2,7 @@
 {                                                                              }
 {   Library:          Fundamentals 4.00                                        }
 {   File name:        cTCPConnection.pas                                       }
-{   File version:     4.22                                                     }
+{   File version:     4.23                                                     }
 {   Description:      TCP connection.                                          }
 {                                                                              }
 {   Copyright:        Copyright (c) 2007-2015, David J Butler                  }
@@ -59,7 +59,10 @@
 {   2011/10/06  4.20  Fix TCPTick frequency.                                   }
 {   2015/03/14  4.21  RawByteString changes.                                   }
 {   2015/04/09  4.22  TBytes functions.                                        }
+{   2015/04/26  4.23  Blocking interface and worker thread.                    }
 {                                                                              }
+{ Todo:                                                                        }
+{ - Throttle Peek/Discard?                                                     }
 {******************************************************************************}
 
 {$INCLUDE cTCP.inc}
@@ -75,6 +78,7 @@ uses
   Windows,
   {$ENDIF}
   SyncObjs,
+  Classes,
 
   { Fundamentals }
   cUtils,
@@ -150,10 +154,11 @@ type
   end;
 
   TTCPConnectionState = (
-    cnsInit,
-    cnsProxyNegotiation,
-    cnsConnected,
-    cnsClosed);
+    cnsInit,               // Initialising
+    cnsProxyNegotiation,   // Proxy busy with negotiation
+    cnsConnected,          // Connected
+    cnsClosed);            // Closed
+  TTCPConnectionStates = set of TTCPConnectionState;
 
   TTCPConnectionTransferState = record
     LastUpdate   : LongWord;
@@ -163,34 +168,20 @@ type
 
   TRawByteCharSet = set of AnsiChar;
 
+  TTCPBlockingConnection = class;
+
   TTCPConnectionNotifyEvent = procedure (Sender: TTCPConnection) of object;
   TTCPConnectionStateChangeEvent = procedure (Sender: TTCPConnection; State: TTCPConnectionState) of object;
   TTCPConnectionLogEvent = procedure (Sender: TTCPConnection; LogType: TTCPLogType; LogMsg: String; LogLevel: Integer) of object;
+  TTCPConnectionWorkerExecuteEvent = procedure (Sender: TTCPConnection;
+      Connection: TTCPBlockingConnection; var CloseOnExit: Boolean) of object;
 
   TTCPConnection = class
   protected
+    // parameters
     FSocket             : TSysSocket;
 
-    FOnLog              : TTCPConnectionLogEvent;
-    FOnStateChange      : TTCPConnectionStateChangeEvent;
-    FOnRead             : TTCPConnectionNotifyEvent;
-    FOnWrite            : TTCPConnectionNotifyEvent;
-    FOnClose            : TTCPConnectionNotifyEvent;
-    FOnReadBufferFull   : TTCPConnectionNotifyEvent;
-    FOnWriteBufferEmpty : TTCPConnectionNotifyEvent;
-
-    FUserTag            : NativeInt;
-    FUserObject         : TObject;
-
-    FLock               : TCriticalSection;
-    FState              : TTCPConnectionState;
-
-    FProxyList          : TTCPConnectionProxyList;
-    FProxyConnection    : Boolean;
-
-    FReadBuffer         : TTCPBuffer;
     FReadBufferMaxSize  : Integer;
-    FWriteBuffer        : TTCPBuffer;
     FWriteBufferMaxSize : Integer;
 
     FReadThrottle       : Boolean;
@@ -198,15 +189,52 @@ type
     FWriteThrottle      : Boolean;
     FWriteThrottleRate  : Integer;
 
-    FReadTransferState  : TTCPConnectionTransferState;
-    FWriteTransferState : TTCPConnectionTransferState;
+    FUseWorkerThread    : Boolean;
 
-    FReadEventPending   : Boolean;
-    FReadBufferFull     : Boolean;
-    FReadSelectPending  : Boolean;
-    FWriteEventPending  : Boolean;
-    FShutdownPending    : Boolean;
-    FClosePending       : Boolean;
+    FUserTag            : NativeInt;
+    FUserObject         : TObject;
+
+    FOnLog              : TTCPConnectionLogEvent;
+    FOnStateChange      : TTCPConnectionStateChangeEvent;
+    FOnReady            : TTCPConnectionNotifyEvent;
+    FOnRead             : TTCPConnectionNotifyEvent;
+    FOnWrite            : TTCPConnectionNotifyEvent;
+    FOnClose            : TTCPConnectionNotifyEvent;
+    FOnReadBufferFull   : TTCPConnectionNotifyEvent;
+    FOnWriteBufferEmpty : TTCPConnectionNotifyEvent;
+
+    FOnWait             : TTCPConnectionNotifyEvent;
+
+    FOnWorkerExecute    : TTCPConnectionWorkerExecuteEvent;
+    FOnWorkerFinished   : TTCPConnectionNotifyEvent;
+
+    // state
+    FLock                : TCriticalSection;
+    FState               : TTCPConnectionState;
+
+    FProxyList           : TTCPConnectionProxyList;
+    FProxyConnection     : Boolean;
+
+    FReadBuffer          : TTCPBuffer;
+    FWriteBuffer         : TTCPBuffer;
+
+    FReadTransferState   : TTCPConnectionTransferState;
+    FWriteTransferState  : TTCPConnectionTransferState;
+
+    FReadEventPending    : Boolean;
+    FReadBufferFull      : Boolean;
+    FReadSelectPending   : Boolean;
+    FWriteEventPending   : Boolean;
+    FShutdownPending     : Boolean;
+    FClosePending        : Boolean;
+    FReadyNotified       : Boolean;
+
+    FBlockingConnection  : TTCPBlockingConnection;
+
+    // worker thread
+    FWorkerThread        : TThread;
+    FWorkerErrorMsg      : String;
+    FWorkerErrorClass    : String;
 
     procedure Init; virtual;
 
@@ -220,10 +248,17 @@ type
     function  GetStateStr: RawByteString;
     procedure SetState(const State: TTCPConnectionState);
 
-    procedure SetClosed;
+    procedure SetStateProxyNegotiation;
+    procedure SetStateConnected;
+    procedure SetStateClosed;
+
+    procedure SetReady;
 
     procedure SetReadBufferMaxSize(const ReadBufferMaxSize: Integer);
     procedure SetWriteBufferMaxSize(const WriteBufferMaxSize: Integer);
+
+    function  GetReadBufferUsed: Integer;
+    function  GetWriteBufferUsed: Integer;
 
     procedure SetReadThrottle(const ReadThrottle: Boolean);
     procedure SetWriteThrottle(const WriteThrottle: Boolean);
@@ -231,14 +266,15 @@ type
     function  GetReadRate: Integer;
     function  GetWriteRate: Integer;
 
-    function  GetReadBufferSize: Integer;
-    function  GetWriteBufferSize: Integer;
-
+    procedure TriggerReady;
     procedure TriggerRead;
     procedure TriggerWrite;
     procedure TriggerClose;
     procedure TriggerReadBufferFull;
     procedure TriggerWriteBufferEmpty;
+
+    procedure TriggerWait;
+    procedure TriggerWorkerFinished;
 
     function  GetFirstActiveProxy: TTCPConnectionProxy;
 
@@ -271,29 +307,46 @@ type
 
     procedure DoShutdown;
 
+    procedure Wait;
+
+    function  GetBlockingConnection: TTCPBlockingConnection;
+
+    procedure StartWorkerThread;
+    procedure WorkerThreadExecute(const Thread: TThread);
+
   public
     constructor Create(const Socket: TSysSocket);
     destructor Destroy; override;
 
+    // Parameters
     property  Socket: TSysSocket read FSocket;
 
+    // Events
     property  OnLog: TTCPConnectionLogEvent read FOnLog write FOnLog;
     property  OnStateChange: TTCPConnectionStateChangeEvent read FOnStateChange write FOnStateChange;
+    property  OnReady: TTCPConnectionNotifyEvent read FOnReady write FOnReady;
     property  OnRead: TTCPConnectionNotifyEvent read FOnRead write FOnRead;
     property  OnWrite: TTCPConnectionNotifyEvent read FOnWrite write FOnWrite;
     property  OnClose: TTCPConnectionNotifyEvent read FOnClose write FOnClose;
     property  OnReadBufferFull: TTCPConnectionNotifyEvent read FOnReadBufferFull write FOnReadBufferFull;
     property  OnWriteBufferEmpty: TTCPConnectionNotifyEvent read FOnWriteBufferEmpty write FOnWriteBufferEmpty;
 
+    // Proxies
     procedure AddProxy(const Proxy: TTCPConnectionProxy);
 
+    // State
     property  State: TTCPConnectionState read GetState;
     property  StateStr: RawByteString read GetStateStr;
     procedure Start;
 
+    // Buffers
     property  ReadBufferMaxSize: Integer read FReadBufferMaxSize write SetReadBufferMaxSize;
     property  WriteBufferMaxSize: Integer read FWriteBufferMaxSize write SetWriteBufferMaxSize;
 
+    property  ReadBufferUsed: Integer read GetReadBufferUsed;
+    property  WriteBufferUsed: Integer read GetWriteBufferUsed;
+
+    // Throttling
     property  ReadThrottle: Boolean read FReadThrottle write SetReadThrottle;
     property  ReadThrottleRate: Integer read FReadThrottleRate write FReadThrottleRate;
     property  WriteThrottle: Boolean read FWriteThrottle write SetWriteThrottle;
@@ -302,36 +355,57 @@ type
     property  ReadRate: Integer read GetReadRate;
     property  WriteRate: Integer read GetWriteRate;
 
-    property  ReadBufferSize: Integer read GetReadBufferSize;
-    property  WriteBufferSize: Integer read GetWriteBufferSize;
-
+    // Poll routine
     procedure PollSocket(out Idle, Terminated: Boolean);
 
+    // Read
     function  Read(var Buf; const BufSize: Integer): Integer;
-    function  ReadStr(const StrLen: Integer): RawByteString;
+    function  ReadStrB(const StrLen: Integer): RawByteString;
     function  ReadBytes(const Len: Integer): TBytes;
 
+    // Discard
     function  Discard(const Size: Integer): Integer;
 
+    // Peek
     function  Peek(var Buf; const BufSize: Integer): Integer;
     function  PeekByte(out B: Byte): Boolean;
-    function  PeekStr(const StrLen: Integer): RawByteString;
+    function  PeekStrB(const StrLen: Integer): RawByteString;
     function  PeekBytes(const Len: Integer): TBytes;
 
     function  PeekDelimited(var Buf; const BufSize: Integer; const Delimiter: TRawByteCharSet; const MaxSize: Integer = -1): Integer; overload;
     function  PeekDelimited(var Buf; const BufSize: Integer; const Delimiter: RawByteString; const MaxSize: Integer = -1): Integer; overload;
 
+    // ReadLine
     function  ReadLine(var Line: RawByteString; const Delimiter: RawByteString; const MaxLineLength: Integer = -1): Boolean;
 
+    // Write
     function  Write(const Buf; const BufSize: Integer): Integer;
-    function  WriteStrA(const Str: AnsiString): Integer;
     function  WriteStrB(const Str: RawByteString): Integer;
-    function  WriteStrWideW(const Str: WideString): Integer;
-    function  WriteStr(const Str: String): Integer;
     function  WriteBytes(const B: TBytes): Integer;
 
-    procedure Close;
+    // Shutdown/Close
+    // Shutdown initiates a graceful shutdown.
+    // Close closes connection immediately.
     procedure Shutdown;
+    procedure Close;
+
+    // Worker thread
+    // Set UseWorkerThread to True and set OnWorkerExecute to execute
+    // OnWorkerExecute in a separate thread.
+    // The thread is launched when the connection state is Connected.
+    // WorkerErrorClass and WorkerErrorMsg is set to the exception details if an
+    // unhandled exception is raised in OnWorkerExecute.
+    property  UseWorkerThread: Boolean read FUseWorkerThread write FUseWorkerThread;
+    property  OnWorkerExecute: TTCPConnectionWorkerExecuteEvent read FOnWorkerExecute write FOnWorkerExecute;
+    property  WorkerErrorClass: String read FWorkerErrorClass;
+    property  WorkerErrorMsg: String read FWorkerErrorMsg;
+    procedure TerminateWorkerThread;
+
+    // Blocking
+    // The blocking interface is available from the worker thread.
+    // OnWait is called when blocking occurs.
+    property  BlockingConnection: TTCPBlockingConnection read GetBlockingConnection;
+    property  OnWait: TTCPConnectionNotifyEvent read FOnWait write FOnWait;
 
     // User defined values
     property  UserTag: NativeInt read FUserTag write FUserTag;
@@ -339,6 +413,38 @@ type
   end;
 
   TTCPConnectionClass = class of TTCPConnection;
+
+  // Blocking connection
+  // These methods will block until a result is available or timeout expires.
+  // If TimeOut is set to -1 then method may wait indefinetely for a result.
+  // Note: These functions should not be called from this object's event handlers
+  // or from the main thread.
+  // These functions can only be called from the worker thread or any other user thread.
+  TTCPBlockingConnection = class
+  private
+    FConnection : TTCPConnection;
+
+    procedure Wait;
+
+  public
+    constructor Create(const Connection : TTCPConnection);
+    destructor Destroy; override;
+
+    property  Connection: TTCPConnection read FConnection;
+
+    function  WaitForState(const States: TTCPConnectionStates; const TimeOutMs: Integer): TTCPConnectionState;
+    function  WaitForReceiveData(const BufferSize: Integer; const TimeOutMs: Integer): Boolean;
+    function  WaitForTransmitFin(const TimeOutMs: Integer): Boolean;
+    function  WaitForClose(const TimeOutMs: Integer): Boolean;
+
+    function  Read(var Buf; const BufferSize: Integer; const TimeOutMs: Integer = -1): Integer;
+    function  Write(const Buf; const BufferSize: Integer; const TimeOutMs: Integer = -1): Integer;
+    procedure Shutdown(
+              const SettleTimeMs: Integer = 2000;
+              const TransmitTimeOutMs: Integer = 15000;
+              const CloseTimeOutMs: Integer = 45000);
+    procedure Close(const TimeOutMs: Integer = 10000);
+  end;
 
 
 
@@ -364,6 +470,7 @@ uses
 {                                                                              }
 const
   SError_InvalidParameter = 'Invalid parameter';
+  SError_TimedOut         = 'Timed out';
 
   SConnectionProxyState : array[TTCPConnectionProxyState] of RawByteString = (
     'Init',
@@ -435,7 +542,7 @@ end;
 
 procedure TTCPConnectionProxy.ConnectionPutReadData(const Buf; const BufSize: Integer);
 begin
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_DATA}
   Log(tlDebug, 'PutRead:%db', [BufSize]);
   {$ENDIF}
   FConnection.ProxyConnectionPutReadData(self, Buf, BufSize);
@@ -443,7 +550,7 @@ end;
 
 procedure TTCPConnectionProxy.ConnectionPutWriteData(const Buf; const BufSize: Integer);
 begin
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_DATA}
   Log(tlDebug, 'PutWrite:%db', [BufSize]);
   {$ENDIF}
   FConnection.ProxyConnectionPutWriteData(self, Buf, BufSize);
@@ -660,6 +767,35 @@ end;
 
 
 {                                                                              }
+{ TCP Connection Worker Thread                                                 }
+{                                                                              }
+type
+  TTCPConnectionWorkerThread = class(TThread)
+  private
+    FConnection: TTCPConnection;
+  protected
+    procedure Execute; override;
+  public
+    constructor Create(const Connection: TTCPConnection);
+    property Terminated;
+  end;
+
+constructor TTCPConnectionWorkerThread.Create(const Connection: TTCPConnection);
+begin
+  Assert(Assigned(Connection));
+  FConnection := Connection;
+  FreeOnTerminate := False;
+  inherited Create(False);
+end;
+
+procedure TTCPConnectionWorkerThread.Execute;
+begin
+  FConnection.WorkerThreadExecute(self);
+end;
+
+
+
+{                                                                              }
 { TCP Connection                                                               }
 {                                                                              }
 constructor TTCPConnection.Create(const Socket: TSysSocket);
@@ -672,6 +808,8 @@ end;
 
 destructor TTCPConnection.Destroy;
 begin
+  FreeAndNil(FWorkerThread);
+  FreeAndNil(FBlockingConnection);
   TCPBufferFinalise(FWriteBuffer);
   TCPBufferFinalise(FReadBuffer);
   FreeAndNil(FProxyList);
@@ -747,12 +885,43 @@ begin
     FOnStateChange(self, State);
 end;
 
-procedure TTCPConnection.SetClosed;
+procedure TTCPConnection.SetStateProxyNegotiation;
+begin
+  SetState(cnsProxyNegotiation);
+end;
+
+procedure TTCPConnection.SetStateConnected;
+begin
+  Assert(FState in [cnsInit, cnsProxyNegotiation]);
+  SetState(cnsConnected);
+  Lock;
+  try
+    // Connection state can change from 'connected' back to 'proxy negotiation'
+    // and then back to 'connected' again.
+    // Trigger the ready event on the first change to 'connected'.
+    if not FReadyNotified then
+      begin
+        FReadyNotified := True;
+        SetReady;
+      end;
+  finally
+    Unlock;
+  end;
+end;
+
+procedure TTCPConnection.SetStateClosed;
 begin
   if FState = cnsClosed then
     exit;
   SetState(cnsClosed);
   TriggerClose;
+end;
+
+procedure TTCPConnection.SetReady;
+begin
+  if FUseWorkerThread and Assigned(FOnWorkerExecute) then
+    StartWorkerThread;
+  TriggerReady;
 end;
 
 procedure TTCPConnection.AddProxy(const Proxy: TTCPConnectionProxy);
@@ -781,7 +950,7 @@ begin
   end;
   if DoNeg then
     begin
-      SetState(cnsProxyNegotiation);
+      SetStateProxyNegotiation;
       Proxy.Start;
     end;
 end;
@@ -803,6 +972,26 @@ begin
   try
     FWriteBufferMaxSize := WriteBufferMaxSize;
     TCPBufferSetMaxSize(FWriteBuffer, WriteBufferMaxSize);
+  finally
+    Unlock;
+  end;
+end;
+
+function TTCPConnection.GetReadBufferUsed: Integer;
+begin
+  Lock;
+  try
+    Result := FReadBuffer.Used;
+  finally
+    Unlock;
+  end;
+end;
+
+function TTCPConnection.GetWriteBufferUsed: Integer;
+begin
+  Lock;
+  try
+    Result := FWriteBuffer.Used;
   finally
     Unlock;
   end;
@@ -848,24 +1037,10 @@ begin
   end;
 end;
 
-function TTCPConnection.GetReadBufferSize: Integer;
+procedure TTCPConnection.TriggerReady;
 begin
-  Lock;
-  try
-    Result := FReadBuffer.Used;
-  finally
-    Unlock;
-  end;
-end;
-
-function TTCPConnection.GetWriteBufferSize: Integer;
-begin
-  Lock;
-  try
-    Result := FWriteBuffer.Used;
-  finally
-    Unlock;
-  end;
+  if Assigned(FOnReady) then
+    FOnReady(self);
 end;
 
 procedure TTCPConnection.TriggerRead;
@@ -898,10 +1073,21 @@ begin
     FOnWriteBufferEmpty(self);
 end;
 
+procedure TTCPConnection.TriggerWait;
+begin
+  if Assigned(FOnWait) then
+    FOnWait(self);
+end;
+
+procedure TTCPConnection.TriggerWorkerFinished;
+begin
+  if Assigned(FOnWorkerFinished) then
+    FOnWorkerFinished(self);
+end;
+
 procedure TTCPConnection.ProxyConnectionClose(const Proxy: TTCPConnectionProxy);
 begin
   Assert(FProxyConnection);
-
   // flag close pending; handled outside lock, after read pending
   Lock;
   try
@@ -1033,6 +1219,7 @@ begin
     prsFiltering,
     prsFinished :
       begin
+        Assert(FState = cnsProxyNegotiation);
         Lock;
         try
           P := Proxy.FNextProxy;
@@ -1042,11 +1229,11 @@ begin
         if Assigned(P) then
           P.Start
         else
-          SetState(cnsConnected);
+          SetStateConnected;
       end;
-    prsError,
-    prsClosed : ;
     prsNegotiating : ;
+    prsError  : ;
+    prsClosed : ;
   end;
 end;
 
@@ -1068,13 +1255,13 @@ begin
     Unlock;
   end;
   // start proxy negotiation
-  SetState(cnsProxyNegotiation);
+  SetStateProxyNegotiation;
   P.Start;
   ProxiesFinished := False;
 end;
 
 procedure TTCPConnection.Start;
-var F : Boolean;
+var ProxiesFin : Boolean;
 begin
   Assert(FState = cnsInit);
   {$IFDEF TCP_DEBUG}
@@ -1087,9 +1274,9 @@ begin
   finally
     Unlock;
   end;
-  StartProxies(F);
-  if F then
-    SetState(cnsConnected);
+  StartProxies(ProxiesFin);
+  if ProxiesFin then
+    SetStateConnected;
 end;
 
 // Pre: Socket is non-blocking
@@ -1150,7 +1337,7 @@ begin
   if Size < 0 then
     // nothing more to receive from socket
     exit;
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_DATA}
   Log(tlDebug, 'FillBufferFromSocket:Received:%db', [Size]);
   {$ENDIF}
   // data received
@@ -1221,7 +1408,7 @@ begin
   // check if buffer emptied
   if SizeWritten = SizeBuf then
     BufferEmptied := True;
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_DATA}
   Log(tlDebug, 'EmptyBufferToSocket:Fin:%d:%db:%db:%db',
       [Ord(BufferEmptied), SizeBuf, SizeWrite, SizeWritten]);
   {$ENDIF}
@@ -1333,7 +1520,7 @@ begin
           if RecvClosed then
             begin
               // socket closed
-              SetClosed;
+              SetStateClosed;
               Terminated := True;
               Fin := True;
             end;
@@ -1565,7 +1752,7 @@ begin
     end;
   Result := FSocket.Recv(Buf, BufSize);
   if Result = 0 then
-    SetClosed else
+    SetStateClosed else
   if Result < 0 then
     Result := 0;
 end;
@@ -1581,6 +1768,9 @@ begin
       end;
 end;
 
+// Read a number of bytes from read buffer and transport.
+// Return the number of bytes actually read.
+// Throttles reading.
 function TTCPConnection.Read(var Buf; const BufSize: Integer): Integer;
 var
   BufPtr : PAnsiChar;
@@ -1626,7 +1816,7 @@ begin
   finally
     Unlock;
   end;
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_DATA}
   Log(tlDebug, 'Read:Fin:%db:%db:%db:%db',
       [BufSize, SizeRead, SizeReadBuf, SizeReadSocket]);
   {$ENDIF}
@@ -1634,7 +1824,7 @@ begin
   Result := SizeTotal;
 end;
 
-function TTCPConnection.ReadStr(const StrLen: Integer): RawByteString;
+function TTCPConnection.ReadStrB(const StrLen: Integer): RawByteString;
 var ReadLen : Integer;
 begin
   if StrLen <= 0 then
@@ -1662,9 +1852,9 @@ begin
     SetLength(Result, ReadLen);
 end;
 
-// Discard a number of bytes from the read buffer
-// Returns the number of bytes actually discarded
-// Similar to Read; no throttling; no reading directly from socket
+// Discard a number of bytes from the read buffer.
+// Returns the number of bytes actually discarded.
+// No throttling and no reading from transport.
 function TTCPConnection.Discard(const Size: Integer): Integer;
 var SizeDiscarded : Integer;
 begin
@@ -1683,7 +1873,7 @@ begin
   finally
     Unlock;
   end;
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_DATA}
   Log(tlDebug, 'DiscardedFromBuffer:%db:%db', [Size, SizeDiscarded]);
   {$ENDIF}
   // return number of bytes discarded
@@ -1727,7 +1917,7 @@ begin
   end;
   if B then
     begin
-      {$IFDEF TCP_DEBUG}
+      {$IFDEF TCP_DEBUG_DATA}
       Log(tlDebug, 'WriteToTransport:WrittenToBuffer:%db:%db', [BufSize, Result]);
       {$ENDIF}
     end
@@ -1749,13 +1939,15 @@ begin
       finally
         Unlock;
       end;
-      {$IFDEF TCP_DEBUG}
+      {$IFDEF TCP_DEBUG_DATA}
       Log(tlDebug, 'WriteToTransport:WrittenToSocketAndBuffer:%db:%db:%db', [BufSize, L, BufSize - L]);
       {$ENDIF}
       Result := BufSize;
     end;
 end;
 
+// Write a number of bytes to transport
+// No throtling
 function TTCPConnection.Write(const Buf; const BufSize: Integer): Integer;
 var IsProxy : Boolean;
 begin
@@ -1782,49 +1974,16 @@ begin
   Assert(Result = BufSize);
 end;
 
-function TTCPConnection.WriteStrA(const Str: AnsiString): Integer;
-var StrLen : Integer;
-begin
-  StrLen := Length(Str);
-  if StrLen <= 0 then
-    begin
-      Result := 0;
-      exit;
-    end;
-  Result := Write(Str[1], StrLen);
-end;
-
 function TTCPConnection.WriteStrB(const Str: RawByteString): Integer;
-var StrLen : Integer;
+var Len : Integer;
 begin
-  StrLen := Length(Str);
-  if StrLen <= 0 then
+  Len := Length(Str);
+  if Len <= 0 then
     begin
       Result := 0;
       exit;
     end;
-  Result := Write(Str[1], StrLen);
-end;
-
-function TTCPConnection.WriteStrWideW(const Str: WideString): Integer;
-var StrLen : Integer;
-begin
-  StrLen := Length(Str);
-  if StrLen <= 0 then
-    begin
-      Result := 0;
-      exit;
-    end;
-  Result := Write(Str[1], StrLen * SizeOf(WideChar));
-end;
-
-function TTCPConnection.WriteStr(const Str: String): Integer;
-begin
-  {$IFDEF StringIsUnicode}
-  Result := WriteStrB(UTF8Encode(Str));
-  {$ELSE}
-  Result := WriteStrB(Str);
-  {$ENDIF}
+  Result := Write(Str[1], Len);
 end;
 
 function TTCPConnection.WriteBytes(const B: TBytes): Integer;
@@ -1839,6 +1998,8 @@ begin
   Result := Write(B[0], Len);
 end;
 
+// Peek a number of bytes from buffer.
+// No throttling; no reading from transport
 function TTCPConnection.Peek(var Buf; const BufSize: Integer): Integer;
 begin
   Lock;
@@ -1859,7 +2020,7 @@ begin
   end;
 end;
 
-function TTCPConnection.PeekStr(const StrLen: Integer): RawByteString;
+function TTCPConnection.PeekStrB(const StrLen: Integer): RawByteString;
 var PeekLen : Integer;
 begin
   if StrLen <= 0 then
@@ -1913,21 +2074,10 @@ begin
   end;
 end;
 
-procedure TTCPConnection.Close;
-begin
-  {$IFDEF TCP_DEBUG}
-  Log(tlDebug, 'Close:%db:%db', [GetReadBufferSize, GetWriteBufferSize]);
-  {$ENDIF}
-  if GetState = cnsClosed then
-    exit;
-  SetClosed;
-  FSocket.Close;
-end;
-
 procedure TTCPConnection.DoShutdown;
 begin
   {$IFDEF TCP_DEBUG}
-  Log(tlDebug, 'DoShutDown:%db:%db', [GetReadBufferSize, GetWriteBufferSize]);
+  Log(tlDebug, 'DoShutDown:%db:%db', [GetReadBufferUsed, GetWriteBufferUsed]);
   {$ENDIF}
   // Sends TCP FIN message to close connection and
   // disallow any further sending on the socket
@@ -1938,7 +2088,7 @@ procedure TTCPConnection.Shutdown;
 var ShutdownNow : Boolean;
 begin
   {$IFDEF TCP_DEBUG}
-  Log(tlDebug, 'ShutDown:%db:%db', [GetReadBufferSize, GetWriteBufferSize]);
+  Log(tlDebug, 'ShutDown:%db:%db', [GetReadBufferUsed, GetWriteBufferUsed]);
   {$ENDIF}
   Lock;
   try
@@ -1955,8 +2105,232 @@ begin
     DoShutDown;
 end;
 
+procedure TTCPConnection.Close;
+begin
+  {$IFDEF TCP_DEBUG}
+  Log(tlDebug, 'Close:%db:%db', [GetReadBufferUsed, GetWriteBufferUsed]);
+  {$ENDIF}
+  if GetState = cnsClosed then
+    exit;
+  SetStateClosed;
+  FSocket.Close;
+end;
+
+procedure TTCPConnection.TerminateWorkerThread;
+begin
+  Lock;
+  try
+    if Assigned(FWorkerThread) then
+      FWorkerThread.Terminate;
+  finally
+    Unlock;
+  end;
+end;
+
+procedure TTCPConnection.Wait;
+begin
+  TriggerWait;
+  Sleep(5);
+end;
+
+function TTCPConnection.GetBlockingConnection: TTCPBlockingConnection;
+begin
+  Lock;
+  try
+    if not Assigned(FBlockingConnection) then
+      FBlockingConnection := TTCPBlockingConnection.Create(self);
+    Result := FBlockingConnection;
+  finally
+    Unlock;
+  end;
+end;
+
+procedure TTCPConnection.StartWorkerThread;
+begin
+  Assert(not Assigned(FWorkerThread));
+
+  FWorkerThread := TTCPConnectionWorkerThread.Create(self);
+end;
+
+procedure TTCPConnection.WorkerThreadExecute(const Thread: TThread);
+var
+  WorkerThread : TTCPConnectionWorkerThread;
+  Event : TTCPConnectionWorkerExecuteEvent;
+  CloseOnExit : Boolean;
+
+  function IsTerminated: Boolean;
+  begin
+    Result := WorkerThread.Terminated;
+  end;
+
+begin
+  try
+    WorkerThread := Thread as TTCPConnectionWorkerThread;
+    CloseOnExit := False;
+    try
+      try
+        Event := FOnWorkerExecute;
+        if Assigned(Event) then
+          Event(self, GetBlockingConnection, CloseOnExit);
+      finally
+        TriggerWorkerFinished;
+      end;
+    finally
+      if not IsTerminated then
+        if CloseOnExit then
+          Close;
+    end;
+  except
+    on E : Exception do
+      if not IsTerminated then
+        begin
+          Lock;
+          try
+            FWorkerErrorMsg := E.Message;
+            FWorkerErrorClass := E.ClassName;
+          finally
+            Unlock;
+          end;
+        end;
+  end;
+end;
+
+
+
+{                                                                              }
+{ TCP Blocking Connection                                                      }
+{                                                                              }
+constructor TTCPBlockingConnection.Create(const Connection: TTCPConnection);
+begin
+  Assert(Assigned(Connection));
+  inherited Create;
+  FConnection := Connection;
+end;
+
+destructor TTCPBlockingConnection.Destroy;
+begin
+  inherited Destroy;
+end;
+
+procedure TTCPBlockingConnection.Wait;
+begin
+  FConnection.Wait;
+end;
+
+// Wait until one of the States or time out.
+function TTCPBlockingConnection.WaitForState(const States: TTCPConnectionStates; const TimeOutMs: Integer): TTCPConnectionState;
+var T : LongWord;
+    S : TTCPConnectionState;
+    C : TTCPConnection;
+begin
+  T := TCPGetTick;
+  C := FConnection;
+  repeat
+    S := C.GetState;
+    if S in States then
+      break;
+    if TimeOutMs >= 0 then
+      if TCPTickDelta(T, TCPGetTick) >= TimeOutMs then
+        break;
+    Wait;
+  until False;
+  Result := S;
+end;
+
+// Wait until amount of data received, closed or time out.
+function TTCPBlockingConnection.WaitForReceiveData(const BufferSize: Integer; const TimeOutMs: Integer): Boolean;
+var T : LongWord;
+    L : Integer;
+    C : TTCPConnection;
+begin
+  T := TCPGetTick;
+  C := FConnection;
+  repeat
+    L := C.ReadBufferUsed;
+    if L >= BufferSize then
+      break;
+    if TimeOutMs >= 0 then
+      if TCPTickDelta(T, TCPGetTick) >= TimeOutMs then
+        break;
+    if C.GetState = cnsClosed then
+      break;
+    Wait;
+  until False;
+  Result := L >= BufferSize;
+end;
+
+// Wait until send buffer is cleared to socket, closed or time out.
+function TTCPBlockingConnection.WaitForTransmitFin(const TimeOutMs: Integer): Boolean;
+var T : LongWord;
+    L : Integer;
+    C : TTCPConnection;
+begin
+  T := TCPGetTick;
+  C := FConnection;
+  repeat
+    L := C.WriteBufferUsed;
+    if L = 0 then
+      break;
+    if TimeOutMs >= 0 then
+      if TCPTickDelta(T, TCPGetTick) >= TimeOutMs then
+        break;
+    if C.GetState = cnsClosed then
+      break;
+    Wait;
+  until False;
+  Result := L = 0;
+end;
+
+// Wait until socket is closed or timeout.
+function TTCPBlockingConnection.WaitForClose(const TimeOutMs: Integer): Boolean;
+begin
+  Result := WaitForState([cnsClosed], TimeOutMs) = cnsClosed;
+end;
+
+// Wait for read data until required size is available or timeout.
+function TTCPBlockingConnection.Read(var Buf; const BufferSize: Integer; const TimeOutMs: Integer): Integer;
+begin
+  if not WaitForReceiveData(BufferSize, TimeOutMs) then
+    raise ETCPConnection.Create(SError_TimedOut);
+  Result := FConnection.Read(Buf, BufferSize);
+end;
+
+// Write and wait for write buffers to empty or timeout.
+function TTCPBlockingConnection.Write(const Buf; const BufferSize: Integer; const TimeOutMs: Integer): Integer;
+begin
+  Result := FConnection.Write(Buf, BufferSize);
+  if Result > 0 then
+    WaitForTransmitFin(TimeOutMs);
+end;
+
+// Does a graceful shutdown and waits for connection to close or timeout.
+// Data received during shutdown is available after connection close.
+//   SettleTimeMs is the maximum time to wait for output buffer to clear before initiating Shutdown.
+//   TransmitTimeOutMs is the maximum time to wait for output buffers to clear after Shutdown.
+//   CloseTimeOutMs is the maximum time to wait for the graceful close after output buffers cleared.
+procedure TTCPBlockingConnection.Shutdown(
+          const SettleTimeMs: Integer;
+          const TransmitTimeOutMs: Integer;
+          const CloseTimeOutMs: Integer);
+begin
+  if SettleTimeMs > 0 then
+    WaitForTransmitFin(SettleTimeMs);
+  FConnection.Shutdown;
+  if not WaitForTransmitFin(TransmitTimeOutMs) then
+    raise ETCPConnection.Create(SError_TimedOut);
+  if not WaitForClose(CloseTimeOutMs) then
+    raise ETCPConnection.Create(SError_TimedOut);
+end;
+
+// Closes immediately and waits for connection to close or timeout.
+procedure TTCPBlockingConnection.Close(const TimeOutMs: Integer);
+begin
+  FConnection.Close;
+  if not WaitForClose(TimeOutMs) then
+    raise ETCPConnection.Create(SError_TimedOut);
+end;
+
 
 
 end.
-
 

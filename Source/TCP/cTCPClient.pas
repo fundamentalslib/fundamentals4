@@ -2,10 +2,10 @@
 {                                                                              }
 {   Library:          Fundamentals 4.00                                        }
 {   File name:        cTCPClient.pas                                           }
-{   File version:     4.12                                                     }
+{   File version:     4.14                                                     }
 {   Description:      TCP client.                                              }
 {                                                                              }
-{   Copyright:        Copyright (c) 2007-2012, David J Butler                  }
+{   Copyright:        Copyright (c) 2007-2015, David J Butler                  }
 {                     All rights reserved.                                     }
 {                     This file is licensed under the BSD License.             }
 {                     See http://www.opensource.org/licenses/bsd-license.php   }
@@ -51,6 +51,12 @@
 {   2011/11/07  4.12  Allow client to be restarted after being stopped.        }
 {                     Added WaitForStartup property to optionally enable       }
 {                     waiting for thread initialisation.                       }
+{   2015/04/26  4.13  Blocking interface and worker thread.                    }
+{   2015/04/27  4.14  Options to retry failed connections.                     }
+{                                                                              }
+{ Todo:                                                                        }
+{ - ReconnectOnDisconnet option                                                }
+{ - shared processing threads                                                  }
 {                                                                              }
 {******************************************************************************}
 
@@ -96,17 +102,21 @@ type
   ETCPClient = class(Exception);
 
   TTCPClientState = (
-    csInit,        // Client initialise
-    csStarting,    // Client starting (thread starting up)
-    csStarted,     // Client activated (thread running)
-    csResolving,   // IP resolving
-    csResolved,    // IP resolved
-    csConnecting,  // TCP connecting
-    csConnected,   // TCP connected
-    csNegotiating, // Connection proxy negotiation
-    csReady,       // Client ready, connection negotiated and ready
-    csClosed,      // Connection closed
-    csStopped      // Client stopped
+    csInit,           // Client initialise
+    csStarting,       // Client starting (thread starting up)
+    csStarted,        // Client activated (thread running)
+    csConnectRetry,   // Client retrying connection
+    csResolvingLocal, // Local IP resolving
+    csResolvedLocal,  // Local IP resolved
+    csBound,          // Local IP bound
+    csResolving,      // IP resolving
+    csResolved,       // IP resolved
+    csConnecting,     // TCP connecting
+    csConnected,      // TCP connected
+    csNegotiating,    // Connection proxy negotiation
+    csReady,          // Client ready, connection negotiated and ready
+    csClosed,         // Connection closed
+    csStopped         // Client stopped
     );
   TTCPClientStates = set of TTCPClientState;
 
@@ -135,10 +145,11 @@ type
   TTCPClientLogEvent = procedure (Client: TF4TCPClient; LogType: TTCPClientLogType; Msg: String; LogLevel: Integer) of object;
   TTCPClientStateEvent = procedure (Client: TF4TCPClient; State: TTCPClientState) of object;
   TTCPClientErrorEvent = procedure (Client: TF4TCPClient; ErrorMsg: String; ErrorCode: Integer) of object;
+  TTCPClientWorkerExecuteEvent = procedure (Client: TF4TCPClient; Connection: TTCPBlockingConnection; var CloseOnExit: Boolean) of object;
 
   TSyncProc = procedure of object;
 
-  TTCPClientThread = class(TThread)
+  TTCPClientProcessThread = class(TThread)
   protected
     FTCPClient : TF4TCPClient;
     procedure Execute; override;
@@ -156,19 +167,25 @@ type
     FLocalHost          : AnsiString;
     FLocalPort          : AnsiString;
 
+    FRetryFailedConnect            : Boolean;
+    FRetryFailedConnectDelaySec    : Integer;
+    FRetryFailedConnectMaxAttempts : Integer;
+
     {$IFDEF TCPCLIENT_SOCKS}
     FSocksEnabled       : Boolean;
     FSocksHost          : AnsiString;
     FSocksPort          : AnsiString;
     FSocksAuth          : Boolean;
-    FSocksUsername      : AnsiString;
-    FSocksPassword      : AnsiString;
+    FSocksUsername      : RawByteString;
+    FSocksPassword      : RawByteString;
     {$ENDIF}
 
     {$IFDEF TCPCLIENT_TLS}
     FTLSEnabled         : Boolean;
     FTLSOptions         : TTCPClientTLSOptions;
     {$ENDIF}
+
+    FUseWorkerThread    : Boolean;
 
     FSynchronisedEvents : Boolean;
     FWaitForStartup     : Boolean;
@@ -177,31 +194,32 @@ type
     FUserObject         : TObject;
 
     // event handlers
-    FOnLog             : TTCPClientLogEvent;
-    FOnStateChanged    : TTCPClientStateEvent;
-    FOnError           : TTCPClientErrorEvent;
-    FOnStart           : TTCPClientNotifyEvent;
-    FOnStop            : TTCPClientNotifyEvent;
-    FOnActive          : TTCPClientNotifyEvent;
-    FOnInactive        : TTCPClientNotifyEvent;
-    FOnIdle            : TTCPClientNotifyEvent;
-    FOnStarted         : TTCPClientNotifyEvent;
-    FOnConnected       : TTCPClientNotifyEvent;
-    FOnConnectFailed   : TTCPClientNotifyEvent;
-    FOnNegotiating     : TTCPClientNotifyEvent;
-    FOnReady           : TTCPClientNotifyEvent;
-    FOnRead            : TTCPClientNotifyEvent;
-    FOnWrite           : TTCPClientNotifyEvent;
-    FOnClose           : TTCPClientNotifyEvent;
-    FOnStopped         : TTCPClientNotifyEvent;
-    FOnMainThreadWait  : TTCPClientNotifyEvent;
-    FOnThreadWait      : TTCPClientNotifyEvent;
+    FOnLog               : TTCPClientLogEvent;
+    FOnError             : TTCPClientErrorEvent;
+    FOnStart             : TTCPClientNotifyEvent;
+    FOnStop              : TTCPClientNotifyEvent;
+    FOnActive            : TTCPClientNotifyEvent;
+    FOnInactive          : TTCPClientNotifyEvent;
+    FOnProcessThreadIdle : TTCPClientNotifyEvent;
+    FOnStateChanged      : TTCPClientStateEvent;
+    FOnStarted           : TTCPClientNotifyEvent;
+    FOnConnected         : TTCPClientNotifyEvent;
+    FOnConnectFailed     : TTCPClientNotifyEvent;
+    FOnNegotiating       : TTCPClientNotifyEvent;
+    FOnReady             : TTCPClientNotifyEvent;
+    FOnRead              : TTCPClientNotifyEvent;
+    FOnWrite             : TTCPClientNotifyEvent;
+    FOnClose             : TTCPClientNotifyEvent;
+    FOnStopped           : TTCPClientNotifyEvent;
+    FOnMainThreadWait    : TTCPClientNotifyEvent;
+    FOnThreadWait        : TTCPClientNotifyEvent;
+    FOnWorkerExecute     : TTCPClientWorkerExecuteEvent;
 
     // state
     FLock              : TCriticalSection;
     FState             : TTCPClientState;
     FIsStopping        : Boolean;
-    FProcessThread     : TTCPClientThread;
+    FProcessThread     : TTCPClientProcessThread;
     FErrorMsg          : String;
     FErrorCode         : Integer;
     FActive            : Boolean;
@@ -253,19 +271,25 @@ type
     procedure SetLocalHost(const LocalHost: AnsiString);
     procedure SetLocalPort(const LocalPort: AnsiString);
 
+    procedure SetRetryFailedConnect(const RetryFailedConnect: Boolean);
+    procedure SetRetryFailedConnectDelaySec(const RetryFailedConnectDelaySec: Integer);
+    procedure SetRetryFailedConnectMaxAttempts(const RetryFailedConnectMaxAttempts: Integer);
+
     {$IFDEF TCPCLIENT_SOCKS}
     procedure SetSocksProxy(const SocksProxy: Boolean);
     procedure SetSocksHost(const SocksHost: AnsiString);
     procedure SetSocksPort(const SocksPort: AnsiString);
     procedure SetSocksAuth(const SocksAuth: Boolean);
-    procedure SetSocksUsername(const SocksUsername: AnsiString);
-    procedure SetSocksPassword(const SocksPassword: AnsiString);
+    procedure SetSocksUsername(const SocksUsername: RawByteString);
+    procedure SetSocksPassword(const SocksPassword: RawByteString);
     {$ENDIF}
 
     {$IFDEF TCPCLIENT_TLS}
     procedure SetTLSEnabled(const TLSEnabled: Boolean);
     procedure SetTLSOptions(const TLSOptions: TTCPClientTLSOptions);
     {$ENDIF}
+
+    procedure SetUseWorkerThread(const UseWorkerThread: Boolean);
 
     procedure SetSynchronisedEvents(const SynchronisedEvents: Boolean);
     procedure SetWaitForStartup(const WaitForStartup: Boolean);
@@ -295,7 +319,7 @@ type
     procedure TriggerStop; virtual;
     procedure TriggerActive; virtual;
     procedure TriggerInactive; virtual;
-    procedure TriggerIdle; virtual;
+    procedure TriggerProcessThreadIdle; virtual;
     procedure TriggerStarted; virtual;
     procedure TriggerConnected; virtual;
     procedure TriggerNegotiating; virtual;
@@ -322,6 +346,9 @@ type
     procedure ConnectionWrite(Sender: TTCPConnection);
     procedure ConnectionClose(Sender: TTCPConnection);
 
+    procedure ConnectionWorkerExecute(Sender: TTCPConnection;
+              Connection: TTCPBlockingConnection; var CloseOnExit: Boolean);
+
     {$IFDEF TCPCLIENT_TLS}
     procedure InstallTLSProxy;
     function  GetTLSClient: TTLSClient;
@@ -335,6 +362,10 @@ type
     procedure CreateConnection;
     procedure FreeConnection;
 
+    function  GetBlockingConnection: TTCPBlockingConnection;
+
+    procedure DoResolveLocal;
+    procedure DoBind;
     procedure DoResolve;
     procedure DoConnect;
     procedure DoClose;
@@ -344,7 +375,9 @@ type
     {$IFDEF OS_MSWIN}
     function  ProcessMessage(var MsgTerminated: Boolean): Boolean;
     {$ENDIF}
-    procedure ThreadExecute(const Thread: TTCPClientThread);
+    procedure ThreadExecute(const Thread: TTCPClientProcessThread);
+
+    procedure TerminateWorkerThread;
 
     procedure DoStart;
     procedure DoStop;
@@ -355,6 +388,7 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
+    // Parameters
     property  AddressFamily: TTCPClientAddressFamily read FAddressFamily write SetAddressFamily default cafIP4;
     property  Host: AnsiString read FHost write SetHost;
     property  Port: AnsiString read FPort write SetPort;
@@ -362,34 +396,47 @@ type
     property  LocalHost: AnsiString read FLocalHost write SetLocalHost;
     property  LocalPort: AnsiString read FLocalPort write SetLocalPort;
 
+    // Connect retry
+    // If RetryFailedConnect if True, a failed connection attempt will be
+    // retried RetryFailedConnectMaxAttempts times after waiting
+    // RetryFailedConnectDelaySec seconds between retries.
+    // If RetryFailedConnectMaxAttempts is -1, the connection will be retried
+    // until the client is stopped.
+    property  RetryFailedConnect: Boolean read FRetryFailedConnect write SetRetryFailedConnect default False;
+    property  RetryFailedConnectDelaySec: Integer read FRetryFailedConnectDelaySec write SetRetryFailedConnectDelaySec default 60;
+    property  RetryFailedConnectMaxAttempts: Integer read FRetryFailedConnectMaxAttempts write SetRetryFailedConnectMaxAttempts default -1;
+
+    // Socks
     {$IFDEF TCPCLIENT_SOCKS}
     property  SocksEnabled: Boolean read FSocksEnabled write SetSocksProxy default False;
     property  SocksHost: AnsiString read FSocksHost write SetSocksHost;
     property  SocksPort: AnsiString read FSocksPort write SetSocksPort;
     property  SocksAuth: Boolean read FSocksAuth write SetSocksAuth default False;
-    property  SocksUsername: AnsiString read FSocksUsername write SetSocksUsername;
-    property  SocksPassword: AnsiString read FSocksPassword write SetSocksPassword;
+    property  SocksUsername: RawByteString read FSocksUsername write SetSocksUsername;
+    property  SocksPassword: RawByteString read FSocksPassword write SetSocksPassword;
     {$ENDIF}
 
+    // TLS
     {$IFDEF TCPCLIENT_TLS}
     property  TLSEnabled: Boolean read FTLSEnabled write SetTLSEnabled default False;
     property  TLSOptions: TTCPClientTLSOptions read FTLSOptions write SetTLSOptions default [ctoDontUseSSL3];
     {$ENDIF}
 
     // When SynchronisedEvents is set, events handlers are called in the main thread
-    // through the TThread.Synchronise mechanism. If not set, events handlers may
-    // be called from any thread. In this case event handler should handle their
-    // own synchronisation if required.
+    // through the TThread.Synchronise mechanism.
+    // When SynchronisedEvents is not set, events handlers will be called from
+    // an external thread. In this case event handler should handle their own
+    // synchronisation if required.
     property  SynchronisedEvents: Boolean read FSynchronisedEvents write SetSynchronisedEvents default False;
 
     property  OnLog: TTCPClientLogEvent read FOnLog write FOnLog;
-    property  OnStateChanged: TTCPClientStateEvent read FOnStateChanged write FOnStateChanged;
     property  OnError: TTCPClientErrorEvent read FOnError write FOnError;
     property  OnStart: TTCPClientNotifyEvent read FOnStart write FOnStart;
     property  OnStop: TTCPClientNotifyEvent read FOnStop write FOnStop;
     property  OnActive: TTCPClientNotifyEvent read FOnActive write FOnActive;
     property  OnInactive: TTCPClientNotifyEvent read FOnInactive write FOnInactive;
-    property  OnIdle: TTCPClientNotifyEvent read FOnIdle write FOnIdle;
+    property  OnProcessThreadIdle: TTCPClientNotifyEvent read FOnProcessThreadIdle write FOnProcessThreadIdle;
+    property  OnStateChanged: TTCPClientStateEvent read FOnStateChanged write FOnStateChanged;
     property  OnStarted: TTCPClientNotifyEvent read FOnStarted write FOnStarted;
     property  OnConnected: TTCPClientNotifyEvent read FOnConnected write FOnConnected;
     property  OnConnectFailed: TTCPClientNotifyEvent read FOnConnectFailed write FOnConnectFailed;
@@ -400,6 +447,7 @@ type
     property  OnClose: TTCPClientNotifyEvent read FOnClose write FOnClose;
     property  OnStopped: TTCPClientNotifyEvent read FOnStopped write FOnStopped;
 
+    // state
     property  State: TTCPClientState read GetState;
     property  StateStr: RawByteString read GetStateStr;
 
@@ -424,6 +472,7 @@ type
     property  ErrorMessage: String read FErrorMsg;
     property  ErrorCode: Integer read FErrorCode;
 
+    // TLS
     {$IFDEF TCPCLIENT_TLS}
     property  TLSClient: TTLSClient read GetTLSClient;
     procedure StartTLS;
@@ -433,26 +482,34 @@ type
     // when not active it is nil.
     property  Connection: TTCPConnection read GetConnection;
 
-    // Blocking helpers
-    // These functions will block until a result is available or timeout expires.
+    // The BlockingConnection can be used in the worker thread for blocking
+    // operations.
+    // Note: These BlockingConnection should not be used from this object's
+    // event handlers.
+    property  BlockingConnection: TTCPBlockingConnection read GetBlockingConnection;
+
+    // Worker thread
+    // When UseWorkerThread is True, the client will have a worker thread
+    // created when it is in the Ready state. OnWorkerExecute will
+    // be called where the client can use the blocking connection interface.
+    property  UseWorkerThread: Boolean read FUseWorkerThread write SetUseWorkerThread default False;
+    property  OnWorkerExecute: TTCPClientWorkerExecuteEvent read FOnWorkerExecute write FOnWorkerExecute;
+
+    // Wait events
+    // Called by wait loops in this class (WaitForStartup, WaitForState)
     // When blocking occurs in the main thread, OnMainThreadWait is called.
     // When blocking occurs in another thread, OnThreadWait is called.
     // Usually the handler for OnMainThreadWait calls Application.ProcessMessages.
-    // Note:
-    // These functions should not be called from this object's event handlers.
-    property  OnThreadWait: TTCPClientNotifyEvent read FOnThreadWait write FOnThreadWait;
     property  OnMainThreadWait: TTCPClientNotifyEvent read FOnMainThreadWait write FOnMainThreadWait;
+    property  OnThreadWait: TTCPClientNotifyEvent read FOnThreadWait write FOnThreadWait;
 
-    function  WaitState(const States: TTCPClientStates; const TimeOut: Integer): TTCPClientState;
-    function  WaitConnect(const TimeOut: Integer): Boolean;
-    function  WaitReceive(const ReadBufferSize: Integer; const TimeOut: Integer): Boolean;
-    function  WaitTransmit(const TimeOut: Integer): Boolean;
-    function  WaitClose(const TimeOut: Integer): Boolean;
-
-    procedure BlockingClose(const TimeOut: Integer);
-    procedure BlockingShutdown(
-              const TransmitTimeOut: Integer;
-              const CloseTimeOut: Integer);
+    // Blocking helpers
+    // These functions will block until a result is available or timeout expires.
+    // If TimeOut is set to -1 the function may wait indefinetely for result.
+    // Note: These functions should not be called from this object's event handlers.
+    function  WaitForState(const States: TTCPClientStates; const TimeOutMs: Integer): TTCPClientState;
+    function  WaitForConnect(const TimeOutMs: Integer): Boolean;
+    function  WaitForClose(const TimeOutMs: Integer): Boolean;
 
     // User defined values
     property  UserTag: NativeInt read FUserTag write FUserTag;
@@ -474,6 +531,10 @@ type
     property  LocalHost;
     property  LocalPort;
 
+    property  RetryFailedConnect;
+    property  RetryFailedConnectDelaySec;
+    property  RetryFailedConnectMaxAttempts;
+
     {$IFDEF TCPCLIENT_SOCKS}
     property  SocksHost;
     property  SocksPort;
@@ -491,13 +552,13 @@ type
     property  WaitForStartup;
 
     property  OnLog;
-    property  OnStateChanged;
     property  OnError;
     property  OnStart;
     property  OnStop;
     property  OnActive;
     property  OnInactive;
-    property  OnIdle;
+    property  OnProcessThreadIdle;
+    property  OnStateChanged;
     property  OnStarted;
     property  OnConnected;
     property  OnConnectFailed;
@@ -507,6 +568,10 @@ type
     property  OnWrite;
     property  OnClose;
     property  OnStopped;
+
+    property  UseWorkerThread;
+    property  OnWorkerExecute;
+
     property  OnThreadWait;
     property  OnMainThreadWait;
 
@@ -545,11 +610,15 @@ const
       'Initialise',
       'Starting',
       'Started',
+      'Connect retry',
+      'Resolving local',
+      'Resolved local',
+      'Bound',
       'Resolving',
       'Resolved',
       'Connecting',
       'Connected',
-      'Negotiating',
+      'Negotiating proxy',
       'Ready',
       'Closed',
       'Stopped');
@@ -564,6 +633,10 @@ const
       csInit,
       csStarting,
       csStarted,
+      csConnectRetry,
+      csResolvingLocal,
+      csResolvedLocal,
+      csBound,
       csResolving,
       csResolved,
       csConnecting,
@@ -577,6 +650,10 @@ const
   TCPClientStates_Connecting = [
       csStarting,
       csStarted,
+      csConnectRetry,
+      csResolvingLocal,
+      csResolvedLocal,
+      csBound,
       csResolving,
       csResolved,
       csConnecting,
@@ -760,9 +837,7 @@ begin
   inherited Create(TCPClient.FConnection);
   FTCPClient := TCPClient;
   FTLSClient := TTLSClient.Create(TLSClientTransportLayerSendProc);
-  {$IFDEF TCP_DEBUG}
   FTLSClient.OnLog := TLSClientLog;
-  {$ENDIF}
   FTLSClient.OnStateChange := TLSClientStateChange;
   FTLSClient.ClientOptions := TCPClientTLSOptionsToTLSOptions(FTCPClient.FTLSOptions);
 end;
@@ -786,7 +861,7 @@ end;
 
 procedure TTCPClientTLSConnectionProxy.TLSClientLog(Sender: TTLSConnection; LogType: TTLSLogType; LogMsg: String; LogLevel: Integer);
 begin
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_TLS}
   Log(tlDebug, 'TLS:%s', [LogMsg], LogLevel + 1);
   {$ENDIF}
 end;
@@ -816,7 +891,7 @@ var
   ReadBuf : array[0..ReadBufSize - 1] of Byte;
   L : Integer;
 begin
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_DATA}
   Log(tlDebug, 'ProcessReadData:%db', [BufSize]);
   {$ENDIF}
   FTLSClient.ProcessTransportLayerReceivedData(Buf, BufSize);
@@ -835,7 +910,7 @@ end;
 
 procedure TTCPClientTLSConnectionProxy.ProcessWriteData(const Buf; const BufSize: Integer);
 begin
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_DATA}
   Log(tlDebug, 'ProcessWriteData:%db', [BufSize]);
   {$ENDIF}
   FTLSClient.Write(Buf, BufSize);
@@ -847,7 +922,7 @@ end;
 {                                                                              }
 { TTCPClientProcessThread                                                      }
 {                                                                              }
-constructor TTCPClientThread.Create(const TCPClient: TF4TCPClient);
+constructor TTCPClientProcessThread.Create(const TCPClient: TF4TCPClient);
 begin
   Assert(Assigned(TCPClient));
   FTCPClient := TCPClient;
@@ -855,7 +930,7 @@ begin
   inherited Create(False);
 end;
 
-procedure TTCPClientThread.Execute;
+procedure TTCPClientProcessThread.Execute;
 begin
   Assert(Assigned(FTCPClient));
   FTCPClient.ThreadExecute(self);
@@ -884,6 +959,9 @@ procedure TF4TCPClient.InitDefaults;
 begin
   FActive := False;
   FAddressFamily := cafIP4;
+  FRetryFailedConnect := False;
+  FRetryFailedConnectDelaySec := 60;
+  FRetryFailedConnectMaxAttempts := -1;
   {$IFDEF TCPCLIENT_SOCKS}
   FSocksEnabled := False;
   FSocksAuth := False;
@@ -894,6 +972,7 @@ begin
   {$ENDIF}
   FSynchronisedEvents := False;
   FWaitForStartup := False;
+  FUseWorkerThread := False;
 end;
 
 destructor TF4TCPClient.Destroy;
@@ -917,9 +996,11 @@ end;
 procedure TF4TCPClient.Synchronize(const SyncProc: TSyncProc);
 begin
   {$IFDEF DELPHI6_DOWN}
+  {$IFDEF OS_MSWIN}
   if GetCurrentThreadID = MainThreadID then
     SyncProc
   else
+  {$ENDIF}
   if Assigned(FProcessThread) then
     FProcessThread.Synchronize(SyncProc);
   {$ELSE}
@@ -960,7 +1041,7 @@ procedure TF4TCPClient.Log(const LogType: TTCPClientLogType; const Msg: String; 
 var SyncRec : PTCPClientSyncLogData;
 begin
   if Assigned(FOnLog) then
-    if FSynchronisedEvents and (GetCurrentThreadID <> MainThreadID) then
+    if FSynchronisedEvents {$IFDEF OS_MSWIN}and (GetCurrentThreadID <> MainThreadID){$ENDIF} then
       begin
         New(SyncRec);
         SyncRec.LogType := LogType;
@@ -1103,6 +1184,30 @@ begin
   FLocalPort := LocalPort;
 end;
 
+procedure TF4TCPClient.SetRetryFailedConnect(const RetryFailedConnect: Boolean);
+begin
+  if RetryFailedConnect = FRetryFailedConnect then
+    exit;
+  CheckNotActive;
+  FRetryFailedConnect := RetryFailedConnect;
+end;
+
+procedure TF4TCPClient.SetRetryFailedConnectDelaySec(const RetryFailedConnectDelaySec: Integer);
+begin
+  if RetryFailedConnectDelaySec = FRetryFailedConnectDelaySec then
+    exit;
+  CheckNotActive;
+  FRetryFailedConnectDelaySec := RetryFailedConnectDelaySec;
+end;
+
+procedure TF4TCPClient.SetRetryFailedConnectMaxAttempts(const RetryFailedConnectMaxAttempts: Integer);
+begin
+  if RetryFailedConnectMaxAttempts = FRetryFailedConnectMaxAttempts then
+    exit;
+  CheckNotActive;
+  FRetryFailedConnectMaxAttempts := RetryFailedConnectMaxAttempts;
+end;
+
 {$IFDEF TCPCLIENT_SOCKS}
 procedure TF4TCPClient.SetSocksProxy(const SocksProxy: Boolean);
 begin
@@ -1136,7 +1241,7 @@ begin
   FSocksAuth := SocksAuth;
 end;
 
-procedure TF4TCPClient.SetSocksUsername(const SocksUsername: AnsiString);
+procedure TF4TCPClient.SetSocksUsername(const SocksUsername: RawByteString);
 begin
   if SocksUsername = FSocksUsername then
     exit;
@@ -1144,7 +1249,7 @@ begin
   FSocksUsername := SocksUsername;
 end;
 
-procedure TF4TCPClient.SetSocksPassword(const SocksPassword: AnsiString);
+procedure TF4TCPClient.SetSocksPassword(const SocksPassword: RawByteString);
 begin
   if SocksPassword = FSocksPassword then
     exit;
@@ -1160,7 +1265,7 @@ begin
     exit;
   CheckNotActive;
   FTLSEnabled := TLSEnabled;
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_TLS}
   Log(cltDebug, 'TLSEnabled:%d', [Ord(TLSEnabled)]);
   {$ENDIF}
 end;
@@ -1173,6 +1278,14 @@ begin
   FTLSOptions := TLSOptions;
 end;
 {$ENDIF}
+
+procedure TF4TCPClient.SetUseWorkerThread(const UseWorkerThread: Boolean);
+begin
+  if UseWorkerThread = FUseWorkerThread then
+    exit;
+  CheckNotActive;
+  FUseWorkerThread := UseWorkerThread;
+end;
 
 procedure TF4TCPClient.SetSynchronisedEvents(const SynchronisedEvents: Boolean);
 begin
@@ -1404,10 +1517,10 @@ begin
       FOnInactive(self);
 end;
 
-procedure TF4TCPClient.TriggerIdle;
+procedure TF4TCPClient.TriggerProcessThreadIdle;
 begin
-  if Assigned(FOnIdle) then
-    FOnIdle(self);
+  if Assigned(FOnProcessThreadIdle) then
+    FOnProcessThreadIdle(self);
   Sleep(1);
 end;
 
@@ -1473,7 +1586,7 @@ end;
 
 procedure TF4TCPClient.TriggerRead;
 begin
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_DATA}
   Log(cltDebug, 'Read');
   {$ENDIF}
   if Assigned(FOnRead) then
@@ -1485,7 +1598,7 @@ end;
 
 procedure TF4TCPClient.TriggerWrite;
 begin
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_DATA}
   Log(cltDebug, 'Write');
   {$ENDIF}
   if Assigned(FOnWrite) then
@@ -1571,7 +1684,7 @@ end;
 
 procedure TF4TCPClient.SocketLog(Sender: TSysSocket; LogType: TSysSocketLogType; Msg: String);
 begin
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_SOCKET}
   Log(cltDebug, 'Socket:%s', [Msg], 10);
   {$ENDIF}
 end;
@@ -1580,14 +1693,14 @@ end;
 
 procedure TF4TCPClient.ConnectionLog(Sender: TTCPConnection; LogType: TTCPLogType; LogMsg: String; LogLevel: Integer);
 begin
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_CONNECTION}
   Log(cltDebug, 'Connection:%s', [LogMsg], LogLevel + 1);
   {$ENDIF}
 end;
 
 procedure TF4TCPClient.ConnectionStateChange(Sender: TTCPConnection; State: TTCPConnectionState);
 begin
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_CONNECTION}
   Log(cltDebug, 'Connection_StateChange:%s', [Sender.StateStr]);
   {$ENDIF}
   case State of
@@ -1598,7 +1711,7 @@ end;
 
 procedure TF4TCPClient.ConnectionRead(Sender: TTCPConnection);
 begin
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_DATA}
   Log(cltDebug, 'Connection_Read');
   {$ENDIF}
   TriggerRead;
@@ -1606,7 +1719,7 @@ end;
 
 procedure TF4TCPClient.ConnectionWrite(Sender: TTCPConnection);
 begin
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_DATA}
   Log(cltDebug, 'Connection_Write');
   {$ENDIF}
   TriggerWrite;
@@ -1614,10 +1727,17 @@ end;
 
 procedure TF4TCPClient.ConnectionClose(Sender: TTCPConnection);
 begin
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_CONNECTION}
   Log(cltDebug, 'Connection_Close');
   {$ENDIF}
   SetClosed;
+end;
+
+procedure TF4TCPClient.ConnectionWorkerExecute(Sender: TTCPConnection;
+          Connection: TTCPBlockingConnection; var CloseOnExit: Boolean);
+begin
+  if Assigned(FOnWorkerExecute) then
+    FOnWorkerExecute(self, Connection, CloseOnExit);
 end;
 
 { Proxies }
@@ -1626,7 +1746,7 @@ end;
 procedure TF4TCPClient.InstallTLSProxy;
 var Proxy : TTCPClientTLSConnectionProxy;
 begin
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_TLS}
   Log(cltDebug, 'InstallTLSProxy');
   {$ENDIF}
   Proxy := TTCPClientTLSConnectionProxy.Create(self);
@@ -1685,11 +1805,13 @@ begin
     {$ENDIF}
 
     FConnection := TTCPConnection.Create(FSocket);
-    FConnection.OnLog         := ConnectionLog;
-    FConnection.OnStateChange := ConnectionStateChange;
-    FConnection.OnRead        := ConnectionRead;
-    FConnection.OnWrite       := ConnectionWrite;
-    FConnection.OnClose       := ConnectionClose;
+    FConnection.OnLog           := ConnectionLog;
+    FConnection.OnStateChange   := ConnectionStateChange;
+    FConnection.OnRead          := ConnectionRead;
+    FConnection.OnWrite         := ConnectionWrite;
+    FConnection.OnClose         := ConnectionClose;
+    FConnection.OnWorkerExecute := ConnectionWorkerExecute;
+    FConnection.UseWorkerThread := FUseWorkerThread;
   finally
     Unlock;
   end;
@@ -1711,22 +1833,63 @@ begin
   FreeAndNil(FSocket);
 end;
 
+function TF4TCPClient.GetBlockingConnection: TTCPBlockingConnection;
+begin
+  if Assigned(FConnection) then
+    Result := FConnection.BlockingConnection
+  else
+    Result := nil;
+end;
+
 { Resolve }
+
+procedure TF4TCPClient.DoResolveLocal;
+var
+  LocAddr : TSocketAddr;
+begin
+  Assert(FActive);
+  Assert(FState in [csStarted, csConnectRetry]);
+  Assert(FHost <> '');
+  {$IFDEF TCP_DEBUG}
+  Log(cltDebug, 'DoResolveLocal');
+  {$ENDIF}
+
+  SetState(csResolvingLocal);
+  LocAddr := cSocketLib.ResolveA(FLocalHost, FLocalPort, FIPAddressFamily, ipTCP);
+  Lock;
+  try
+    FLocalAddr := LocAddr;
+  finally
+    Unlock;
+  end;
+  SetState(csResolvedLocal);
+end;
+
+procedure TF4TCPClient.DoBind;
+begin
+  Assert(FActive);
+  Assert(FState = csResolvedLocal);
+  Assert(Assigned(FSocket));
+  {$IFDEF TCP_DEBUG}
+  Log(cltDebug, 'DoBind');
+  {$ENDIF}
+
+  FSocket.Bind(FLocalAddr);
+  SetState(csBound);
+end;
 
 procedure TF4TCPClient.DoResolve;
 var
-  LocAddr : TSocketAddr;
   ConAddr : TSocketAddr;
 begin
   Assert(FActive);
-  Assert(FState = csStarted);
+  Assert(FState in [csBound, csConnectRetry]);
   Assert(FHost <> '');
   {$IFDEF TCP_DEBUG}
   Log(cltDebug, 'DoResolve');
   {$ENDIF}
 
   SetState(csResolving);
-  LocAddr := cSocketLib.ResolveA(FLocalHost, FLocalPort, FIPAddressFamily, ipTCP);
   ConAddr := cSocketLib.ResolveA(FHost, FPort, FIPAddressFamily, ipTCP);
 
   Lock;
@@ -1741,7 +1904,6 @@ begin
       InitSocketAddrNone(FSocksResolvedAddr);
     {$ENDIF}
     FConnectAddr := ConAddr;
-    FLocalAddr := LocAddr;
   finally
     Unlock;
   end;
@@ -1760,7 +1922,6 @@ begin
   {$ENDIF}
 
   SetState(csConnecting);
-  FSocket.Bind(FLocalAddr);
   FSocket.Connect(FConnectAddr);
   SetConnected;
 end;
@@ -1772,7 +1933,6 @@ begin
   {$IFDEF TCP_DEBUG}
   Log(cltDebug, 'DoClose');
   {$ENDIF}
-  
   FConnection.Close;
   SetClosed;
 end;
@@ -1781,15 +1941,15 @@ end;
 
 procedure TF4TCPClient.StartThread;
 begin
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_THREAD}
   Log(cltDebug, 'StartThread');
   {$ENDIF}
-  FProcessThread := TTCPClientThread.Create(self);
+  FProcessThread := TTCPClientProcessThread.Create(self);
 end;
 
 procedure TF4TCPClient.StopThread;
 begin
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_THREAD}
   Log(cltDebug, 'StopThread');
   {$ENDIF}
   FreeAndNil(FProcessThread);
@@ -1812,7 +1972,9 @@ begin
 end;
 {$ENDIF}
 
-procedure TF4TCPClient.ThreadExecute(const Thread: TTCPClientThread);
+// The client thread is responsible for connecting and processing the socket.
+// Events are dispatches from this thread.
+procedure TF4TCPClient.ThreadExecute(const Thread: TTCPClientProcessThread);
 
   function IsTerminated: Boolean;
   begin
@@ -1827,14 +1989,34 @@ procedure TF4TCPClient.ThreadExecute(const Thread: TTCPClientThread);
       SetError(E.Message, -1);
   end;
 
+  function WaitSec(const NSec: Integer): Boolean;
+  var
+    T : LongWord;
+  begin
+    Result := True;
+    if NSec <= 0 then
+      exit;
+    T := TCPGetTick;
+    repeat
+      if IsTerminated then
+        begin
+          Result := False;
+          exit;
+        end;
+      Sleep(10);
+    until TCPTickDelta(T, TCPGetTick) >= NSec * 1000;
+  end;
+
 var
   ConIdle, ConTerminated : Boolean;
   {$IFDEF OS_MSWIN}
   MsgProcessed, MsgTerminated : Boolean;
   {$ENDIF}
+  ConnRetry : Boolean;
+  ConnAttempt : Integer;
 begin
   Assert(Assigned(Thread));
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_THREAD}
   Log(cltDebug, 'ThreadExecute');
   {$ENDIF}
   try
@@ -1846,12 +2028,12 @@ begin
         exit;
       SetStarted;
       FSocket.SetBlocking(True);
-      // resolve
-      DoResolve;
+      // resolve local
+      DoResolveLocal;
       if IsTerminated then
         exit;
-      // connect
-      DoConnect;
+      // bind
+      DoBind;
       if IsTerminated then
         exit;
     except
@@ -1862,6 +2044,45 @@ begin
           exit;
         end;
     end;
+    // resolve and connect
+    ConnAttempt := 1;
+    repeat
+      try
+        // resolve
+        DoResolve;
+        if IsTerminated then
+          exit;
+        // connect
+        DoConnect;
+        if IsTerminated then
+          exit;
+        // success
+        ConnRetry := False;
+      except
+        on E : Exception do
+          begin
+            // retry
+            if FRetryFailedConnect then
+              if (FRetryFailedConnectMaxAttempts < 0) or
+                 (ConnAttempt < FRetryFailedConnectMaxAttempts) then
+                begin
+                  if not WaitSec(FRetryFailedConnectDelaySec) then
+                    exit;
+                  Inc(ConnAttempt);
+                  ConnRetry := True;
+                  SetState(csConnectRetry);
+                  if IsTerminated then
+                    exit;
+                end;
+            if not ConnRetry then
+              begin
+                SetErrorFromException(E);
+                TriggerConnectFailed;
+                exit;
+              end;
+          end;
+      end;
+    until not ConnRetry;
     // poll loop
     try
       FSocket.SetBlocking(False);
@@ -1874,7 +2095,7 @@ begin
           if ConTerminated then
             begin
               Thread.Terminate;
-              {$IFDEF TCP_DEBUG}
+              {$IFDEF TCP_DEBUG_THREAD}
               Log(cltDebug, 'ThreadTerminate:ConnectionTerminated');
               {$ENDIF}
             end
@@ -1886,15 +2107,15 @@ begin
               if MsgTerminated then
                 begin
                   Thread.Terminate;
-                  {$IFDEF TCP_DEBUG}
+                  {$IFDEF TCP_DEBUG_THREAD}
                   Log(cltDebug, 'ThreadTerminate:MsgTerminated');
                   {$ENDIF}
                 end
               else
                 if not MsgProcessed then
-                  TriggerIdle;
+                  TriggerProcessThreadIdle;
               {$ELSE}
-              TriggerIdle;
+              TriggerProcessThreadIdle;
               {$ENDIF}
             end;
         end;
@@ -1907,9 +2128,15 @@ begin
     if not Thread.Terminated then
       SetClosed;
   end;
-  {$IFDEF TCP_DEBUG}
+  {$IFDEF TCP_DEBUG_THREAD}
   Log(cltDebug, 'ThreadTerminate:Terminated=%d', [Ord(IsTerminated)]);
   {$ENDIF}
+end;
+
+procedure TF4TCPClient.TerminateWorkerThread;
+begin
+  Assert(Assigned(FConnection));
+  FConnection.TerminateWorkerThread;
 end;
 
 { Start / Stop }
@@ -1918,11 +2145,11 @@ const
   // milliseconds to wait for thread to startup,
   // this usually happens within 1 ms but could pause for a few seconds if the
   // system is busy
-  ThreadStartupTimeOut = 15000; // 15 seconds
+  ThreadStartupTimeOut = 30000; // 30 seconds
 
 procedure TF4TCPClient.DoStart;
 var
-  IsStarting : Boolean;
+  IsAlreadyStarting : Boolean;
   WaitForStart : Boolean;
 begin
   // ensure only one thread is doing DoStart
@@ -1930,7 +2157,7 @@ begin
   try
     if FActive then
       exit;
-    IsStarting := False;
+    IsAlreadyStarting := False;
     WaitForStart := False;
     // validate paramters
     if FHost = '' then
@@ -1938,27 +2165,31 @@ begin
     if FPort = '' then
       raise ETCPClient.Create(SError_PortNotSpecified);
     // check if already starting
-    IsStarting := FState = csStarting;
-    if not IsStarting then
+    IsAlreadyStarting := FState = csStarting;
+    if not IsAlreadyStarting then
       SetState(csStarting);
     WaitForStart := FWaitForStartup;
   finally
     Unlock;
   end;
-  if IsStarting then
+  if IsAlreadyStarting then
     begin
-      // this thread is not doing startup, wait for other thread to complete startup
+      // this thread is not doing startup,
+      // wait for other thread to complete startup
       if WaitForStart then
-        if WaitState(TCPClientStates_All - [csStarting], ThreadStartupTimeOut) = csStarting then
+        if WaitForState(TCPClientStates_All - [csStarting], ThreadStartupTimeOut) = csStarting then
           raise ETCPClient.Create(SError_StartupFailed); // timed out waiting for startup
       exit;
     end;
+  // start
   Assert(not FActive);
   // notify start
   TriggerStart;
   // initialise active state
   Lock;
   try
+    InitSocketAddrNone(FLocalAddr);
+    InitSocketAddrNone(FConnectAddr);
     FErrorMsg := '';
     FErrorCode := 0;
     FActive := True;
@@ -1969,7 +2200,7 @@ begin
   StartThread;
   // wait for thread to complete startup
   if WaitForStart then
-    if WaitState(TCPClientStates_All - [csStarting], ThreadStartupTimeOut) = csStarting then
+    if WaitForState(TCPClientStates_All - [csStarting], ThreadStartupTimeOut) = csStarting then
       raise ETCPClient.Create(SError_StartupFailed); // timed out waiting for thread
     // connection object initialised
   // started
@@ -1977,27 +2208,28 @@ begin
 end;
 
 const
-  ClientStopTimeOut = 15000; // 15 seconds
+  ClientStopTimeOut = 30000; // 30 seconds
 
 procedure TF4TCPClient.DoStop;
 var
-  IsStopping : Boolean;
+  IsAlreadyStopping : Boolean;
 begin
   // ensure only one thread is doing DoStop
   Lock;
   try
     if not FActive then
       exit;
-    IsStopping := FIsStopping;
-    if not IsStopping then
+    IsAlreadyStopping := FIsStopping;
+    if not IsAlreadyStopping then
       FIsStopping := True;
   finally
     Unlock;
   end;
-  if IsStopping then
+  if IsAlreadyStopping then
     begin
-      // this thread is not doing stop, wait for other thread to complete stop
-      WaitState([csStopped], ClientStopTimeOut);
+      // this thread is not doing stop,
+      // wait for other thread to complete stop
+      WaitForState([csStopped], ClientStopTimeOut);
       exit;
     end;
   Assert(FActive);
@@ -2005,6 +2237,7 @@ begin
   try
     TriggerStop;
     StopThread;
+    TerminateWorkerThread;
     DoClose;
     FActive := False;
     TriggerInactive;
@@ -2018,6 +2251,7 @@ begin
       Unlock;
     end;
   end;
+  // stopped
 end;
 
 procedure TF4TCPClient.Start;
@@ -2068,6 +2302,7 @@ end;
 
 procedure TF4TCPClient.Wait;
 begin
+  {$IFDEF OS_MSWIN}
   if GetCurrentThreadID = MainThreadID then
     begin
       if Assigned(OnMainThreadWait) then
@@ -2078,11 +2313,15 @@ begin
       if Assigned(FOnThreadWait) then
         FOnThreadWait(self);
     end;
-  Sleep(1);
+  {$ELSE}
+  if Assigned(FOnThreadWait) then
+    FOnThreadWait(self);
+  {$ENDIF}
+  Sleep(5);
 end;
 
 // Wait until one of the States or time out
-function TF4TCPClient.WaitState(const States: TTCPClientStates; const TimeOut: Integer): TTCPClientState;
+function TF4TCPClient.WaitForState(const States: TTCPClientStates; const TimeOutMs: Integer): TTCPClientState;
 var T : LongWord;
     S : TTCPClientState;
 begin
@@ -2092,85 +2331,24 @@ begin
     S := GetState;
     if S in States then
       break;
-    if TCPTickDelta(T, TCPGetTick) >= TimeOut then
-      break;
+    if TimeOutMs >= 0 then
+      if TCPTickDelta(T, TCPGetTick) >= TimeOutMs then
+        break;
     Wait;
   until False;
   Result := S;
 end;
 
 // Wait until connected (ready), closed or time out
-function TF4TCPClient.WaitConnect(const TimeOut: Integer): Boolean;
+function TF4TCPClient.WaitForConnect(const TimeOutMs: Integer): Boolean;
 begin
-  Result := WaitState([csReady, csClosed, csStopped], TimeOut) = csReady;
-end;
-
-// Wait until amount of data received, closed or time out
-function TF4TCPClient.WaitReceive(const ReadBufferSize: Integer; const TimeOut: Integer): Boolean;
-var T : LongWord;
-    L : Integer;
-begin
-  CheckActive;
-  T := TCPGetTick;
-  repeat
-    L := FConnection.ReadBufferSize;
-    if L >= ReadBufferSize then
-      break;
-    if TCPTickDelta(T, TCPGetTick) >= TimeOut then
-      break;
-    if GetState in [csClosed, csStopped] then
-      break;
-    Wait;
-  until False;
-  Result := L >= ReadBufferSize;
-end;
-
-// Wait until send buffer is cleared to socket, closed or time out
-function TF4TCPClient.WaitTransmit(const TimeOut: Integer): Boolean;
-var T : LongWord;
-    L : Integer;
-begin
-  CheckActive;
-  T := TCPGetTick;
-  repeat
-    L := FConnection.WriteBufferSize;
-    if L = 0 then
-      break;
-    if TCPTickDelta(T, TCPGetTick) >= TimeOut then
-      break;
-    if GetState in [csClosed, csStopped] then
-      break;
-    Wait;
-  until False;
-  Result := L = 0;
+  Result := WaitForState([csReady, csClosed, csStopped], TimeOutMs) = csReady;
 end;
 
 // Wait until socket is closed or time out
-function TF4TCPClient.WaitClose(const TimeOut: Integer): Boolean;
+function TF4TCPClient.WaitForClose(const TimeOutMs: Integer): Boolean;
 begin
-  Result := WaitState([csClosed, csStopped], TimeOut) = csClosed;
-end;
-
-{ Blocking }
-
-procedure TF4TCPClient.BlockingClose(const TimeOut: Integer);
-begin
-  CheckActive;;
-  DoClose;
-  if not WaitClose(TimeOut) then
-    raise ETCPClient.Create(SError_TimedOut);
-end;
-
-// Does a graceful shutdown and waits for connection to close or timeout
-// Data received during shutdown is available after connection close
-procedure TF4TCPClient.BlockingShutdown(const TransmitTimeOut: Integer; const CloseTimeOut: Integer);
-begin
-  CheckActive;
-  if not WaitTransmit(TransmitTimeOut) then
-    raise ETCPClient.Create(SError_TimedOut);
-  FConnection.Shutdown;
-  if not WaitClose(CloseTimeOut) then
-    raise ETCPClient.Create(SError_TimedOut);
+  Result := WaitForState([csClosed, csStopped], TimeOutMs) = csClosed;
 end;
 
 

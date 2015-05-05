@@ -42,6 +42,7 @@
 {   2011/04/22  4.04  Test for multiple connections.                           }
 {   2011/10/13  4.05  SSL3 tests.                                              }
 {   2012/04/19  4.06  Test for stopping and restarting client.                 }
+{   2015/04/26  4.07  Test for worker thread and blocking interface.           }
 {                                                                              }
 { Todo:                                                                        }
 { - Test case socks proxy                                                      }
@@ -619,6 +620,13 @@ begin
   Log('S:' + Msg);
 end;
 
+procedure LogPrint(const S: String);
+begin
+  {$IFDEF TCP_SELFTEST_LOG_TO_CONSOLE}
+  Writeln(S);
+  {$ENDIF}
+end;
+
 procedure SelfTestClientServer(
           const Mode: TClientServerTestMode;
           const TestClientCount: Integer;
@@ -841,14 +849,14 @@ begin
         repeat
           Inc(I);
           Sleep(1);
-        until (T[K].Connection.ReadBufferSize >= 12) or (I >= 5000);
+        until (T[K].Connection.ReadBufferUsed >= 12) or (I >= 5000);
         DebugObj.Log('{RWS:' + IntToStr(K + 1) + ':B}');
-        Assert(T[K].Connection.ReadBufferSize = 12);
-        F := T[K].Connection.PeekStr(3);
+        Assert(T[K].Connection.ReadBufferUsed = 12);
+        F := T[K].Connection.PeekStrB(3);
         Assert(F = 'Fun');
         Assert(T[K].Connection.PeekByte(B));
         Assert(B = Ord('F'));
-        F := T[K].Connection.ReadStr(12);
+        F := T[K].Connection.ReadStrB(12);
         Assert(F = 'Fundamentals');
         DebugObj.Log('{RWS:' + IntToStr(K + 1) + ':Z}');
       end;
@@ -857,8 +865,8 @@ begin
       T[K].Connection.WriteStrB('123');
     for K := 0 to TestClientCount - 1 do
       begin
-        C[K].WaitReceive(3, 5000);
-        F := C[K].Connection.ReadStr(3);
+        C[K].BlockingConnection.WaitForReceiveData(3, 5000);
+        F := C[K].Connection.ReadStrB(3);
         Assert(F = '123');
       end;
     if TestLargeBlock then
@@ -878,9 +886,9 @@ begin
                 Sleep(1);
                 Assert(C[K].State = csReady);
                 Assert(T[K].State = scsReady);
-              until (T[K].Connection.ReadBufferSize > 0) or (I >= 5000);
-              Assert(T[K].Connection.ReadBufferSize > 0);
-              F := T[K].Connection.ReadStr(T[K].Connection.ReadBufferSize);
+              until (T[K].Connection.ReadBufferUsed > 0) or (I >= 5000);
+              Assert(T[K].Connection.ReadBufferUsed > 0);
+              F := T[K].Connection.ReadStrB(T[K].Connection.ReadBufferUsed);
               Assert(Length(F) > 0);
               for I := 1 to Length(F) do
                 Assert(F[I] = #1);
@@ -888,7 +896,7 @@ begin
             until J <= 0;
             Assert(J = 0);
             Sleep(2);
-            Assert(T[K].Connection.ReadBufferSize = 0);
+            Assert(T[K].Connection.ReadBufferUsed = 0);
           end;
         // read & write (large block): server to client
         SetLength(F, LargeBlockSize);
@@ -899,11 +907,11 @@ begin
           begin
             J := LargeBlockSize;
             repeat
-              C[K].WaitReceive(1, 5000);
+              C[K].BlockingConnection.WaitForReceiveData(1, 5000);
               Assert(C[K].State = csReady);
               Assert(T[K].State = scsReady);
-              Assert(C[K].Connection.ReadBufferSize > 0);
-              F := C[K].Connection.ReadStr(C[K].Connection.ReadBufferSize);
+              Assert(C[K].Connection.ReadBufferUsed > 0);
+              F := C[K].Connection.ReadStrB(C[K].Connection.ReadBufferUsed);
               Assert(Length(F) > 0);
               for I := 1 to Length(F) do
                 Assert(F[I] = #1);
@@ -911,7 +919,7 @@ begin
             until J <= 0;
             Assert(J = 0);
             Sleep(2);
-            Assert(C[K].Connection.ReadBufferSize = 0);
+            Assert(C[K].Connection.ReadBufferUsed = 0);
           end;
       end;
     // release reference
@@ -1010,6 +1018,27 @@ begin
             Assert(C[K].State = csStopped);
             Assert(not Assigned(C[K].Connection));
           end;
+        // delay
+        if J > 0 then
+          Sleep(J - 1);
+        // re-start client
+        for K := 0 to TestClientCount - 1 do
+          begin
+            C[K].Start;
+            // connection must exist when Start exits
+            Assert(Assigned(C[K].Connection));
+            Assert(C[K].Active);
+          end;
+        // delay
+        if J > 0 then
+          Sleep(J - 1);
+        // re-stop clients
+        for K := TestClientCount - 1 downto 0 do
+          begin
+            C[K].Stop;
+            Assert(C[K].State = csStopped);
+            Assert(not Assigned(C[K].Connection));
+          end;
       end;
     // stop server
     S.Stop;
@@ -1022,7 +1051,7 @@ begin
   end;
 end;
 
-procedure SelfTest_ClientServer;
+procedure SelfTest_ClientServer_A;
 begin
   Writeln('{STCS1}');
   SelfTestClientServer(tmSimple, 1,  True);
@@ -1037,33 +1066,172 @@ begin
   Writeln('{STCS.SS}');
   SelfTestClientServer_StopStart;
   {$IFDEF TCPCLIENTSERVER_SELFTEST_TLS}
+  LogPrint('{STCS.SSL}');
   // SelfTestClientServer(tmTLS, 1, True, [ctoDontUseTLS10, ctoDontUseTLS11, ctoDontUseTLS12]); // SSL 3.0
-  Writeln('{STCS.TLS}');
+  LogPrint('{STCS.TLS}');
   SelfTestClientServer(tmTLS, 1, True, [ctoDontUseSSL3,  ctoDontUseTLS10, ctoDontUseTLS11]); // TLS 1.2
-  //SelfTestClientServer(tmTLS, 1, True, [ctoDontUseSSL3,  ctoDontUseTLS10, ctoDontUseTLS12]); // TLS 1.1
-  //SelfTestClientServer(tmTLS, 1, True, [ctoDontUseSSL3,  ctoDontUseTLS11, ctoDontUseTLS12]); // TLS 1.0
+  SelfTestClientServer(tmTLS, 1, True, [ctoDontUseSSL3,  ctoDontUseTLS10, ctoDontUseTLS12]); // TLS 1.1
+  SelfTestClientServer(tmTLS, 1, True, [ctoDontUseSSL3,  ctoDontUseTLS11, ctoDontUseTLS12]); // TLS 1.0
+  LogPrint('{STCSFin}');
   {$ENDIF}
-  Writeln('{STCSFin}');
 end;
 {$ENDIF}
 
+type
+  TTestObjB = class
+    FinC, FinS : Boolean;
+    procedure ClientExec(Client: TF4TCPClient; Connection: TTCPBlockingConnection; var CloseOnExit: Boolean);
+    procedure ServerExec(Sender: TTCPServerClient; Connection: TTCPBlockingConnection; var CloseOnExit: Boolean);
+  end;
+
+{ TTestObjB }
+
+procedure TTestObjB.ClientExec(Client: TF4TCPClient;Connection: TTCPBlockingConnection; var CloseOnExit: Boolean);
+var
+  B1 : LongWord;
+begin
+  Sleep(200);
+
+  B1 := 1234;
+  Connection.Write(B1, 4, 10000);
+
+  B1 := 0;
+  Connection.Read(B1, 4, 10000);
+  Assert(B1 = 22222);
+
+  FinC := True;
+end;
+
+procedure TTestObjB.ServerExec(Sender: TTCPServerClient; Connection: TTCPBlockingConnection; var CloseOnExit: Boolean);
+var
+  B1 : LongWord;
+begin
+  B1 := 0;
+  Connection.Read(B1, 4, 10000);
+  Assert(B1 = 1234);
+
+  B1 := 22222;
+  Connection.Write(B1, 4, 10000);
+
+  FinS := True;
+end;
+
+procedure SelfTest_ClientServer_Block;
+var
+  S : TF4TCPServer;
+  C : TF4TCPClient;
+  DebugObj : TTCPDebugObj;
+  TestObj : TTestObjB;
+begin
+  DebugObj := TTCPDebugObj.Create;
+  TestObj := TTestObjB.Create;
+
+  S := TF4TCPServer.Create(nil);
+  S.OnLog := DebugObj.ServerLog;
+  S.AddressFamily := iaIP4;
+  S.BindAddress := '127.0.0.1';
+  S.ServerPort := 12345;
+  S.MaxClients := -1;
+  S.UseWorkerThread := True;
+  S.OnClientWorkerExecute := TestObj.ServerExec;
+  S.Active := True;
+
+  C := TF4TCPClient.Create(nil);
+  C.OnLog := DebugObj.ClientLog;
+  C.LocalHost := '0.0.0.0';
+  C.Host := '127.0.0.1';
+  C.Port := '12345';
+  C.WaitForStartup := True;
+  C.UseWorkerThread := True;
+  C.OnWorkerExecute := TestObj.ClientExec;
+  C.Active := True;
+
+  repeat
+    Sleep(1);
+  until TestObj.FinC and TestObj.FinS;
+
+  C.Active := False;
+  S.Active := False;
+
+  C.Free;
+  S.Free;
+
+  TestObj.Free;
+  DebugObj.Free;
+end;
+
+procedure SelfTest_ClientServer_RetryConnect;
+var
+  S : TF4TCPServer;
+  C : TF4TCPClient;
+  DebugObj : TTCPDebugObj;
+  TestObj : TTestObjB;
+begin
+  DebugObj := TTCPDebugObj.Create;
+  TestObj := TTestObjB.Create;
+
+  S := TF4TCPServer.Create(nil);
+  S.OnLog := DebugObj.ServerLog;
+  S.AddressFamily := iaIP4;
+  S.BindAddress := '127.0.0.1';
+  S.ServerPort := 12345;
+  S.MaxClients := -1;
+  S.UseWorkerThread := True;
+  S.OnClientWorkerExecute := TestObj.ServerExec;
+
+  C := TF4TCPClient.Create(nil);
+  C.OnLog := DebugObj.ClientLog;
+  C.LocalHost := '0.0.0.0';
+  C.Host := '127.0.0.1';
+  C.Port := '12345';
+  C.WaitForStartup := True;
+  C.UseWorkerThread := True;
+  C.OnWorkerExecute := TestObj.ClientExec;
+  C.RetryFailedConnect := True;
+  C.RetryFailedConnectDelaySec := 2;
+  C.RetryFailedConnectMaxAttempts := 2;
+  C.Active := True;
+
+  Sleep(1000);
+
+  S.Active := True;
+
+  repeat
+    Sleep(1);
+  until TestObj.FinC and TestObj.FinS;
+
+  C.Active := False;
+  S.Active := False;
+
+  C.Free;
+  S.Free;
+
+  TestObj.Free;
+  DebugObj.Free;
+end;
+
 procedure SelfTest;
 begin
-  Writeln('{ST1}');
+  SelfTest_ClientServer_Block;
+  SelfTest_ClientServer_RetryConnect;
+
+  LogPrint('{ST1}');
   SelfTest_Buffer;
   {$IFDEF TCPSERVER_SELFTEST}
-  Writeln('{ST2}');
+  LogPrint('{ST2}');
   SelfTest_Server;
   {$ENDIF}
   {$IFDEF TCPCLIENT_SELFTEST}
-  Writeln('{ST3}');
+  LogPrint('{ST3}');
   SelfTest_Client;
   {$ENDIF}
   {$IFDEF TCPCLIENTSERVER_SELFTEST}
-  Writeln('{ST4}');
-  SelfTest_ClientServer;
+  LogPrint('{ST4}');
+  SelfTest_ClientServer_A;
+  LogPrint('{ST5}');
+  SelfTest_ClientServer_Block;
   {$ENDIF}
-  Writeln('{STFin}');
+  LogPrint('{STFin}');
 end;
 {$ENDIF}
 
