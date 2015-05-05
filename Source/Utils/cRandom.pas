@@ -82,7 +82,7 @@ uses
 {     returned by RandomSeed.                                                  }
 {                                                                              }
 procedure AddEntropy(const Value: Int64);
-function  RandomSeed: LongWord;
+function  RandomSeed32: LongWord;
 
 
 
@@ -96,12 +96,12 @@ function  RandomSeed: LongWord;
 {   RandomAlphaStr returns a string of random letters (A-Z).                   }
 {   RandomPseudoWord returns a random word-like string.                        }
 {                                                                              }
-function  RandomUniform: LongWord; overload;
-function  RandomUniform(const N: Integer): Integer; overload;
-function  RandomBoolean: Boolean;
+function  RandomUniform32: LongWord;
+function  RandomUniform(const N: Integer): Integer;
+function  RandomUniform16: Word;
 function  RandomByte: Byte;
 function  RandomByteNonZero: Byte;
-function  RandomWord: Word;
+function  RandomBoolean: Boolean;
 function  RandomInt64: Int64; overload;
 function  RandomInt64(const N: Int64): Int64; overload;
 
@@ -122,8 +122,8 @@ function  RandomPasswordA(const MinLength, MaxLength: Integer;
 {                                                                              }
 { Alternative uniform random number generators                                 }
 {                                                                              }
-function  mwcRandomLongWord: LongWord;
-function  urnRandomLongWord: LongWord;
+function  mwcRandom32: LongWord;
+function  urnRandom32: LongWord;
 function  moaRandomFloat: Extended;
 function  mwcRandomFloat: Extended;
 
@@ -584,7 +584,7 @@ end;
 
 {$IFDEF DELPHI5}{$OPTIMIZATION OFF}{$ENDIF}
 {$IFOPT Q+}{$DEFINE QOn}{$Q-}{$ELSE}{$UNDEF QOn}{$ENDIF}
-function RandomSeed: LongWord;
+function RandomSeed32: LongWord;
 var
   S : Int64;
 begin
@@ -649,13 +649,13 @@ begin
   moaSeeded := True;
 end;
 
-function moaRandomLongWord: LongWord;
+function moaRandom32: LongWord;
 var
   S  : Int64;
   Xn : LongWord;
 begin
   if not moaSeeded then
-    moaInitSeed(RandomSeed);
+    moaInitSeed(RandomSeed32);
   S := 2111111111 * Int64(moaX[0]) +
              1492 * Int64(moaX[1]) +
              1776 * Int64(moaX[2]) +
@@ -672,7 +672,7 @@ end;
 
 function moaRandomFloat: Extended;
 begin
-  Result := moaRandomLongWord / High(LongWord);
+  Result := moaRandom32 / High(LongWord);
 end;
 
 procedure moaFinalise;
@@ -717,11 +717,11 @@ begin
   mwcSeeded := True;
 end;
 
-function mwcRandomLongWord: LongWord;
+function mwcRandom32: LongWord;
 var S : Int64;
 begin
   if not mwcSeeded then
-    mwcInitSeed(RandomSeed);
+    mwcInitSeed(RandomSeed32);
   S := 1111111464 * (Int64(mwcX) + mwcY) + mwcC;
   Result := LongWord(S);
   mwcX := mwcY;
@@ -731,7 +731,7 @@ end;
 
 function mwcRandomFloat: Extended;
 begin
-  Result := mwcRandomLongWord / High(LongWord);
+  Result := mwcRandom32 / High(LongWord);
 end;
 
 procedure mwcFinalise;
@@ -808,7 +808,7 @@ function urnRandomFloat: Double;
 var R : Double;
 begin
   if not urnSeeded then
-    urnInitSeed(RandomSeed);
+    urnInitSeed(RandomSeed32);
   R := urnU[urnI] - urnU[urnJ];
   if R < 0.0 then
     R := R + 1.0;
@@ -828,7 +828,7 @@ begin
   Result := R;
 end;
 
-function urnRandomLongWord: LongWord;
+function urnRandom32: LongWord;
 begin
   Result := LongWord(Trunc(urnRandomFloat * 4294967295.0));
 end;
@@ -854,9 +854,9 @@ end;
 {                                                                              }
 { Uniform Random                                                               }
 {                                                                              }
-function RandomUniform: LongWord;
+function RandomUniform32: LongWord;
 begin
-  Result := moaRandomLongWord;
+  Result := moaRandom32;
 end;
 
 function RandomUniform(const N: Integer): Integer;
@@ -864,18 +864,21 @@ begin
   if N <= 1 then
     Result := 0
   else
-    Result := Integer(RandomUniform mod LongWord(N));
+    Result := Integer(RandomUniform32 mod LongWord(N));
 end;
 
-function RandomBoolean: Boolean;
+function RandomUniform16: Word;
+var I : LongWord;
 begin
-  Result := RandomUniform and 1 = 1;
+  I := RandomUniform32;
+  I := I xor (I shr 16);
+  Result := Word(I and $FFFF);
 end;
 
 function RandomByte: Byte;
 var I : LongWord;
 begin
-  I := RandomUniform;
+  I := RandomUniform32;
   I := I xor (I shr 8) xor (I shr 16) xor (I shr 24);
   Result := Byte(I and $FF);
 end;
@@ -887,12 +890,9 @@ begin
   until Result <> 0;
 end;
 
-function RandomWord: Word;
-var I : LongWord;
+function RandomBoolean: Boolean;
 begin
-  I := RandomUniform;
-  I := I xor (I shr 16);
-  Result := Word(I and $FFFF);
+  Result := RandomUniform32 and 1 = 1;
 end;
 
 function RandomFloat: Extended;
@@ -903,8 +903,8 @@ end;
 function RandomInt64: Int64;
 begin
   Result :=
-     Int64(RandomUniform) or
-    (Int64(RandomUniform) shl 32);
+     Int64(RandomUniform32) or
+    (Int64(RandomUniform32) shl 32);
 end;
 
 function RandomInt64(const N: Int64): Int64;
@@ -1189,14 +1189,14 @@ begin
   T2 := 0;
   for I := 1 to 10000 do
     begin
-      A := RandomSeed;
-      B := RandomSeed;
-      C := RandomSeed;
+      A := RandomSeed32;
+      B := RandomSeed32;
+      C := RandomSeed32;
       Assert(not ((A = B) and (B = C)), 'RandomSeed');
       T1 := T1 + A + B + C;
-      A := RandomUniform;
-      B := RandomUniform;
-      C := RandomUniform;
+      A := RandomUniform32;
+      B := RandomUniform32;
+      C := RandomUniform32;
       Assert(not ((A = B) and (B = C)), 'RandomUniform');
       T2 := T2 + A + B + C;
     end;

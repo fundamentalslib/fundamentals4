@@ -3477,7 +3477,7 @@ begin
   P := A.Data;
   for I := 0 to Size - 1 do
     begin
-      P^ := RandomUniform;
+      P^ := RandomUniform32;
       Inc(P);
     end;
   HugeWordNormalise(A);

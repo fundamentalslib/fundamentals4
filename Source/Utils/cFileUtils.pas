@@ -2619,11 +2619,11 @@ function FileWriteEx(
 begin
   {$IFDEF MSWIN}
   if not WriteFile(FileHandle, Buf, BufSize, LongWord(Result), nil) then
-    raise EFileError.CreateFmt(feFileWriteError, SFileWriteError, [GetLastOSErrorMessage]);
+    raise EFileError.CreateFmt(feFileWriteError, SFileWriteError, [GetLastOSErrorMessage, IntToStr(Ord(FileHandle))]);
   {$ELSE}
   Result := FileWrite(FileHandle, Buf, BufSize);
   if Result < 0 then
-    raise EFileError.Create(feFileWriteError, SFileWriteError);
+    raise EFileError.Create(feFileWriteError, SFileWriteError, [GetLastOSErrorMessage, IntToStr(Ord(FileHandle))]);
   {$ENDIF}
 end;
 

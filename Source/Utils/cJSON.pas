@@ -1,7 +1,7 @@
 {******************************************************************************}
 {                                                                              }
 {   File name:        cJSON.pas                                                }
-{   File version:     4.09                                                     }
+{   File version:     4.10                                                     }
 {   Description:      JSON                                                     }
 {                                                                              }
 {   Copyright:        Copyright (c) 2011-2015, David J Butler                  }
@@ -41,11 +41,12 @@
 {   2013/03/22  4.07  UnicodeString changes.                                   }
 {   2013/03/23  4.08  Improvements.                                            }
 {   2015/03/31  4.09  Revision.                                                }
+{   2015/05/05  4.10  JSONFloat type, dynamic array functions.                 }
 {                                                                              }
 { Supported compilers:                                                         }
 {                                                                              }
 {   Delphi 7 Win32                      4.09  2015/03/31                       }
-{   Delphi XE7 Win64                    4.09  2015/03/31                       }
+{   Delphi XE7 Win64                    4.10  2015/05/05                       }
 {                                                                              }
 { References:                                                                  }
 {                                                                              }
@@ -97,6 +98,13 @@ type
     jboIndent
     );
 
+  {$IFDEF ExtendedIsDouble}
+  JSONFloat = Double;
+  {$ELSE}
+  JSONFloat = Extended;
+  {$ENDIF}
+  JSONFloatArray = array of JSONFloat;
+
   TJSONArray = class;
   TJSONObject = class;
 
@@ -113,7 +121,7 @@ type
     function  GetValueStrUTF8: RawByteString;
     function  GetValueStrWide: WideString;
     function  GetValueInt: Int64; virtual;
-    function  GetValueFloat: Extended; virtual;
+    function  GetValueFloat: JSONFloat; virtual;
     function  GetValueBoolean: Boolean; virtual;
     function  GetValueArray: TJSONArray; virtual;
     function  GetValueObject: TJSONObject; virtual;
@@ -123,7 +131,7 @@ type
     procedure SetValueStrUTF8(const AValue: RawByteString); virtual;
     procedure SetValueStrWide(const AValue: WideString); virtual;
     procedure SetValueInt(const AValue: Int64); virtual;
-    procedure SetValueFloat(const AValue: Extended); virtual;
+    procedure SetValueFloat(const AValue: JSONFloat); virtual;
     procedure SetValueBoolean(const AValue: Boolean); virtual;
     procedure SetValueVariant(const AValue: Variant); virtual;
 
@@ -148,7 +156,7 @@ type
     property  ValueStrUTF8: RawByteString read GetValueStrUTF8 write SetValueStrUTF8;
     property  ValueStrWide: WideString read GetValueStrWide write SetValueStrWide;
     property  ValueInt: Int64 read GetValueInt write SetValueInt;
-    property  ValueFloat: Extended read GetValueFloat write SetValueFloat;
+    property  ValueFloat: JSONFloat read GetValueFloat write SetValueFloat;
     property  ValueBoolean: Boolean read GetValueBoolean write SetValueBoolean;
     property  ValueArray: TJSONArray read GetValueArray;
     property  ValueObject: TJSONObject read GetValueObject;
@@ -175,13 +183,13 @@ type
     function  GetValueType: TJSONValueType; override;
     function  GetValueStr: UnicodeString; override;
     function  GetValueInt: Int64; override;
-    function  GetValueFloat: Extended; override;
+    function  GetValueFloat: JSONFloat; override;
     function  GetValueBoolean: Boolean; override;
     function  GetValueVariant: Variant; override;
     function  GetValueIsStr: Boolean; override;
     procedure SetValueStr(const AValue: UnicodeString); override;
     procedure SetValueInt(const AValue: Int64); override;
-    procedure SetValueFloat(const AValue: Extended); override;
+    procedure SetValueFloat(const AValue: JSONFloat); override;
     procedure SetValueBoolean(const AValue: Boolean); override;
 
   public
@@ -204,7 +212,7 @@ type
     function  GetValueType: TJSONValueType; override;
     function  GetValueStr: UnicodeString; override;
     function  GetValueInt: Int64; override;
-    function  GetValueFloat: Extended; override;
+    function  GetValueFloat: JSONFloat; override;
     function  GetValueBoolean: Boolean; override;
     function  GetValueVariant: Variant; override;
     function  GetValueIsInt: Boolean; override;
@@ -223,24 +231,24 @@ type
 
   TJSONFloat = class(TJSONValue)
   private
-    FValue : Extended;
+    FValue : JSONFloat;
 
   protected
     procedure BuildJSONString(const A: TUnicodeStringBuilder; const AOptions: TJSONStringOptions; const ALevel: Integer); override;
     function  GetValueType: TJSONValueType; override;
     function  GetValueStr: UnicodeString; override;
-    function  GetValueFloat: Extended; override;
+    function  GetValueFloat: JSONFloat; override;
     function  GetValueVariant: Variant; override;
     function  GetValueIsFloat: Boolean; override;
     procedure SetValueStr(const AValue: UnicodeString); override;
     procedure SetValueInt(const AValue: Int64); override;
-    procedure SetValueFloat(const AValue: Extended); override;
+    procedure SetValueFloat(const AValue: JSONFloat); override;
 
   public
-    constructor Create(const AValue: Extended);
+    constructor Create(const AValue: JSONFloat);
 
     function  Clone: TJSONValue; override;
-    property  Value: Extended read FValue;
+    property  Value: JSONFloat read FValue;
     function  Compare(const A: TJSONValue): Integer; override;
     procedure Validate(const Schema: TJSONObject); override;
   end;
@@ -291,7 +299,7 @@ type
     function  GetItemAsStrUTF8(const Idx: Integer): RawByteString;
     function  GetItemAsStrWide(const Idx: Integer): WideString;
     function  GetItemAsInt(const Idx: Integer): Int64;
-    function  GetItemAsFloat(const Idx: Integer): Extended;
+    function  GetItemAsFloat(const Idx: Integer): JSONFloat;
     function  GetItemAsBoolean(const Idx: Integer): Boolean;
     function  GetItemAsArray(const Idx: Integer): TJSONArray;
     function  GetItemAsObject(const Idx: Integer): TJSONObject;
@@ -301,7 +309,7 @@ type
     procedure SetItemAsStrUTF8(const Idx: Integer; const Value: RawByteString);
     procedure SetItemAsStrWide(const Idx: Integer; const Value: WideString);
     procedure SetItemAsInt(const Idx: Integer; const Value: Int64);
-    procedure SetItemAsFloat(const Idx: Integer; const Value: Extended);
+    procedure SetItemAsFloat(const Idx: Integer; const Value: JSONFloat);
     procedure SetItemAsBoolean(const Idx: Integer; const Value: Boolean);
     procedure SetItemAsVariant(const Idx: Integer; const Value: Variant);
 
@@ -313,6 +321,7 @@ type
 
   public
     constructor Create;
+    constructor CreateEx(const Values: array of const);
     destructor Destroy; override;
 
     function  Clone: TJSONValue; override;
@@ -326,7 +335,7 @@ type
     property  ItemAsStrUTF8[const Idx: Integer]: RawByteString read GetItemAsStrUTF8 write SetItemAsStrUTF8;
     property  ItemAsStrWide[const Idx: Integer]: WideString read GetItemAsStrWide write SetItemAsStrWide;
     property  ItemAsInt[const Idx: Integer]: Int64 read GetItemAsInt write SetItemAsInt;
-    property  ItemAsFloat[const Idx: Integer]: Extended read GetItemAsFloat write SetItemAsFloat;
+    property  ItemAsFloat[const Idx: Integer]: JSONFloat read GetItemAsFloat write SetItemAsFloat;
     property  ItemAsBoolean[const Idx: Integer]: Boolean read GetItemAsBoolean write SetItemAsBoolean;
     property  ItemAsArray[const Idx: Integer]: TJSONArray read GetItemAsArray;
     property  ItemAsObject[const Idx: Integer]: TJSONObject read GetItemAsObject;
@@ -337,13 +346,19 @@ type
     procedure AppendStrUTF8(const A: RawByteString);
     procedure AppendStrWide(const A: WideString);
     procedure AppendInt(const A: Int64);
-    procedure AppendFloat(const A: Extended);
+    procedure AppendFloat(const A: JSONFloat);
     procedure AppendBoolean(const A: Boolean);
     procedure AppendNull;
     procedure AppendVariant(const A : Variant);
 
     function  Compare(const A: TJSONValue): Integer; override;
     procedure Validate(const Schema: TJSONObject); override;
+
+    function  GetAsStrArray: UnicodeStringArray;
+    function  GetAsStrArrayUTF8: RawByteStringArray;
+    function  GetAsStrArrayWide: WideStringArray;
+    function  GetAsIntArray: Int64Array;
+    function  GetAsFloatArray: JSONFloatArray;
   end;
 
   TJSONObjectItem = record
@@ -390,7 +405,7 @@ type
     function  GetItemAsStrUTF8(const Name: UnicodeString; const Default: RawByteString = ''): RawByteString;
     function  GetItemAsStrWide(const Name: UnicodeString; const Default: WideString = ''): WideString;
     function  GetItemAsInt(const Name: UnicodeString; const Default: Int64 = 0): Int64;
-    function  GetItemAsFloat(const Name: UnicodeString; const Default: Extended = 0.0): Extended;
+    function  GetItemAsFloat(const Name: UnicodeString; const Default: JSONFloat = 0.0): JSONFloat;
     function  GetItemAsBoolean(const Name: UnicodeString; const Default: Boolean = False): Boolean;
     function  GetItemAsArray(const Name: UnicodeString): TJSONArray;
     function  GetItemAsObject(const Name: UnicodeString): TJSONObject;
@@ -403,7 +418,7 @@ type
     procedure SetItemAsStrUTF8(const Name: UnicodeString; const Value: RawByteString);
     procedure SetItemAsStrWide(const Name: UnicodeString; const Value: WideString);
     procedure SetItemAsInt(const Name: UnicodeString; const Value: Int64);
-    procedure SetItemAsFloat(const Name: UnicodeString; const Value: Extended);
+    procedure SetItemAsFloat(const Name: UnicodeString; const Value: JSONFloat);
     procedure SetItemAsBoolean(const Name: UnicodeString; const Value: Boolean);
     procedure SetItemAsVariant(const Name: UnicodeString; const Value: Variant);
 
@@ -452,7 +467,7 @@ type
     FTokenPos        : Integer;
     FTokenLen        : Integer;
     FTokenInteger    : Int64;
-    FTokenFloat      : Extended;
+    FTokenFloat      : JSONFloat;
     FTokenStrBuilder : TUnicodeStringBuilder;
     FTokenStr        : UnicodeString;
 
@@ -467,7 +482,7 @@ type
     function  ParseToken_ExpectUnsignedInteger(const Ch: WideChar): Int64;
     function  ParseToken_SignedInteger(const Ch: WideChar): Int64;
     function  ParseToken_ExpectSignedInteger(const Ch: WideChar): Int64;
-    function  ParseToken_Float(const Ch: WideChar): Extended;
+    function  ParseToken_Float(const Ch: WideChar): JSONFloat;
     function  ParseToken_Number(const Ch: WideChar): TJSONParserToken;
     function  ParseToken_String_Escaped_Hex4(const Ch: WideChar): WideChar;
     function  ParseToken_String_Escaped(const Ch: WideChar): WideChar;
@@ -654,7 +669,7 @@ begin
       [ClassName, 'integer']);
 end;
 
-function TJSONValue.GetValueFloat: Extended;
+function TJSONValue.GetValueFloat: JSONFloat;
 begin
   raise EJSONValue.CreateFmt('%s: Conversion of value to %s not supported',
       [ClassName, 'float']);
@@ -714,7 +729,7 @@ begin
       [ClassName, 'integer']);
 end;
 
-procedure TJSONValue.SetValueFloat(const AValue: Extended);
+procedure TJSONValue.SetValueFloat(const AValue: JSONFloat);
 begin
   raise EJSONValue.CreateFmt('%s: Conversion from %s value not supported',
       [ClassName, 'float']);
@@ -904,7 +919,7 @@ begin
   Result := StrToInt64(FValue);
 end;
 
-function TJSONString.GetValueFloat: Extended;
+function TJSONString.GetValueFloat: JSONFloat;
 begin
   Result := StrToFloat(FValue);
 end;
@@ -940,7 +955,7 @@ begin
   FValue := IntToStr(AValue);
 end;
 
-procedure TJSONString.SetValueFloat(const AValue: Extended);
+procedure TJSONString.SetValueFloat(const AValue: JSONFloat);
 begin
   FValue := FloatToStr(AValue);
 end;
@@ -1013,7 +1028,7 @@ begin
   Result := FValue;
 end;
 
-function TJSONInteger.GetValueFloat: Extended;
+function TJSONInteger.GetValueFloat: JSONFloat;
 begin
   Result := FValue;
 end;
@@ -1108,7 +1123,7 @@ end;
 
 { TJSONFloat }
 
-constructor TJSONFloat.Create(const AValue: Extended);
+constructor TJSONFloat.Create(const AValue: JSONFloat);
 begin
   inherited Create;
   FValue := AValue;
@@ -1134,7 +1149,7 @@ begin
   Result := FloatToStr(FValue);
 end;
 
-function TJSONFloat.GetValueFloat: Extended;
+function TJSONFloat.GetValueFloat: JSONFloat;
 begin
   Result := FValue;
 end;
@@ -1159,7 +1174,7 @@ begin
   FValue := AValue;
 end;
 
-procedure TJSONFloat.SetValueFloat(const AValue: Extended);
+procedure TJSONFloat.SetValueFloat(const AValue: JSONFloat);
 begin
   FValue := AValue;
 end;
@@ -1340,11 +1355,52 @@ end;
 
 
 
+{ TVarRec }
+
+function VarRecToJSONValue(const Value: TVarRec): TJSONValue;
+begin
+  case Value.VType of
+    System.vtInteger       : Result := TJSONInteger.Create(Value.VInteger);
+    System.vtBoolean       : Result := TJSONBoolean.Create(Value.VBoolean);
+    System.vtChar          : Result := TJSONString.Create(ToStringChA(Value.VChar));
+    System.vtExtended      : Result := TJSONFloat.Create(Value.VExtended^);
+    System.vtString        : Result := TJSONString.Create(String(Value.VString^));
+    System.vtPointer       : if not Assigned(Value.VPointer) then
+                               Result := TJSONNull.Create
+                             else
+                               raise EJSONValue.Create('VarRec value not supported');
+    System.vtPChar         : Result := TJSONString.Create(ToStringA(Value.VPChar^));
+    System.vtWideChar      : Result := TJSONString.Create(ToStringChW(Value.VWideChar));
+    System.vtPWideChar     : Result := TJSONString.Create(Value.VPWideChar^);
+    System.vtAnsiString    : Result := TJSONString.Create(ToStringA(AnsiString(Value.VAnsiString)));
+    System.vtCurrency      : Result := TJSONFloat.Create(Value.VCurrency^);
+    System.vtWideString    : Result := TJSONString.Create(ToStringW(WideString(Value.VWideString)));
+    System.vtInt64         : Result := TJSONInteger.Create(Value.VInt64^);
+    System.vtUnicodeString : Result := TJSONString.Create(UnicodeString(Value.VUnicodeString));
+  else
+    raise EJSONValue.Create('VarRec value type not supported');
+  end;
+end;
+
+
+
 { TJSONArray }
 
 constructor TJSONArray.Create;
 begin
   inherited Create;
+end;
+
+constructor TJSONArray.CreateEx(const Values: array of const);
+var L, I : Integer;
+begin
+  inherited Create;
+  L := Length(Values);
+  SetLength(FList, L);
+  for I := 0 to L - 1 do
+    FList[I] := nil;
+  for I := 0 to L - 1 do
+    FList[I] := VarRecToJSONValue(Values[I]);
 end;
 
 destructor TJSONArray.Destroy;
@@ -1431,7 +1487,7 @@ begin
   Result := GetItem(Idx).GetValueInt;
 end;
 
-function TJSONArray.GetItemAsFloat(const Idx: Integer): Extended;
+function TJSONArray.GetItemAsFloat(const Idx: Integer): JSONFloat;
 begin
   Result := GetItem(Idx).GetValueFloat;
 end;
@@ -1476,7 +1532,7 @@ begin
   GetItem(Idx).SetValueInt(Value);
 end;
 
-procedure TJSONArray.SetItemAsFloat(const Idx: Integer; const Value: Extended);
+procedure TJSONArray.SetItemAsFloat(const Idx: Integer; const Value: JSONFloat);
 begin
   GetItem(Idx).SetValueFloat(Value);
 end;
@@ -1521,7 +1577,7 @@ begin
   Append(TJSONInteger.Create(A));
 end;
 
-procedure TJSONArray.AppendFloat(const A: Extended);
+procedure TJSONArray.AppendFloat(const A: JSONFloat);
 begin
   Append(TJSONFloat.Create(A));
 end;
@@ -1674,6 +1730,52 @@ begin
     else
       raise EJSONSchema.CreateFmt(SErr_InvalidSchema, ['Invalid value type for "items" field']);
 end;
+
+function TJSONArray.GetAsStrArray: UnicodeStringArray;
+var L, I : Integer;
+begin
+  L := Length(FList);
+  SetLength(Result, L);
+  for I := 0 to L - 1 do
+    Result[I] := GetItemAsStr(I);
+end;
+
+function TJSONArray.GetAsStrArrayUTF8: RawByteStringArray;
+var L, I : Integer;
+begin
+  L := Length(FList);
+  SetLength(Result, L);
+  for I := 0 to L - 1 do
+    Result[I] := GetItemAsStrUTF8(I);
+end;
+
+function TJSONArray.GetAsStrArrayWide: WideStringArray;
+var L, I : Integer;
+begin
+  L := Length(FList);
+  SetLength(Result, L);
+  for I := 0 to L - 1 do
+    Result[I] := GetItemAsStrWide(I);
+end;
+
+function TJSONArray.GetAsIntArray: Int64Array;
+var L, I : Integer;
+begin
+  L := Length(FList);
+  SetLength(Result, L);
+  for I := 0 to L - 1 do
+    Result[I] := GetItemAsInt(I);
+end;
+
+function TJSONArray.GetAsFloatArray: JSONFloatArray;
+var L, I : Integer;
+begin
+  L := Length(FList);
+  SetLength(Result, L);
+  for I := 0 to L - 1 do
+    Result[I] := GetItemAsFloat(I);
+end;
+
 
 
 { TJSONObject helpers }
@@ -1879,7 +1981,7 @@ begin
       end;
 end;
 
-function TJSONObject.GetItemAsFloat(const Name: UnicodeString; const Default: Extended): Extended;
+function TJSONObject.GetItemAsFloat(const Name: UnicodeString; const Default: JSONFloat): JSONFloat;
 var I : TJSONValue;
 begin
   I := GetItemValueByName(Name);
@@ -2025,7 +2127,7 @@ begin
     I.ValueInt := Value;
 end;
 
-procedure TJSONObject.SetItemAsFloat(const Name: UnicodeString; const Value: Extended);
+procedure TJSONObject.SetItemAsFloat(const Name: UnicodeString; const Value: JSONFloat);
 var I : TJSONValue;
 begin
   I := GetItemValueByName(Name);
@@ -2409,9 +2511,9 @@ begin
   end;
 end;
 
-function TJSONParser.ParseToken_Float(const Ch: WideChar): Extended;
+function TJSONParser.ParseToken_Float(const Ch: WideChar): JSONFloat;
 var C : WideChar;
-    F, E : Extended;
+    F, E : JSONFloat;
     N : Integer;
 begin
   C := Ch;
@@ -2436,7 +2538,7 @@ function TJSONParser.ParseToken_Number(const Ch: WideChar): TJSONParserToken;
 var C : WideChar;
     T : TJSONParserToken;
     N, E : Int64;
-    F, G : Extended;
+    F, G : JSONFloat;
 begin
   C := Ch;
   T := jptInteger;
