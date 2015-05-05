@@ -225,7 +225,7 @@ function  SocketAddrEqual(const Addr1, Addr2: TSocketAddr): Boolean;
 
 procedure SocketAddrArrayAppend(var AddrArray: TSocketAddrArray; const Addr: TSocketAddr);
 function  SocketAddrArrayGetAddrIndex(const AddrArray: TSocketAddrArray; const Addr: TSocketAddr): Integer;
-function  SocketAddrArrayHasAddr(const AddrArray: TSocketAddrArray; const Addr: TSocketAddr): Boolean;
+function  SocketAddrArrayHasAddr(const AddrArray: TSocketAddrArray; const Addr: TSocketAddr): Boolean; {$IFDEF UseInline}inline;{$ENDIF}
 
 type
   TSocketHost = record
@@ -254,6 +254,8 @@ function  SocketHandleArrayLocate(var Handles: TSocketHandleArray; const Handle:
 
 const
   INVALID_SOCKETHANDLE = TSocketHandle(-1);
+
+function  AddrInfoCount(const AddrInfo: PAddrInfo; const Family: Word): Integer;
 
 
 
@@ -1107,6 +1109,23 @@ begin
   Result := -1;
 end;
 
+function AddrInfoCount(const AddrInfo: PAddrInfo; const Family: Word): Integer;
+var CurrAddr : PAddrInfo;
+    Found : Integer;
+    SockAddr : PSockAddr;
+begin
+  CurrAddr := AddrInfo;
+  Found := 0;
+  while Assigned(CurrAddr) do
+    begin
+      SockAddr := CurrAddr^.ai_addr;
+      if Assigned(SockAddr) and (SockAddr^.sa_family = Family) then
+        Inc(Found);
+      CurrAddr := CurrAddr^.ai_next;
+    end;
+  Result := Found;
+end;
+
 
 
 {                                                                              }
@@ -1163,7 +1182,6 @@ var Hints    : TAddrInfo;
     Found    : Integer;
     AddrIdx  : Integer;
     SockAddr : PSockAddr;
-    DestAddr : PSocketAddr;
     QHost    : PAnsiChar;
     QPort    : PAnsiChar;
 begin
@@ -1192,15 +1210,7 @@ begin
     raise ESocketLib.Create('Lookup failed', SocketGetLastError);
   try
     // Count number of results
-    CurrAddr := AddrInfo;
-    Found := 0;
-    while Assigned(CurrAddr) do
-      begin
-        SockAddr := CurrAddr^.ai_addr;
-        if Assigned(SockAddr) and (SockAddr^.sa_family = Hints.ai_family) then
-          Inc(Found);
-        CurrAddr := CurrAddr^.ai_next;
-      end;
+    Found := AddrInfoCount(AddrInfo, Hints.ai_family);
     if Found = 0 then
       // No results returned
       Addresses := nil
@@ -1217,11 +1227,7 @@ begin
             SockAddr := CurrAddr^.ai_addr;
             if Assigned(SockAddr) and (SockAddr^.sa_family = Hints.ai_family) then
               begin
-                DestAddr := @Addresses[AddrIdx];
-                case SockAddr^.sa_family of
-                  AF_INET  : DestAddr^ := SockAddrToSocketAddr(PSockAddr(SockAddr)^);
-                  AF_INET6 : DestAddr^ := SockAddrToSocketAddr(PSockAddr(SockAddr)^);
-                end;
+                Addresses[AddrIdx] := SockAddrToSocketAddr(PSockAddr(SockAddr)^);
                 Inc(AddrIdx);
                 if AddrIdx = Found then // last result
                   break;
