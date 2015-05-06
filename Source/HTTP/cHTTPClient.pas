@@ -456,6 +456,7 @@ type
     // Usually the handler for OnMainThreadWait calls Application.ProcessMessages.
     // Note:
     // These functions should not be called from this object's event handlers.
+    function  WaitForConnect(const Timeout: Integer): Boolean;
     function  WaitRequestNotBusy(const Timeout: Integer): Boolean;
 
     property  OnThreadWait: THTTPClientEvent read FOnThreadWait write FOnThreadWait;
@@ -1973,6 +1974,32 @@ begin
     FOnThreadWait(self);
   {$ENDIF}
   Sleep(5);
+end;
+
+function TF4HTTPClient.WaitForConnect(const Timeout: Integer): Boolean;
+var T : LongWord;
+    R : Boolean;
+begin
+  T := TCPGetTick;
+  repeat
+    Lock;
+    try
+      R := FActive;
+      if not R then
+        break;
+      R := FTCPClient.IsConnected;
+      if R then
+        break;
+      if FTCPClient.State in [csClosed, csStopped] then
+        break;
+    finally
+      Unlock;
+    end;
+    if TCPTickDelta(T, TCPGetTick) >= TimeOut then
+      break;
+    Wait;
+  until false;
+  Result := R;
 end;
 
 function TF4HTTPClient.WaitRequestNotBusy(const Timeout: Integer): Boolean;
