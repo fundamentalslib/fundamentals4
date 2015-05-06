@@ -2047,6 +2047,7 @@ begin
     // resolve and connect
     ConnAttempt := 1;
     repeat
+      ConnRetry := False;
       try
         // resolve
         DoResolve;
@@ -2057,7 +2058,6 @@ begin
         if IsTerminated then
           exit;
         // success
-        ConnRetry := False;
       except
         on E : Exception do
           begin
