@@ -2,7 +2,7 @@
 {                                                                              }
 {   Library:          Fundamentals 4.00                                        }
 {   File name:        cRandom.pas                                              }
-{   File version:     4.15                                                     }
+{   File version:     4.16                                                     }
 {   Description:      Random number functions                                  }
 {                                                                              }
 {   Copyright:        Copyright (c) 1999-2015, David J Butler                  }
@@ -49,12 +49,12 @@
 {   2010/06/27  4.13  Compilable with FreePascal 2.4.0 OSX x86-64              }
 {   2015/04/19  4.14  Changes for 64-bit compilers and RawByteString           }
 {   2015/04/20  4.15  Revise RandomSeed                                        }
+{   2015/05/06  4.16  Prevent mwcRandom32 overflow error.                      }
 {                                                                              }
 { Supported compilers:                                                         }
 {                                                                              }
-{   Borland Delphi 5/6/7/2005/2006/2007 Win32 i386                             }
-{   FreePascal 2 Win32 i386                                                    }
-{   FreePascal 2 Linux i386                                                    }
+{   Delphi XE7 Win32                    4.16  2015/05/06                       }
+{   Delphi XE7 Win64                    4.16  2015/05/06                       }
 {                                                                              }
 {******************************************************************************}
 
@@ -523,7 +523,7 @@ end;
 procedure InitFixedSeed;
 var
   S : Int64;
-  {$IFNDEF DOT_NET}
+  {$IFNDEF ManagedCode}
   Q : Pointer;
   {$ENDIF}
   {$IFDEF UNIX}
@@ -543,11 +543,14 @@ begin
   S := Int64(S + NativeUInt(Q));
   Q := @S; // Local variable
   S := Int64(S + NativeUInt(Q));
+  GetMem(Q, 17); // Heap memory
+  S := Int64(S + NativeUInt(Q));
+  FreeMem(Q);
   {$ENDIF}
   {$IFDEF MSWIN}
   { CPU Frequency }
   S := S xor GetCPUFrequency;
-  {$IFNDEF DOT_NET}
+  {$IFNDEF ManagedCode}
   { OS User Name }
   S := Int64(S + StrHashB(GetOSUserName));
   { OS Computer Name }
@@ -718,11 +721,16 @@ begin
 end;
 
 function mwcRandom32: LongWord;
-var S : Int64;
+var S, T : Int64;
 begin
   if not mwcSeeded then
     mwcInitSeed(RandomSeed32);
-  S := 1111111464 * (Int64(mwcX) + mwcY) + mwcC;
+  S := 1111111464;
+  {$IFOPT Q+}{$DEFINE QOn}{$Q-}{$ELSE}{$UNDEF QOn}{$ENDIF}
+  T := Int64(mwcX) + Int64(mwcY);
+  S := S * T;
+  S := S + mwcC;
+  {$IFDEF QOn}{$Q+}{$ENDIF}
   Result := LongWord(S);
   mwcX := mwcY;
   mwcY := Result;
@@ -786,7 +794,7 @@ begin
           K := M;
           L := (53 * L + 1) mod 169;
           if ((L * M) mod 64 >= 32) then
-                  S := S + T;
+            S := S + T;
           T := T * 0.5;
         end;
       urnU[F] := S;
