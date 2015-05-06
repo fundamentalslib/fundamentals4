@@ -864,12 +864,12 @@ begin
       if IP4AddrIsNone(A.AddrIP4) then
         Result := ''
       else
-        Result := IPAddressStrA(A.AddrIP4);
+        Result := IP4AddressStrA(A.AddrIP4);
     iaIP6 :
       if IP6AddrIsZero(A.AddrIP6) then
         Result := ''
       else
-        Result := IPAddressStrA(A.AddrIP6);
+        Result := IP6AddressStrA(A.AddrIP6);
   else
     Result := '';
   end;
@@ -1062,12 +1062,12 @@ begin
       if IP4AddrIsNone(A.AddrIP4) then
         Result := ''
       else
-        Result := IPAddressStrA(A.AddrIP4);
+        Result := IP4AddressStrA(A.AddrIP4);
     iaIP6 :
       if IP6AddrIsZero(A.AddrIP6) then
         Result := ''
       else
-        Result := IPAddressStrA(A.AddrIP6);
+        Result := IP6AddressStrA(A.AddrIP6);
   else
     Result := '';
   end;
@@ -1083,7 +1083,7 @@ begin
     begin
       Result := cSocketLib.GetRemoteHostNameA(Address);
       if Result = '' then
-        Result := IPAddressStrA(Address);
+        Result := IP4AddressStrA(Address);
       {$IFDEF SOCKET_DEBUG}
       Log(sltDebug, 'RemoteHostName:%s', [Result]);
       {$ENDIF}

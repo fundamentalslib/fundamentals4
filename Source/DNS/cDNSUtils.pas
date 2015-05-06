@@ -63,7 +63,6 @@ uses
 
   { Fundamentals }
   cUtils,
-  cWinSock,
   cSocketLib;
 
 
@@ -726,9 +725,9 @@ begin
   Result := DNS_MessageHeaderSize;
   P := PdnsMessageHeader(@Buf);
   ZeroMem(P^, DNS_MessageHeaderSize);
-  P^.ID      := htons(ID);
-  P^.Attr    := htons(DNS_EncodeHeaderAttr_Query(Operation, RecursionDesired));
-  P^.QDCount := htons(QuestionCount);
+  P^.ID      := Sockethtons(ID);
+  P^.Attr    := Sockethtons(DNS_EncodeHeaderAttr_Query(Operation, RecursionDesired));
+  P^.QDCount := Sockethtons(QuestionCount);
 end;
 
 function DNS_EncodeHeader_Response(var Buf; const BufSize: Integer;
@@ -740,11 +739,11 @@ begin
   Result := DNS_MessageHeaderSize;
   P := PdnsMessageHeader(@Buf);
   ZeroMem(P^, DNS_MessageHeaderSize);
-  P^.ID      := htons(Header.ID);
-  P^.Attr    := htons(Header.Attr or $8000);
-  P^.ANCount := htons(Header.ANCount);
-  P^.NSCount := htons(Header.NSCount);
-  P^.ARCount := htons(Header.ARCount);
+  P^.ID      := Sockethtons(Header.ID);
+  P^.Attr    := Sockethtons(Header.Attr or $8000);
+  P^.ANCount := Sockethtons(Header.ANCount);
+  P^.NSCount := Sockethtons(Header.NSCount);
+  P^.ARCount := Sockethtons(Header.ARCount);
 end;
 
 function DNS_DecodeHeader_Query(
@@ -758,12 +757,12 @@ begin
   Result := DNS_MessageHeaderSize;
   P := PdnsMessageHeader(@Buf);
   ZeroMem(Header, DNS_MessageHeaderSize);
-  Header.ID := ntohs(P^.ID);
-  Header.Attr := ntohs(P^.Attr);
-  Header.QDCount := ntohs(P^.QDCount);
-  Header.ANCount := ntohs(P^.ANCount);
-  Header.NSCount := ntohs(P^.NSCount);
-  Header.ARCount := ntohs(P^.ARCount);
+  Header.ID := Socketntohs(P^.ID);
+  Header.Attr := Socketntohs(P^.Attr);
+  Header.QDCount := Socketntohs(P^.QDCount);
+  Header.ANCount := Socketntohs(P^.ANCount);
+  Header.NSCount := Socketntohs(P^.NSCount);
+  Header.ARCount := Socketntohs(P^.ARCount);
 end;
 
 
@@ -1089,9 +1088,9 @@ begin
   Inc(Result, 4);
   if Result > BufSize then
     raise EdnsError.Create(DNSE_BufferOverflow);
-  PWord(P)^ := htons(DNS_EncodeQueryType(QueryType));
+  PWord(P)^ := Sockethtons(DNS_EncodeQueryType(QueryType));
   Inc(P, 2);
-  PWord(P)^ := htons(QueryClass);
+  PWord(P)^ := Sockethtons(QueryClass);
 end;
 
 function DNS_SkipQuestion(const Buf; const BufSize: Integer): Integer;
@@ -1115,9 +1114,9 @@ begin
   Inc(Result, 4);
   if Result > BufSize then
     raise EdnsError.Create(DNSE_InvalidBuffer);
-  Question.QueryType := DNS_DecodeQueryType(ntohs(PWord(P)^));
+  Question.QueryType := DNS_DecodeQueryType(Socketntohs(PWord(P)^));
   Inc(P, 2);
-  Question.QueryClass := ntohs(PWord(P)^);
+  Question.QueryClass := Socketntohs(PWord(P)^);
 end;
 
 
@@ -1169,13 +1168,13 @@ begin
   Inc(Result, I);
   if L < 10 then
     raise EdnsError.Create(DNSE_InvalidBuffer);
-  Info.RecordType := ntohs(PWord(P)^);
+  Info.RecordType := Socketntohs(PWord(P)^);
   Inc(P, 2);
-  Info.RecordClass := ntohs(PWord(P)^);
+  Info.RecordClass := Socketntohs(PWord(P)^);
   Inc(P, 2);
-  Info.TTL := ntohl(PLongWord(P)^);
+  Info.TTL := Socketntohl(PLongWord(P)^);
   Inc(P, 4);
-  Info.RecDataSize := ntohs(PWord(P)^);
+  Info.RecDataSize := Socketntohs(PWord(P)^);
   Inc(P, 2);
   Dec(L, 10);
   Inc(Result, 10);
@@ -1199,14 +1198,14 @@ begin
   Inc(Result, I);
   if L < 10 then
     raise EdnsError.Create(DNSE_BufferOverflow);
-  PWord(P)^ := htons(Info.RecordType);
+  PWord(P)^ := Sockethtons(Info.RecordType);
   Inc(P, 2);
-  PWord(P)^ := htons(Info.RecordClass);
+  PWord(P)^ := Sockethtons(Info.RecordClass);
   Inc(P, 2);
-  PLongWord(P)^ := htonl(Info.TTL);
+  PLongWord(P)^ := Sockethtonl(Info.TTL);
   Inc(P, 4);
   RecDataSizeP := PWord(P);
-  PWord(P)^ := htons(Info.RecDataSize);
+  PWord(P)^ := Sockethtons(Info.RecDataSize);
   Inc(Result, 10);
 end;
 
@@ -1270,7 +1269,7 @@ begin
   Inc(P, Result);
   Dec(L, Result);
   I := DNS_EncodeRecData_NS(P^, L, NSName);
-  S^ := htons(Word(I));
+  S^ := Sockethtons(Word(I));
   Inc(Result, I);
 end;
 
@@ -1302,7 +1301,7 @@ begin
   Inc(P, Result);
   Dec(L, Result);
   I := DNS_EncodeRecData_CNAME(P^, L, CName);
-  S^ := htons(Word(I));
+  S^ := Sockethtons(Word(I));
   Inc(Result, I);
 end;
 
@@ -1334,7 +1333,7 @@ begin
   if BufSize < 2 then
     raise EdnsError.Create(DNSE_InvalidBuffer);
   P := @Buf;
-  Preference := ntohs(PWord(P)^);
+  Preference := Socketntohs(PWord(P)^);
   Inc(P, 2);
   DNS_DecodeName(MsgBuf, MsgBufSize, P^, BufSize - 2, Name);
 end;
@@ -1346,7 +1345,7 @@ begin
   if BufSize < 2 then
     raise EdnsError.Create(DNSE_BufferOverflow);
   P := @Buf;
-  PWord(P)^ := htons(Preference);
+  PWord(P)^ := Sockethtons(Preference);
   Inc(P, 2);
   Result := 2 + DNS_EncodeName(P^, BufSize - 2, MXName);
 end;
@@ -1366,7 +1365,7 @@ begin
   Inc(P, Result);
   Dec(L, Result);
   I := DNS_EncodeRecData_MX(P^, L, Preference, MXName);
-  S^ := htons(Word(I));
+  S^ := Sockethtons(Word(I));
   Inc(Result, I);
 end;
 
@@ -1384,13 +1383,13 @@ begin
   Dec(L, I);
   I := DNS_DecodeName(MsgBuf, MsgBufSize, P^, L, ResponsiblePerson);
   Inc(P, I);
-  Serial := LongWord(ntohl(PLongWord(P)^));
+  Serial := LongWord(Socketntohl(PLongWord(P)^));
   Inc(P, 4);
-  Refresh := LongWord(ntohl(PLongWord(P)^));
+  Refresh := LongWord(Socketntohl(PLongWord(P)^));
   Inc(P, 4);
-  Retry := LongWord(ntohl(PLongWord(P)^));
+  Retry := LongWord(Socketntohl(PLongWord(P)^));
   Inc(P, 4);
-  Expire := LongWord(ntohl(PLongWord(P)^));
+  Expire := LongWord(Socketntohl(PLongWord(P)^));
 end;
 
 
@@ -1462,12 +1461,12 @@ begin
   if L < DNS_MessageHeaderSize then
     raise EdnsError.Create(DNSE_InvalidBuffer);
   Hdr := Pointer(P);
-  ID := ntohs(Hdr^.ID);
-  DNS_DecodeHeaderAttr(ntohs(Hdr^.Attr), Info);
+  ID := Socketntohs(Hdr^.ID);
+  DNS_DecodeHeaderAttr(Socketntohs(Hdr^.Attr), Info);
   Inc(P, DNS_MessageHeaderSize);
   Dec(L, DNS_MessageHeaderSize);
   // Skip questions
-  for I := 1 to ntohs(Hdr^.QDCount) do
+  for I := 1 to Socketntohs(Hdr^.QDCount) do
     begin
       J := DNS_SkipQuestion(P^, L);
       Inc(P, J);

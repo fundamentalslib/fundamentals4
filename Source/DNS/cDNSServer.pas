@@ -55,6 +55,7 @@ uses
   SyncObjs,
 
   { Fundamentals }
+  cUtils,
   cSocketLib,
   cSocket,
 
@@ -167,6 +168,7 @@ constructor TdnsUDPServerThread.Create(const Server: TdnsUDPServer);
 begin
   Assert(Assigned(Server));
   FServer := Server;
+  FreeOnTerminate := False;
   inherited Create(False);
 end;
 
@@ -251,7 +253,7 @@ procedure TdnsUDPServer.TriggerQuery(
           const Attr: TdnsHeaderAttrInfo;
           const Questions: TdnsQuestionInfoArray);
 begin
-  Log(dltDebug, 'DNSQuery:%s:%d:%db', [IPAddressStr(Address), Port, MessageBufSize]);
+  Log(dltDebug, 'DNSQuery:%s:%d:%db', [IP4AddressStr(Address), Port, MessageBufSize]);
 
   if Assigned(FOnQuery) then
     FOnQuery(self, MessageBuf, MessageBufSize, Address, Port,
@@ -390,14 +392,18 @@ procedure TdnsUDPServer.Start;
 begin
   if FActive then
     exit;
+  Log(dltInfo, 'dnsUDPServer:Start');
   DoStart;
+  Log(dltInfo, 'dnsUDPServer:Started');
 end;
 
 procedure TdnsUDPServer.Stop;
 begin
   if not FActive then
     exit;
+  Log(dltInfo, 'dnsUDPServer:Stop');
   DoStop;
+  Log(dltInfo, 'dnsUDPServer:Stopped');
 end;
 
 

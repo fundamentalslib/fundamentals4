@@ -2,7 +2,7 @@
 {                                                                              }
 {   Library:          Fundamentals 4.00                                        }
 {   File name:        cSocketLib.pas                                           }
-{   File version:     4.16                                                     }
+{   File version:     4.17                                                     }
 {   Description:      Socket library.                                          }
 {                                                                              }
 {   Copyright:        Copyright (c) 2001-2015, David J Butler                  }
@@ -53,6 +53,7 @@
 {   2010/09/12  4.14  Revision.                                                }
 {   2014/04/23  4.15  Revision.                                                }
 {   2015/04/24  4.16  SocketAddrArray help functions.                          }
+{   2015/05/06  4.17  Rename IP4/IP6 address functions.                        }
 {                                                                              }
 { Supported compilers:                                                         }
 {                                                                              }
@@ -463,22 +464,25 @@ type
       inaMulticast,
       inaBroadcast);
 
-function  IsIPAddressA(const Address: RawByteString; out NetAddress: TIP4Addr): Boolean; overload;
-function  IsIPAddressA(const Address: RawByteString; out NetAddress: TIP6Addr): Boolean; overload;
+function  IsIP4AddressA(const Address: RawByteString; out NetAddress: TIP4Addr): Boolean;
+function  IsIP6AddressA(const Address: RawByteString; out NetAddress: TIP6Addr): Boolean;
 
-function  IsIPAddress(const Address: String; out NetAddress: TIP4Addr): Boolean; overload;
-function  IsIPAddress(const Address: String; out NetAddress: TIP6Addr): Boolean; overload;
+function  IsIP4AddressU(const Address: UnicodeString; out NetAddress: TIP4Addr): Boolean;
+function  IsIP6AddressU(const Address: UnicodeString; out NetAddress: TIP6Addr): Boolean;
 
-function  IPAddressStrA(const Address: TIP4Addr): RawByteString; overload;
-function  IPAddressStrA(const Address: TIP6Addr): RawByteString; overload;
+function  IsIP4Address(const Address: String; out NetAddress: TIP4Addr): Boolean;
+function  IsIP6Address(const Address: String; out NetAddress: TIP6Addr): Boolean;
 
-function  IPAddressStr(const Address: TIP4Addr): String; overload;
-function  IPAddressStr(const Address: TIP6Addr): String; overload;
+function  IP4AddressStrA(const Address: TIP4Addr): RawByteString;
+function  IP6AddressStrA(const Address: TIP6Addr): RawByteString;
 
-function  IPAddressType(const Address: TIP4Addr): TIP4AddressType;
-function  IsPrivateIPAddress(const Address: TIP4Addr): Boolean;
-function  IsInternetIPAddress(const Address: TIP4Addr): Boolean;
-procedure SwapIPEndian(var Address: TIP4Addr);
+function  IP4AddressStr(const Address: TIP4Addr): String;
+function  IP6AddressStr(const Address: TIP6Addr): String;
+
+function  IP4AddressType(const Address: TIP4Addr): TIP4AddressType;
+function  IsPrivateIP4Address(const Address: TIP4Addr): Boolean;
+function  IsInternetIP4Address(const Address: TIP4Addr): Boolean;
+procedure SwapIP4Endian(var Address: TIP4Addr);
 
 
 
@@ -558,15 +562,15 @@ function  LocalHostName: String;
 function  LocalIPAddresses: TIP4AddrArray;
 function  LocalIP6Addresses: TIP6AddrArray;
 
-function  LocalIPAddressesStrA: AddressStrArrayA;
+function  LocalIP4AddressesStrA: AddressStrArrayA;
 function  LocalIP6AddressesStrA: AddressStrArrayA;
 
-function  LocalIPAddressesStr: AddressStrArray;
+function  LocalIP4AddressesStr: AddressStrArray;
 function  LocalIP6AddressesStr: AddressStrArray;
 
-function  GuessInternetIP: TIP4Addr;
-function  GuessInternetIPStrA: RawByteString;
-function  GuessInternetIPStr: String;
+function  GuessInternetIP4: TIP4Addr;
+function  GuessInternetIP4StrA: RawByteString;
+function  GuessInternetIP4Str: String;
 
 
 
@@ -961,8 +965,8 @@ end;
 function SocketAddrIPStrA(const Addr: TSocketAddr): RawByteString;
 begin
   case Addr.AddrFamily of
-    iaIP4 : Result := IPAddressStrA(Addr.AddrIP4);
-    iaIP6 : Result := IPAddressStrA(Addr.AddrIP6);
+    iaIP4 : Result := IP4AddressStrA(Addr.AddrIP4);
+    iaIP6 : Result := IP6AddressStrA(Addr.AddrIP6);
   else
     Result := '';
   end;
@@ -971,8 +975,8 @@ end;
 function SocketAddrIPStr(const Addr: TSocketAddr): String;
 begin
   case Addr.AddrFamily of
-    iaIP4 : Result := IPAddressStr(Addr.AddrIP4);
-    iaIP6 : Result := IPAddressStr(Addr.AddrIP6);
+    iaIP4 : Result := IP4AddressStr(Addr.AddrIP4);
+    iaIP6 : Result := IP6AddressStr(Addr.AddrIP6);
   else
     Result := '';
   end;
@@ -1614,7 +1618,7 @@ end;
 {                                                                              }
 { IP Addresses                                                                 }
 {                                                                              }
-function IsIPAddressA(const Address: RawByteString; out NetAddress: TIP4Addr): Boolean;
+function IsIP4AddressA(const Address: RawByteString; out NetAddress: TIP4Addr): Boolean;
 var I, L, N : Integer;
 begin
   // Validate length: shortest full IP address is 7 characters: #.#.#.#
@@ -1656,7 +1660,7 @@ begin
       Result := False;
 end;
 
-function IsIPAddressA(const Address: RawByteString; out NetAddress: TIP6Addr): Boolean;
+function IsIP6AddressA(const Address: RawByteString; out NetAddress: TIP6Addr): Boolean;
 var Hints    : TAddrInfo;
     AddrInfo : PAddrInfo;
     CurrAddr : PAddrInfo;
@@ -1718,30 +1722,97 @@ begin
     end;
 end;
 
-function IsIPAddress(const Address: String; out NetAddress: TIP4Addr): Boolean;
+function IsIP4AddressU(const Address: UnicodeString; out NetAddress: TIP4Addr): Boolean;
+begin
+  Result := IsIP4AddressA(UTF8Encode(Address), NetAddress);
+end;
+
+function IsIP6AddressU(const Address: UnicodeString; out NetAddress: TIP6Addr): Boolean;
+var Hints    : TAddrInfoW;
+    AddrInfo : PAddrInfoW;
+    CurrAddr : PAddrInfoW;
+    Error    : Integer;
+    SockAddr : PSockAddr;
+begin
+  // Check length
+  if Length(Address) <= 1 then
+    begin
+      IP6AddrSetZero(NetAddress);
+      Result := False;
+      exit;
+    end;
+  // Check special addresses
+  if (Address = IP6AddrStrUnspecified) or (Address = IP6AddrStrAnyHost) then
+    begin
+      IP6AddrSetZero(NetAddress);
+      Result := True;
+      exit;
+    end;
+  // Use system to resolve IP
+  {$IFDEF SOCKETLIB_WIN}
+  if not WinSockStarted then
+    WinSockStartup;
+  {$ENDIF}
+  // Call GetAddrInfo with IP6 address family hint
+  FillChar(Hints, Sizeof(TAddrInfoW), 0);
+  Hints.ai_flags := AI_NUMERICHOST;
+  Hints.ai_family := AF_INET6;
+  AddrInfo := nil;
+  Error := GetAddrInfoW(PWideChar(Address), nil, @Hints, AddrInfo);
+  if (Error = 0) and Assigned(AddrInfo) then
+    try
+      // Iterate through list of returned addresses until IP6 address is found
+      CurrAddr := AddrInfo;
+      Result := False;
+      repeat
+        SockAddr := CurrAddr^.ai_addr;
+        if Assigned(SockAddr) and (SockAddr^.sa_family = AF_INET6) then
+          begin
+            // Found
+            Move(SockAddr^.sin6_addr.u6_addr32, NetAddress.Addr32, SizeOf(TIP6Addr));
+            Result := True;
+            break;
+          end;
+        CurrAddr := CurrAddr^.ai_next;
+      until not Assigned(CurrAddr);
+      if not Result then
+        IP6AddrSetZero(NetAddress);
+    finally
+      // Release resources allocated by GetAddrInfo
+      FreeAddrInfoW(AddrInfo);
+    end
+  else
+    begin
+      // Failure
+      IP6AddrSetZero(NetAddress);
+      Result := False;
+    end;
+end;
+
+function IsIP4Address(const Address: String; out NetAddress: TIP4Addr): Boolean;
 begin
   {$IFDEF StringIsUnicode}
-  Result := IsIPAddressA(AnsiString(Address), NetAddress);
+  Result := IsIP4AddressU(Address, NetAddress);
   {$ELSE}
-  Result := IsIPAddressA(Address, NetAddress);
+  Result := IsIP4AddressA(Address, NetAddress);
   {$ENDIF}
 end;
 
-function IsIPAddress(const Address: String; out NetAddress: TIP6Addr): Boolean;
+function IsIP6Address(const Address: String; out NetAddress: TIP6Addr): Boolean;
 begin
   {$IFDEF StringIsUnicode}
-  Result := IsIPAddressA(AnsiString(Address), NetAddress);
+  Result := IsIP6AddressU(Address, NetAddress);
   {$ELSE}
-  Result := IsIPAddressA(Address, NetAddress);
+  Result := IsIP6AddressA(Address, NetAddress);
   {$ENDIF}
 end;
 
-function IPAddressStrA(const Address: TIP4Addr): RawByteString;
+function IP4AddressStrA(const Address: TIP4Addr): RawByteString;
 begin
   Result := Socketinet_ntoa(Address);
 end;
 
-function IPAddressStrA(const Address: TIP6Addr): RawByteString;
+function IP6AddressStrA(const Address: TIP6Addr): RawByteString;
 var I : Integer;
 begin
   // Handle special addresses
@@ -1766,25 +1837,25 @@ begin
   AsciiConvertLowerB(Result);
 end;
 
-function IPAddressStr(const Address: TIP4Addr): String;
+function IP4AddressStr(const Address: TIP4Addr): String;
 begin
   {$IFDEF StringIsUnicode}
-  Result := String(IPAddressStrA(Address));
+  Result := String(IP4AddressStrA(Address));
   {$ELSE}
-  Result := IPAddressStrA(Address);
+  Result := IP4AddressStrA(Address);
   {$ENDIF}
 end;
 
-function IPAddressStr(const Address: TIP6Addr): String;
+function IP6AddressStr(const Address: TIP6Addr): String;
 begin
   {$IFDEF StringIsUnicode}
-  Result := String(IPAddressStrA(Address));
+  Result := String(IP6AddressStrA(Address));
   {$ELSE}
-  Result := IPAddressStrA(Address);
+  Result := IP6AddressStrA(Address);
   {$ENDIF}
 end;
 
-function IPAddressType(const Address: TIP4Addr): TIP4AddressType;
+function IP4AddressType(const Address: TIP4Addr): TIP4AddressType;
 begin
   Result := inaPublic;
   case Address.Addr8[0] of
@@ -1812,17 +1883,17 @@ begin
   end;
 end;
 
-function IsPrivateIPAddress(const Address: TIP4Addr): Boolean;
+function IsPrivateIP4Address(const Address: TIP4Addr): Boolean;
 begin
-  Result := IPAddressType(Address) = inaPrivate;
+  Result := IP4AddressType(Address) = inaPrivate;
 end;
 
-function IsInternetIPAddress(const Address: TIP4Addr): Boolean;
+function IsInternetIP4Address(const Address: TIP4Addr): Boolean;
 begin
-  Result := IPAddressType(Address) = inaPublic;
+  Result := IP4AddressType(Address) = inaPublic;
 end;
 
-procedure SwapIPEndian(var Address: TIP4Addr);
+procedure SwapIP4Endian(var Address: TIP4Addr);
 var A : Byte;
 begin
   A := Address.Addr8[0];
@@ -1937,7 +2008,7 @@ end;
 
 function HostEntAddressStr(const HostEnt: PHostEnt; const Index: Integer): RawByteString;
 begin
-  Result := IPAddressStrA(HostEntAddressIP4(HostEnt, Index));
+  Result := IP4AddressStrA(HostEntAddressIP4(HostEnt, Index));
 end;
 
 function HostEntName(const HostEnt: PHostEnt): AnsiString;
@@ -2072,7 +2143,7 @@ begin
     IP6AddrAssign(Result[I], Addr[I].AddrIP6);
 end;
 
-function LocalIPAddressesStrA: AddressStrArrayA;
+function LocalIP4AddressesStrA: AddressStrArrayA;
 var V : TIP4AddrArray;
     I, L : Integer;
 begin
@@ -2080,7 +2151,7 @@ begin
   L := Length(V);
   SetLength(Result, L);
   for I := 0 to L - 1 do
-    Result[I] := IPAddressStrA(V[I]);
+    Result[I] := IP4AddressStrA(V[I]);
 end;
 
 function LocalIP6AddressesStrA: AddressStrArrayA;
@@ -2091,10 +2162,10 @@ begin
   L := Length(V);
   SetLength(Result, L);
   for I := 0 to L - 1 do
-    Result[I] := IPAddressStrA(V[I]);
+    Result[I] := IP6AddressStrA(V[I]);
 end;
 
-function LocalIPAddressesStr: AddressStrArray;
+function LocalIP4AddressesStr: AddressStrArray;
 var V : TIP4AddrArray;
     I, L : Integer;
 begin
@@ -2102,7 +2173,7 @@ begin
   L := Length(V);
   SetLength(Result, L);
   for I := 0 to L - 1 do
-    Result[I] := IPAddressStr(V[I]);
+    Result[I] := IP4AddressStr(V[I]);
 end;
 
 function LocalIP6AddressesStr: AddressStrArray;
@@ -2113,16 +2184,16 @@ begin
   L := Length(V);
   SetLength(Result, L);
   for I := 0 to L - 1 do
-    Result[I] := IPAddressStr(V[I]);
+    Result[I] := IP6AddressStr(V[I]);
 end;
 
-function GuessInternetIP: TIP4Addr;
+function GuessInternetIP4: TIP4Addr;
 var A : TIP4AddrArray;
     I : Integer;
 begin
   A := LocalIPAddresses;
   for I := 0 to Length(A) - 1 do
-    if IsInternetIPAddress(A[I]) then
+    if IsInternetIP4Address(A[I]) then
       begin
         Result.Addr32 := A[I].Addr32;
         exit;
@@ -2130,20 +2201,20 @@ begin
   Result := IP4AddrNone;
 end;
 
-function GuessInternetIPStrA: RawByteString;
+function GuessInternetIP4StrA: RawByteString;
 var A : TIP4Addr;
 begin
-  A := GuessInternetIP;
+  A := GuessInternetIP4;
   if LongInt(A) = LongInt(INADDR_NONE) then
     Result := ''
   else
-    Result := IPAddressStrA(A);
+    Result := IP4AddressStrA(A);
 end;
 
-function GuessInternetIPStr: String;
+function GuessInternetIP4Str: String;
 begin
   {$IFDEF StringIsUnicode}
-  Result := String(GuessInternetIPStrA);
+  Result := String(GuessInternetIP4StrA);
   {$ELSE}
   Result := GuessInternetIPStrA;
   {$ENDIF}
@@ -2245,14 +2316,14 @@ begin
   if Host = '' then
     raise ESocketLib.Create('Host not specified');
   if AddressFamily = iaIP4 then
-    if IsIPAddressA(Host, InAddr) then
+    if IsIP4AddressA(Host, InAddr) then
       begin
         SetLength(Result, 1);
         InitSocketAddr(Result[0], InAddr, 0);
         exit;
       end;
   if AddressFamily = iaIP6 then
-    if IsIPAddressA(Host, In6Addr) then
+    if IsIP6AddressA(Host, In6Addr) then
       begin
         SetLength(Result, 1);
         InitSocketAddr(Result[0], In6Addr, 0);
@@ -2321,7 +2392,7 @@ var HostEnt : PHostEnt;
 begin
   if Host = '' then
     raise ESocketLib.Create('Host not specified');
-  if IsIPAddressA(Host, InAddr) then
+  if IsIP4AddressA(Host, InAddr) then
     begin
       SetLength(Result, 1);
       Result[0] := InAddr;
@@ -2383,7 +2454,7 @@ var In6Addr : TIP6Addr;
 begin
   if Host = '' then
     raise ESocketLib.Create('Host not specified');
-  if IsIPAddressA(Host, In6Addr) then
+  if IsIP6AddressA(Host, In6Addr) then
     begin
       SetLength(Result, 1);
       Result[0] := In6Addr;
@@ -2403,7 +2474,7 @@ var Addrs : TSocketAddrArray;
 begin
   if Host = '' then
     raise ESocketLib.Create('Host not specified');
-  if IsIPAddressA(Host, Result) then
+  if IsIP6AddressA(Host, Result) then
     exit;
   SocketGetAddrInfo(iaIP6, ipNone, Host, '', Addrs);
   if Length(Addrs) = 0 then
@@ -2911,33 +2982,33 @@ begin
   Assert(AFToIPAddressFamily(AF_INET) = iaIP4);
 
   // IsIPAddress
-  Assert(IsIPAddressA('192.168.0.1', A),          'IsIPAddress');
+  Assert(IsIP4AddressA('192.168.0.1', A),          'IsIPAddress');
   Assert((A.Addr8[0] = 192) and
          (A.Addr8[1] = 168) and
          (A.Addr8[2] = 0)   and
          (A.Addr8[3] = 1),                        'IsIPAddress');
-  Assert(IPAddressType(A) = inaPrivate,           'IPAddressType');
-  Assert(IPAddressStrA(A) = '192.168.0.1',        'IPAddressStr');
-  Assert(IPAddressStr(A) = '192.168.0.1',         'IPAddressStr');
-  Assert(IsIPAddressA('0.0.0.0', A),              'IsIPAddress');
+  Assert(IP4AddressType(A) = inaPrivate,           'IPAddressType');
+  Assert(IP4AddressStrA(A) = '192.168.0.1',        'IPAddressStr');
+  Assert(IP4AddressStr(A) = '192.168.0.1',         'IPAddressStr');
+  Assert(IsIP4AddressA('0.0.0.0', A),              'IsIPAddress');
   Assert(A.Addr32 = 0,                            'IsIPAddress');
-  Assert(IsIPAddress('0.0.0.0', A),               'IsIPAddress');
+  Assert(IsIP4Address('0.0.0.0', A),               'IsIPAddress');
   Assert(A.Addr32 = 0,                            'IsIPAddress');
-  Assert(IsIPAddressA('255.255.255.255', A),      'IsIPAddress');
+  Assert(IsIP4AddressA('255.255.255.255', A),      'IsIPAddress');
   Assert(A.Addr32 = INADDR_BROADCAST,             'IsIPAddress');
-  Assert(IPAddressStrA(A) = '255.255.255.255',    'IPAddressStr');
-  Assert(not IsIPAddressA('', A),                 'IsIPAddress');
-  Assert(not IsIPAddressA('192.168.0.', A),       'IsIPAddress');
-  Assert(not IsIPAddressA('192.168.0', A),        'IsIPAddress');
-  Assert(not IsIPAddressA('192.168.0.256', A),    'IsIPAddress');
+  Assert(IP4AddressStrA(A) = '255.255.255.255',    'IPAddressStr');
+  Assert(not IsIP4AddressA('', A),                 'IsIPAddress');
+  Assert(not IsIP4AddressA('192.168.0.', A),       'IsIPAddress');
+  Assert(not IsIP4AddressA('192.168.0', A),        'IsIPAddress');
+  Assert(not IsIP4AddressA('192.168.0.256', A),    'IsIPAddress');
   Assert(SocketGetLastError = 0,                  'IsIPAddress');
-  Assert(IsIPAddressA('192.168.0.255', A),        'IsIPAddress');
-  Assert(IPAddressStrA(A) = '192.168.0.255',      'IPAddressStr');
+  Assert(IsIP4AddressA('192.168.0.255', A),        'IsIPAddress');
+  Assert(IP4AddressStrA(A) = '192.168.0.255',      'IPAddressStr');
   Assert(SocketGetLastError = 0,                  'IsIPAddress');
 
   // ResolveHost IP
   A := ResolveHostIP4A('192.168.0.1');
-  Assert(IPAddressStrA(A) = '192.168.0.1',        'ResolveHostIP4');
+  Assert(IP4AddressStrA(A) = '192.168.0.1',        'ResolveHostIP4');
   Assert((A.Addr8[0] = 192) and
          (A.Addr8[1] = 168) and
          (A.Addr8[2] = 0)   and
@@ -2996,7 +3067,7 @@ begin
   Assert(ntohs(P) = 80,                           'ResolvePort');
 
   // LocalIPAddresses
-  W := LocalIPAddressesStrA;
+  W := LocalIP4AddressesStrA;
   Assert(Length(W) > 0,                           'LocalIPAddresses');
 
   {$IFDEF SOCKETLIB_SELFTEST_IP6}
