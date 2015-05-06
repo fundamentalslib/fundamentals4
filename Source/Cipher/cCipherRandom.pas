@@ -2,10 +2,10 @@
 {                                                                              }
 {   Library:          Fundamentals 4.00                                        }
 {   File name:        cCipherRandom.pas                                        }
-{   File version:     4.02                                                     }
+{   File version:     4.03                                                     }
 {   Description:      Cipher random                                            }
 {                                                                              }
-{   Copyright:        Copyright (c) 2010-2013, David J Butler                  }
+{   Copyright:        Copyright (c) 2010-2015, David J Butler                  }
 {                     All rights reserved.                                     }
 {                     This file is licensed under the BSD License.             }
 {                     See http://www.opensource.org/licenses/bsd-license.php   }
@@ -40,6 +40,8 @@
 {                                                                              }
 {   2010/12/17  4.01  Initial version                                          }
 {   2013/09/25  4.02  UnicodeString version                                    }
+{   2015/05/05  4.03  Multiple PRNGs and PRSS and SHA512 hash in random block  }
+{                     generator.                                               }
 {                                                                              }
 {******************************************************************************}
 
@@ -90,15 +92,22 @@ const
   RandomSeedDataLen = 512 div 32;
 var I : Integer;
     R512 : array[0..RandomSeedDataLen - 1] of LongWord;
+    H512 : T512BitDigest;
     H256 : T256BitDigest;
     H128 : T128BitDigest;
 begin
   try
-    // initialise 512 bits with PRN
+    // initialise 512 bits with multiple Pseudo Random Numbers Generators (PRNG)
+    // and Pseudo Random System State (PRSS)
     for I := 0 to RandomSeedDataLen - 1 do
-      R512[I] := RandomUniform;
+      R512[I] := RandomUniform32 xor
+                 mwcRandom32 xor
+                 urnRandom32 xor
+                 RandomSeed32;
+    // hash 512 bits using SHA512
+    H512 := CalcSHA512(R512, SizeOf(R512));
     // hash 512 bits using SHA256
-    H256 := CalcSHA256(R512, SizeOf(R512));
+    H256 := CalcSHA256(H512, SizeOf(T512BitDigest));
     // hash 256 bits using MD5
     H128 := CalcMD5(H256, SizeOf(T256BitDigest));
     // result is 128 bits of random data
@@ -107,6 +116,7 @@ begin
   finally
     SecureClear(H128, SizeOf(T128BitDigest));
     SecureClear(H256, SizeOf(T256BitDigest));
+    SecureClear(H512, SizeOf(T512BitDigest));
     SecureClear(R512, SizeOf(R512));
   end;
 end;
