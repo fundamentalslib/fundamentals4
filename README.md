@@ -4,9 +4,12 @@ A code library for use with FreePascal/Delphi.
 
 Includes:
 
-* String, Unicode, DateTime and Dynamic array routines
+* String, DateTime and dynamic array routines
+* Unicode routines
 * Hash (e.g. SHA256, SHA512, SHA1, SHA256, MD5)
-* Huge Integer
+* Integer (e.g. Word128, Word256, Int128, Int256)
+* Huge Word, Huge Integer
+* Decimal (Decimal32, Decimal64, Decimal128, HugeDecimal and signed decimals)
 * JSON
 * Random number generators
 * Cipher (e.g. AES, DES, RC2, RC4, RSA)
