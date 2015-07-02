@@ -75,7 +75,7 @@ uses
 
 
 {                                                                              }
-{ THTTPClient                                                                  }
+{ HTTP Client                                                                  }
 {                                                                              }
 type
   THTTPClientLogType = (
@@ -468,10 +468,44 @@ type
 
 
 {                                                                              }
+{ HTTP Client Collection                                                       }
+{                                                                              }
+type
+  THTTPClientCollection = class
+  private
+    FItemOwner : Boolean;
+    FList : array of TF4HTTPClient;
+
+    function  GetCount: Integer;
+    function  GetItem(const Idx: Integer): TF4HTTPClient;
+
+  protected
+    function  CreateNew: TF4HTTPClient; virtual;
+
+  public
+    constructor Create(const ItemOwner: Boolean);
+    destructor Destroy; override;
+
+    property  ItemOwner: Boolean read FItemOwner;
+    property  Count: Integer read GetCount;
+    property  Item[const Idx: Integer]: TF4HTTPClient read GetItem; default;
+    function  Add(const Item: TF4HTTPClient): Integer;
+    function  AddNew: TF4HTTPClient;
+    function  GetItemIndex(const Item: TF4HTTPClient): Integer;
+    procedure RemoveByIndex(const Idx: Integer);
+    function  Remove(const Item: TF4HTTPClient): Boolean;
+    procedure Clear;
+  end;
+
+  EHTTPClientCollection = class(Exception);
+
+
+
+{                                                                              }
 { Component                                                                    }
 {                                                                              }
 type
-  TFnd4HTTPClient = class(TF4HTTPClient)
+  TfclHTTPClient = class(TF4HTTPClient)
   published
     property  SynchronisedEvents;
 
@@ -1670,9 +1704,10 @@ end;
 procedure TF4HTTPClient.ReadResponse;
 begin
   Assert(FTCPClient.State in [csReady, csClosed]);
-  Assert(FState <> hcsResponseComplete);
-  Assert(FState in [hcsAwaitingResponse, hcsReceivedResponse, hcsReceivingContent, hcsResponseCompleteAndClosing, hcsResponseCompleteAndClosed, hcsRequestInterruptedAndClosed]);
-  //
+  Assert(FState in [
+      hcsAwaitingResponse, hcsReceivedResponse, hcsReceivingContent,
+      hcsResponseComplete, hcsResponseCompleteAndClosing, hcsResponseCompleteAndClosed,
+      hcsRequestInterruptedAndClosed]);
   try
     if FState = hcsAwaitingResponse then
       ReadResponseHeader;
@@ -2019,6 +2054,122 @@ begin
 end;
 
 
+
+{                                                                              }
+{ THTTPClientCollection                                                        }
+{                                                                              }
+constructor THTTPClientCollection.Create(const ItemOwner: Boolean);
+begin
+  inherited Create;
+  FItemOwner := ItemOwner;
+end;
+
+destructor THTTPClientCollection.Destroy;
+var
+  I : Integer;
+begin
+  if FItemOwner then
+    for I := Length(FList) - 1 downto 0 do
+      FreeAndNil(FList[I]);
+  inherited Destroy;
+end;
+
+function THTTPClientCollection.GetCount: Integer;
+begin
+  Result := Length(FList);
+end;
+
+function THTTPClientCollection.GetItem(const Idx: Integer): TF4HTTPClient;
+begin
+  Assert(Idx >= 0);
+  Assert(Idx < Length(FList));
+
+  Result := FList[Idx];
+end;
+
+function THTTPClientCollection.Add(const Item: TF4HTTPClient): Integer;
+var
+  L : Integer;
+begin
+  Assert(Assigned(Item));
+
+  L := Length(FList);
+  SetLength(FList, L + 1);
+  FList[L] := Item;
+  Result := L;
+end;
+
+function THTTPClientCollection.CreateNew: TF4HTTPClient;
+begin
+  Result := TF4HTTPClient.Create(nil);
+end;
+
+function THTTPClientCollection.AddNew: TF4HTTPClient;
+var
+  C : TF4HTTPClient;
+begin
+  C := CreateNew;
+  try
+    Add(C);
+  except
+    C.Free;
+    raise;
+  end;
+  Result := C;
+end;
+
+function THTTPClientCollection.GetItemIndex(const Item: TF4HTTPClient): Integer;
+var
+  I : Integer;
+begin
+  for I := 0 to Length(FList) - 1 do
+    if FList[I] = Item then
+      begin
+        Result := I;
+        exit;
+      end;
+  Result := -1;
+end;
+
+procedure THTTPClientCollection.RemoveByIndex(const Idx: Integer);
+var
+  L, I : Integer;
+  T : TF4HTTPClient;
+begin
+  L := Length(FList);
+  if (Idx < 0) or (Idx >= L) then
+    raise EHTTPClientCollection.Create('Index out of range');
+  T := FList[Idx];
+  for I := Idx to L - 2 do
+    FList[I] := FList[I + 1];
+  SetLength(FList, L - 1);
+  if FItemOwner then
+    T.Free;
+end;
+
+function THTTPClientCollection.Remove(const Item: TF4HTTPClient): Boolean;
+var
+  I : Integer;
+begin
+  I := GetItemIndex(Item);
+  if I >= 0 then
+    begin
+      RemoveByIndex(I);
+      Result := True;
+    end
+  else
+    Result := False;
+end;
+
+procedure THTTPClientCollection.Clear;
+var
+  I : Integer;
+begin
+  if FItemOwner then
+    for I := Length(FList) - 1 downto 0 do
+      FreeAndNil(FList[I]);
+  FList := nil;
+end;
 
 {$IFDEF HTTPCLIENT_CUSTOM}
   {$INCLUDE cHTTPClientImpl.inc}

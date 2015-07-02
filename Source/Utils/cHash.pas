@@ -129,7 +129,7 @@ uses
 
 
 {                                                                              }
-{ RawByteString                                                                }
+{ System type definitions                                                      }
 {                                                                              }
 {$IFNDEF SupportRawByteString}
 type

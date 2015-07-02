@@ -624,6 +624,7 @@ implementation
 
 uses
   { Fundamentals }
+  cBits32,
   cDynArrays,
   cStrings
   {$IFDEF UNIX}
@@ -2279,7 +2280,7 @@ begin
     end
   else
     begin
-      Sleep(MaxI(0, FileOpenWait^.RetryInterval) + GetRandomRetryWait);
+      Sleep(MaxInt(0, FileOpenWait^.RetryInterval) + GetRandomRetryWait);
       Retry := True;
     end;
   if Retry then
@@ -2623,7 +2624,7 @@ begin
   {$ELSE}
   Result := FileWrite(FileHandle, Buf, BufSize);
   if Result < 0 then
-    raise EFileError.Create(feFileWriteError, SFileWriteError, [GetLastOSErrorMessage, IntToStr(Ord(FileHandle))]);
+    raise EFileError.CreateFmt(feFileWriteError, SFileWriteError, [GetLastOSErrorMessage, IntToStr(Ord(FileHandle))]);
   {$ENDIF}
 end;
 

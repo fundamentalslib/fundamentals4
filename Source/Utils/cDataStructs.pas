@@ -10128,6 +10128,7 @@ implementation
 
 uses
   { Fundamentals }
+  cBits32,
   cDynArrays,
   cStrings;
 
@@ -10357,7 +10358,7 @@ begin
   if A is AType then
     Result := AType(A).Compare(B) else
   if B is AType then
-    Result := ReverseCompareResult(AType(B).Compare(A))
+    Result := InverseCompareResult(AType(B).Compare(A))
   else
     Result := crUndefined;
 end;
@@ -10570,8 +10571,8 @@ end;
 function ALongIntArray.GetRange(const LoIdx, HiIdx: Integer): LongIntArray;
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   SetLength(Result, C);
   for I := 0 to C - 1 do
@@ -10582,8 +10583,8 @@ function ALongIntArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var I, L, H, C : Integer;
 begin
   Result := ALongIntArray(CreateInstance);
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   ALongIntArray(Result).Count := C;
   for I := 0 to C - 1 do
@@ -10593,9 +10594,9 @@ end;
 procedure ALongIntArray.SetRange(const LoIdx, HiIdx: Integer; const V: LongIntArray);
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
-  C := MinI(Length(V), H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
+  C := MinInt(Length(V), H - L + 1);
   for I := 0 to C - 1 do
     Item[L + I] := V[I];
 end;
@@ -10633,7 +10634,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Count - 1;
@@ -10660,7 +10661,7 @@ begin
             Result := -1;
     end else // linear search
     begin
-      for I := MaxI(PrevPos + 1, 0) to Count - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Count - 1 do
         if Item[I] = Find then
           begin
             Result := I;
@@ -10730,9 +10731,9 @@ end;
 procedure ALongIntArray.Delete(const Idx: Integer; const Count: Integer);
 var I, C, J, L : Integer;
 begin
-  J := MaxI(Idx, 0);
+  J := MaxInt(Idx, 0);
   C := GetCount;
-  L := MinI(Count, C - J);
+  L := MinInt(Count, C - J);
   if L > 0 then
     begin
       for I := J to J + C - 1 do
@@ -10748,7 +10749,7 @@ begin
     exit;
   C := GetCount;
   SetCount(C + Count);
-  J := MinI(MaxI(Idx, 0), C);
+  J := MinInt(MaxInt(Idx, 0), C);
   L := C - J;
   for I := C - 1 downto C - L do
     SetItem(I + Count, GetItem(I));
@@ -10776,8 +10777,8 @@ end;
 function ALongWordArray.GetRange(const LoIdx, HiIdx: Integer): LongWordArray;
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   SetLength(Result, C);
   for I := 0 to C - 1 do
@@ -10788,8 +10789,8 @@ function ALongWordArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var I, L, H, C : Integer;
 begin
   Result := ALongWordArray(CreateInstance);
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   ALongWordArray(Result).Count := C;
   for I := 0 to C - 1 do
@@ -10799,9 +10800,9 @@ end;
 procedure ALongWordArray.SetRange(const LoIdx, HiIdx: Integer; const V: LongWordArray);
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
-  C := MinI(Length(V), H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
+  C := MinInt(Length(V), H - L + 1);
   for I := 0 to C - 1 do
     Item[L + I] := V[I];
 end;
@@ -10839,7 +10840,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Count - 1;
@@ -10866,7 +10867,7 @@ begin
             Result := -1;
     end else // linear search
     begin
-      for I := MaxI(PrevPos + 1, 0) to Count - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Count - 1 do
         if Item[I] = Find then
           begin
             Result := I;
@@ -10936,9 +10937,9 @@ end;
 procedure ALongWordArray.Delete(const Idx: Integer; const Count: Integer);
 var I, C, J, L : Integer;
 begin
-  J := MaxI(Idx, 0);
+  J := MaxInt(Idx, 0);
   C := GetCount;
-  L := MinI(Count, C - J);
+  L := MinInt(Count, C - J);
   if L > 0 then
     begin
       for I := J to J + C - 1 do
@@ -10954,7 +10955,7 @@ begin
     exit;
   C := GetCount;
   SetCount(C + Count);
-  J := MinI(MaxI(Idx, 0), C);
+  J := MinInt(MaxInt(Idx, 0), C);
   L := C - J;
   for I := C - 1 downto C - L do
     SetItem(I + Count, GetItem(I));
@@ -10982,8 +10983,8 @@ end;
 function AInt64Array.GetRange(const LoIdx, HiIdx: Integer): Int64Array;
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   SetLength(Result, C);
   for I := 0 to C - 1 do
@@ -10994,8 +10995,8 @@ function AInt64Array.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var I, L, H, C : Integer;
 begin
   Result := AInt64Array(CreateInstance);
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   AInt64Array(Result).Count := C;
   for I := 0 to C - 1 do
@@ -11005,9 +11006,9 @@ end;
 procedure AInt64Array.SetRange(const LoIdx, HiIdx: Integer; const V: Int64Array);
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
-  C := MinI(Length(V), H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
+  C := MinInt(Length(V), H - L + 1);
   for I := 0 to C - 1 do
     Item[L + I] := V[I];
 end;
@@ -11045,7 +11046,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Count - 1;
@@ -11072,7 +11073,7 @@ begin
             Result := -1;
     end else // linear search
     begin
-      for I := MaxI(PrevPos + 1, 0) to Count - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Count - 1 do
         if Item[I] = Find then
           begin
             Result := I;
@@ -11149,9 +11150,9 @@ end;
 procedure AInt64Array.Delete(const Idx: Integer; const Count: Integer);
 var I, C, J, L : Integer;
 begin
-  J := MaxI(Idx, 0);
+  J := MaxInt(Idx, 0);
   C := GetCount;
-  L := MinI(Count, C - J);
+  L := MinInt(Count, C - J);
   if L > 0 then
     begin
       for I := J to J + C - 1 do
@@ -11167,7 +11168,7 @@ begin
     exit;
   C := GetCount;
   SetCount(C + Count);
-  J := MinI(MaxI(Idx, 0), C);
+  J := MinInt(MaxInt(Idx, 0), C);
   L := C - J;
   for I := C - 1 downto C - L do
     SetItem(I + Count, GetItem(I));
@@ -11195,8 +11196,8 @@ end;
 function ASingleArray.GetRange(const LoIdx, HiIdx: Integer): SingleArray;
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   SetLength(Result, C);
   for I := 0 to C - 1 do
@@ -11207,8 +11208,8 @@ function ASingleArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var I, L, H, C : Integer;
 begin
   Result := ASingleArray(CreateInstance);
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   ASingleArray(Result).Count := C;
   for I := 0 to C - 1 do
@@ -11218,9 +11219,9 @@ end;
 procedure ASingleArray.SetRange(const LoIdx, HiIdx: Integer; const V: SingleArray);
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
-  C := MinI(Length(V), H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
+  C := MinInt(Length(V), H - L + 1);
   for I := 0 to C - 1 do
     Item[L + I] := V[I];
 end;
@@ -11258,7 +11259,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Count - 1;
@@ -11285,7 +11286,7 @@ begin
             Result := -1;
     end else // linear search
     begin
-      for I := MaxI(PrevPos + 1, 0) to Count - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Count - 1 do
         if Item[I] = Find then
           begin
             Result := I;
@@ -11362,9 +11363,9 @@ end;
 procedure ASingleArray.Delete(const Idx: Integer; const Count: Integer);
 var I, C, J, L : Integer;
 begin
-  J := MaxI(Idx, 0);
+  J := MaxInt(Idx, 0);
   C := GetCount;
-  L := MinI(Count, C - J);
+  L := MinInt(Count, C - J);
   if L > 0 then
     begin
       for I := J to J + C - 1 do
@@ -11380,7 +11381,7 @@ begin
     exit;
   C := GetCount;
   SetCount(C + Count);
-  J := MinI(MaxI(Idx, 0), C);
+  J := MinInt(MaxInt(Idx, 0), C);
   L := C - J;
   for I := C - 1 downto C - L do
     SetItem(I + Count, GetItem(I));
@@ -11408,8 +11409,8 @@ end;
 function ADoubleArray.GetRange(const LoIdx, HiIdx: Integer): DoubleArray;
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   SetLength(Result, C);
   for I := 0 to C - 1 do
@@ -11420,8 +11421,8 @@ function ADoubleArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var I, L, H, C : Integer;
 begin
   Result := ADoubleArray(CreateInstance);
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   ADoubleArray(Result).Count := C;
   for I := 0 to C - 1 do
@@ -11431,9 +11432,9 @@ end;
 procedure ADoubleArray.SetRange(const LoIdx, HiIdx: Integer; const V: DoubleArray);
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
-  C := MinI(Length(V), H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
+  C := MinInt(Length(V), H - L + 1);
   for I := 0 to C - 1 do
     Item[L + I] := V[I];
 end;
@@ -11471,7 +11472,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Count - 1;
@@ -11498,7 +11499,7 @@ begin
             Result := -1;
     end else // linear search
     begin
-      for I := MaxI(PrevPos + 1, 0) to Count - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Count - 1 do
         if Item[I] = Find then
           begin
             Result := I;
@@ -11575,9 +11576,9 @@ end;
 procedure ADoubleArray.Delete(const Idx: Integer; const Count: Integer);
 var I, C, J, L : Integer;
 begin
-  J := MaxI(Idx, 0);
+  J := MaxInt(Idx, 0);
   C := GetCount;
-  L := MinI(Count, C - J);
+  L := MinInt(Count, C - J);
   if L > 0 then
     begin
       for I := J to J + C - 1 do
@@ -11593,7 +11594,7 @@ begin
     exit;
   C := GetCount;
   SetCount(C + Count);
-  J := MinI(MaxI(Idx, 0), C);
+  J := MinInt(MaxInt(Idx, 0), C);
   L := C - J;
   for I := C - 1 downto C - L do
     SetItem(I + Count, GetItem(I));
@@ -11621,8 +11622,8 @@ end;
 function AExtendedArray.GetRange(const LoIdx, HiIdx: Integer): ExtendedArray;
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   SetLength(Result, C);
   for I := 0 to C - 1 do
@@ -11633,8 +11634,8 @@ function AExtendedArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var I, L, H, C : Integer;
 begin
   Result := AExtendedArray(CreateInstance);
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   AExtendedArray(Result).Count := C;
   for I := 0 to C - 1 do
@@ -11644,9 +11645,9 @@ end;
 procedure AExtendedArray.SetRange(const LoIdx, HiIdx: Integer; const V: ExtendedArray);
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
-  C := MinI(Length(V), H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
+  C := MinInt(Length(V), H - L + 1);
   for I := 0 to C - 1 do
     Item[L + I] := V[I];
 end;
@@ -11684,7 +11685,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Count - 1;
@@ -11711,7 +11712,7 @@ begin
             Result := -1;
     end else // linear search
     begin
-      for I := MaxI(PrevPos + 1, 0) to Count - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Count - 1 do
         if Item[I] = Find then
           begin
             Result := I;
@@ -11788,9 +11789,9 @@ end;
 procedure AExtendedArray.Delete(const Idx: Integer; const Count: Integer);
 var I, C, J, L : Integer;
 begin
-  J := MaxI(Idx, 0);
+  J := MaxInt(Idx, 0);
   C := GetCount;
-  L := MinI(Count, C - J);
+  L := MinInt(Count, C - J);
   if L > 0 then
     begin
       for I := J to J + C - 1 do
@@ -11806,7 +11807,7 @@ begin
     exit;
   C := GetCount;
   SetCount(C + Count);
-  J := MinI(MaxI(Idx, 0), C);
+  J := MinInt(MaxInt(Idx, 0), C);
   L := C - J;
   for I := C - 1 downto C - L do
     SetItem(I + Count, GetItem(I));
@@ -11834,8 +11835,8 @@ end;
 function AAnsiStringArray.GetRange(const LoIdx, HiIdx: Integer): AnsiStringArray;
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   SetLength(Result, C);
   for I := 0 to C - 1 do
@@ -11846,8 +11847,8 @@ function AAnsiStringArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var I, L, H, C : Integer;
 begin
   Result := AAnsiStringArray(CreateInstance);
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   AAnsiStringArray(Result).Count := C;
   for I := 0 to C - 1 do
@@ -11857,9 +11858,9 @@ end;
 procedure AAnsiStringArray.SetRange(const LoIdx, HiIdx: Integer; const V: AnsiStringArray);
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
-  C := MinI(Length(V), H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
+  C := MinInt(Length(V), H - L + 1);
   for I := 0 to C - 1 do
     Item[L + I] := V[I];
 end;
@@ -11897,7 +11898,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Count - 1;
@@ -11924,7 +11925,7 @@ begin
             Result := -1;
     end else // linear search
     begin
-      for I := MaxI(PrevPos + 1, 0) to Count - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Count - 1 do
         if Item[I] = Find then
           begin
             Result := I;
@@ -11994,9 +11995,9 @@ end;
 procedure AAnsiStringArray.Delete(const Idx: Integer; const Count: Integer);
 var I, C, J, L : Integer;
 begin
-  J := MaxI(Idx, 0);
+  J := MaxInt(Idx, 0);
   C := GetCount;
-  L := MinI(Count, C - J);
+  L := MinInt(Count, C - J);
   if L > 0 then
     begin
       for I := J to J + C - 1 do
@@ -12012,7 +12013,7 @@ begin
     exit;
   C := GetCount;
   SetCount(C + Count);
-  J := MinI(MaxI(Idx, 0), C);
+  J := MinInt(MaxInt(Idx, 0), C);
   L := C - J;
   for I := C - 1 downto C - L do
     SetItem(I + Count, GetItem(I));
@@ -12040,8 +12041,8 @@ end;
 function ARawByteStringArray.GetRange(const LoIdx, HiIdx: Integer): RawByteStringArray;
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   SetLength(Result, C);
   for I := 0 to C - 1 do
@@ -12052,8 +12053,8 @@ function ARawByteStringArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray
 var I, L, H, C : Integer;
 begin
   Result := ARawByteStringArray(CreateInstance);
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   ARawByteStringArray(Result).Count := C;
   for I := 0 to C - 1 do
@@ -12063,9 +12064,9 @@ end;
 procedure ARawByteStringArray.SetRange(const LoIdx, HiIdx: Integer; const V: RawByteStringArray);
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
-  C := MinI(Length(V), H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
+  C := MinInt(Length(V), H - L + 1);
   for I := 0 to C - 1 do
     Item[L + I] := V[I];
 end;
@@ -12103,7 +12104,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Count - 1;
@@ -12130,7 +12131,7 @@ begin
             Result := -1;
     end else // linear search
     begin
-      for I := MaxI(PrevPos + 1, 0) to Count - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Count - 1 do
         if Item[I] = Find then
           begin
             Result := I;
@@ -12200,9 +12201,9 @@ end;
 procedure ARawByteStringArray.Delete(const Idx: Integer; const Count: Integer);
 var I, C, J, L : Integer;
 begin
-  J := MaxI(Idx, 0);
+  J := MaxInt(Idx, 0);
   C := GetCount;
-  L := MinI(Count, C - J);
+  L := MinInt(Count, C - J);
   if L > 0 then
     begin
       for I := J to J + C - 1 do
@@ -12218,7 +12219,7 @@ begin
     exit;
   C := GetCount;
   SetCount(C + Count);
-  J := MinI(MaxI(Idx, 0), C);
+  J := MinInt(MaxInt(Idx, 0), C);
   L := C - J;
   for I := C - 1 downto C - L do
     SetItem(I + Count, GetItem(I));
@@ -12246,8 +12247,8 @@ end;
 function AWideStringArray.GetRange(const LoIdx, HiIdx: Integer): WideStringArray;
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   SetLength(Result, C);
   for I := 0 to C - 1 do
@@ -12258,8 +12259,8 @@ function AWideStringArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var I, L, H, C : Integer;
 begin
   Result := AWideStringArray(CreateInstance);
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   AWideStringArray(Result).Count := C;
   for I := 0 to C - 1 do
@@ -12269,9 +12270,9 @@ end;
 procedure AWideStringArray.SetRange(const LoIdx, HiIdx: Integer; const V: WideStringArray);
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
-  C := MinI(Length(V), H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
+  C := MinInt(Length(V), H - L + 1);
   for I := 0 to C - 1 do
     Item[L + I] := V[I];
 end;
@@ -12309,7 +12310,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Count - 1;
@@ -12336,7 +12337,7 @@ begin
             Result := -1;
     end else // linear search
     begin
-      for I := MaxI(PrevPos + 1, 0) to Count - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Count - 1 do
         if Item[I] = Find then
           begin
             Result := I;
@@ -12406,9 +12407,9 @@ end;
 procedure AWideStringArray.Delete(const Idx: Integer; const Count: Integer);
 var I, C, J, L : Integer;
 begin
-  J := MaxI(Idx, 0);
+  J := MaxInt(Idx, 0);
   C := GetCount;
-  L := MinI(Count, C - J);
+  L := MinInt(Count, C - J);
   if L > 0 then
     begin
       for I := J to J + C - 1 do
@@ -12424,7 +12425,7 @@ begin
     exit;
   C := GetCount;
   SetCount(C + Count);
-  J := MinI(MaxI(Idx, 0), C);
+  J := MinInt(MaxInt(Idx, 0), C);
   L := C - J;
   for I := C - 1 downto C - L do
     SetItem(I + Count, GetItem(I));
@@ -12452,8 +12453,8 @@ end;
 function AUnicodeStringArray.GetRange(const LoIdx, HiIdx: Integer): UnicodeStringArray;
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   SetLength(Result, C);
   for I := 0 to C - 1 do
@@ -12464,8 +12465,8 @@ function AUnicodeStringArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray
 var I, L, H, C : Integer;
 begin
   Result := AUnicodeStringArray(CreateInstance);
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   AUnicodeStringArray(Result).Count := C;
   for I := 0 to C - 1 do
@@ -12475,9 +12476,9 @@ end;
 procedure AUnicodeStringArray.SetRange(const LoIdx, HiIdx: Integer; const V: UnicodeStringArray);
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
-  C := MinI(Length(V), H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
+  C := MinInt(Length(V), H - L + 1);
   for I := 0 to C - 1 do
     Item[L + I] := V[I];
 end;
@@ -12515,7 +12516,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Count - 1;
@@ -12542,7 +12543,7 @@ begin
             Result := -1;
     end else // linear search
     begin
-      for I := MaxI(PrevPos + 1, 0) to Count - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Count - 1 do
         if Item[I] = Find then
           begin
             Result := I;
@@ -12612,9 +12613,9 @@ end;
 procedure AUnicodeStringArray.Delete(const Idx: Integer; const Count: Integer);
 var I, C, J, L : Integer;
 begin
-  J := MaxI(Idx, 0);
+  J := MaxInt(Idx, 0);
   C := GetCount;
-  L := MinI(Count, C - J);
+  L := MinInt(Count, C - J);
   if L > 0 then
     begin
       for I := J to J + C - 1 do
@@ -12630,7 +12631,7 @@ begin
     exit;
   C := GetCount;
   SetCount(C + Count);
-  J := MinI(MaxI(Idx, 0), C);
+  J := MinInt(MaxInt(Idx, 0), C);
   L := C - J;
   for I := C - 1 downto C - L do
     SetItem(I + Count, GetItem(I));
@@ -12658,8 +12659,8 @@ end;
 function AStringArray.GetRange(const LoIdx, HiIdx: Integer): StringArray;
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   SetLength(Result, C);
   for I := 0 to C - 1 do
@@ -12670,8 +12671,8 @@ function AStringArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var I, L, H, C : Integer;
 begin
   Result := AStringArray(CreateInstance);
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   AStringArray(Result).Count := C;
   for I := 0 to C - 1 do
@@ -12681,9 +12682,9 @@ end;
 procedure AStringArray.SetRange(const LoIdx, HiIdx: Integer; const V: StringArray);
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
-  C := MinI(Length(V), H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
+  C := MinInt(Length(V), H - L + 1);
   for I := 0 to C - 1 do
     Item[L + I] := V[I];
 end;
@@ -12721,7 +12722,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Count - 1;
@@ -12748,7 +12749,7 @@ begin
             Result := -1;
     end else // linear search
     begin
-      for I := MaxI(PrevPos + 1, 0) to Count - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Count - 1 do
         if Item[I] = Find then
           begin
             Result := I;
@@ -12810,9 +12811,9 @@ end;
 procedure AStringArray.Delete(const Idx: Integer; const Count: Integer);
 var I, C, J, L : Integer;
 begin
-  J := MaxI(Idx, 0);
+  J := MaxInt(Idx, 0);
   C := GetCount;
-  L := MinI(Count, C - J);
+  L := MinInt(Count, C - J);
   if L > 0 then
     begin
       for I := J to J + C - 1 do
@@ -12828,7 +12829,7 @@ begin
     exit;
   C := GetCount;
   SetCount(C + Count);
-  J := MinI(MaxI(Idx, 0), C);
+  J := MinInt(MaxInt(Idx, 0), C);
   L := C - J;
   for I := C - 1 downto C - L do
     SetItem(I + Count, GetItem(I));
@@ -12856,8 +12857,8 @@ end;
 function APointerArray.GetRange(const LoIdx, HiIdx: Integer): PointerArray;
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   SetLength(Result, C);
   for I := 0 to C - 1 do
@@ -12868,8 +12869,8 @@ function APointerArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var I, L, H, C : Integer;
 begin
   Result := APointerArray(CreateInstance);
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   APointerArray(Result).Count := C;
   for I := 0 to C - 1 do
@@ -12879,9 +12880,9 @@ end;
 procedure APointerArray.SetRange(const LoIdx, HiIdx: Integer; const V: PointerArray);
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
-  C := MinI(Length(V), H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
+  C := MinInt(Length(V), H - L + 1);
   for I := 0 to C - 1 do
     Item[L + I] := V[I];
 end;
@@ -12919,7 +12920,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Count - 1;
@@ -12946,7 +12947,7 @@ begin
             Result := -1;
     end else // linear search
     begin
-      for I := MaxI(PrevPos + 1, 0) to Count - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Count - 1 do
         if Item[I] = Find then
           begin
             Result := I;
@@ -13016,9 +13017,9 @@ end;
 procedure APointerArray.Delete(const Idx: Integer; const Count: Integer);
 var I, C, J, L : Integer;
 begin
-  J := MaxI(Idx, 0);
+  J := MaxInt(Idx, 0);
   C := GetCount;
-  L := MinI(Count, C - J);
+  L := MinInt(Count, C - J);
   if L > 0 then
     begin
       for I := J to J + C - 1 do
@@ -13034,7 +13035,7 @@ begin
     exit;
   C := GetCount;
   SetCount(C + Count);
-  J := MinI(MaxI(Idx, 0), C);
+  J := MinInt(MaxInt(Idx, 0), C);
   L := C - J;
   for I := C - 1 downto C - L do
     SetItem(I + Count, GetItem(I));
@@ -13062,8 +13063,8 @@ end;
 function AInterfaceArray.GetRange(const LoIdx, HiIdx: Integer): InterfaceArray;
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   SetLength(Result, C);
   for I := 0 to C - 1 do
@@ -13074,8 +13075,8 @@ function AInterfaceArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var I, L, H, C : Integer;
 begin
   Result := AInterfaceArray(CreateInstance);
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L + 1;
   AInterfaceArray(Result).Count := C;
   for I := 0 to C - 1 do
@@ -13085,9 +13086,9 @@ end;
 procedure AInterfaceArray.SetRange(const LoIdx, HiIdx: Integer; const V: InterfaceArray);
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
-  C := MinI(Length(V), H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
+  C := MinInt(Length(V), H - L + 1);
   for I := 0 to C - 1 do
     Item[L + I] := V[I];
 end;
@@ -13125,7 +13126,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Count - 1;
@@ -13152,7 +13153,7 @@ begin
             Result := -1;
     end else // linear search
     begin
-      for I := MaxI(PrevPos + 1, 0) to Count - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Count - 1 do
         if Item[I] = Find then
           begin
             Result := I;
@@ -13214,9 +13215,9 @@ end;
 procedure AInterfaceArray.Delete(const Idx: Integer; const Count: Integer);
 var I, C, J, L : Integer;
 begin
-  J := MaxI(Idx, 0);
+  J := MaxInt(Idx, 0);
   C := GetCount;
-  L := MinI(Count, C - J);
+  L := MinInt(Count, C - J);
   if L > 0 then
     begin
       for I := J to J + C - 1 do
@@ -13232,7 +13233,7 @@ begin
     exit;
   C := GetCount;
   SetCount(C + Count);
-  J := MinI(MaxI(Idx, 0), C);
+  J := MinInt(MaxInt(Idx, 0), C);
   L := C - J;
   for I := C - 1 downto C - L do
     SetItem(I + Count, GetItem(I));
@@ -13332,8 +13333,8 @@ end;
 function AObjectArray.GetRange(const LoIdx, HiIdx: Integer): ObjectArray;
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
   C := H - L  + 1;
   SetLength(Result, C);
   for I := 0 to C - 1 do
@@ -13343,9 +13344,9 @@ end;
 procedure AObjectArray.SetRange(const LoIdx, HiIdx: Integer; const V: ObjectArray);
 var I, L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(Count - 1, HiIdx);
-  C := MinI(Length(V), H - L  + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(Count - 1, HiIdx);
+  C := MinInt(Length(V), H - L  + 1);
   for I := 0 to C - 1 do
     Item[L + I] := V[I];
 end;
@@ -13407,9 +13408,9 @@ end;
 procedure AObjectArray.Delete(const Idx, Count: Integer);
 var I, C, J, L : Integer;
 begin
-  J := MaxI(Idx, 0);
+  J := MaxInt(Idx, 0);
   C := GetCount;
-  L := MinI(Count, C - J);
+  L := MinInt(Count, C - J);
   if L > 0 then
     begin
       for I := J to J + C - 1 do
@@ -13421,7 +13422,7 @@ end;
 function AObjectArray.PosNext(const Find: TObject; const PrevPos: Integer): Integer;
 var I : Integer;
 begin
-  for I := MaxI(PrevPos + 1, 0) to Count - 1 do
+  for I := MaxInt(PrevPos + 1, 0) to Count - 1 do
     if Find = Item[I] then
       begin
         Result := I;
@@ -13434,7 +13435,7 @@ function AObjectArray.PosNext(var Item: TObject; const ClassType: TClass;
     const PrevPos: Integer): Integer;
 var I : Integer;
 begin
-  for I := MaxI(PrevPos + 1, 0) to Count - 1 do
+  for I := MaxInt(PrevPos + 1, 0) to Count - 1 do
     begin
       Item := GetItem(I);
       if Item.InheritsFrom(ClassType) then
@@ -13451,7 +13452,7 @@ function AObjectArray.PosNext(var Item: TObject; const ClassName: String;
     const PrevPos: Integer): Integer;
 var I : Integer;
 begin
-  for I := MaxI(PrevPos + 1, 0) to Count - 1 do
+  for I := MaxInt(PrevPos + 1, 0) to Count - 1 do
     begin
       Item := GetItem(I);
       if Assigned(Item) and Item.ClassNameIs(ClassName) then
@@ -13919,8 +13920,8 @@ end;
 function TLongIntArray.GetRange(const LoIdx, HiIdx: Integer): LongIntArray;
 var L, H : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
   if H >= L then
     Result := Copy(FData, L, H - L + 1) else
     Result := nil;
@@ -13929,9 +13930,9 @@ end;
 procedure TLongIntArray.SetRange(const LoIdx, HiIdx: Integer; const V: LongIntArray);
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(MinI(Length(V), H - L + 1), 0);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(MinInt(Length(V), H - L + 1), 0);
   if C > 0 then
     Move(V[0], FData[L], C * Sizeof(LongInt));
 end;
@@ -13952,9 +13953,9 @@ end;
 function TLongIntArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(0, H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(0, H - L + 1);
   Result := CreateInstance as TLongIntArray;
   TLongIntArray(Result).FCount := C;
   if C > 0 then
@@ -14088,8 +14089,8 @@ end;
 function TLongWordArray.GetRange(const LoIdx, HiIdx: Integer): LongWordArray;
 var L, H : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
   if H >= L then
     Result := Copy(FData, L, H - L + 1) else
     Result := nil;
@@ -14098,9 +14099,9 @@ end;
 procedure TLongWordArray.SetRange(const LoIdx, HiIdx: Integer; const V: LongWordArray);
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(MinI(Length(V), H - L + 1), 0);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(MinInt(Length(V), H - L + 1), 0);
   if C > 0 then
     Move(V[0], FData[L], C * Sizeof(LongWord));
 end;
@@ -14121,9 +14122,9 @@ end;
 function TLongWordArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(0, H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(0, H - L + 1);
   Result := CreateInstance as TLongWordArray;
   TLongWordArray(Result).FCount := C;
   if C > 0 then
@@ -14257,8 +14258,8 @@ end;
 function TInt64Array.GetRange(const LoIdx, HiIdx: Integer): Int64Array;
 var L, H : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
   if H >= L then
     Result := Copy(FData, L, H - L + 1) else
     Result := nil;
@@ -14267,9 +14268,9 @@ end;
 procedure TInt64Array.SetRange(const LoIdx, HiIdx: Integer; const V: Int64Array);
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(MinI(Length(V), H - L + 1), 0);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(MinInt(Length(V), H - L + 1), 0);
   if C > 0 then
     Move(V[0], FData[L], C * Sizeof(Int64));
 end;
@@ -14290,9 +14291,9 @@ end;
 function TInt64Array.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(0, H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(0, H - L + 1);
   Result := CreateInstance as TInt64Array;
   TInt64Array(Result).FCount := C;
   if C > 0 then
@@ -14426,8 +14427,8 @@ end;
 function TSingleArray.GetRange(const LoIdx, HiIdx: Integer): SingleArray;
 var L, H : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
   if H >= L then
     Result := Copy(FData, L, H - L + 1) else
     Result := nil;
@@ -14436,9 +14437,9 @@ end;
 procedure TSingleArray.SetRange(const LoIdx, HiIdx: Integer; const V: SingleArray);
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(MinI(Length(V), H - L + 1), 0);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(MinInt(Length(V), H - L + 1), 0);
   if C > 0 then
     Move(V[0], FData[L], C * Sizeof(Single));
 end;
@@ -14459,9 +14460,9 @@ end;
 function TSingleArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(0, H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(0, H - L + 1);
   Result := CreateInstance as TSingleArray;
   TSingleArray(Result).FCount := C;
   if C > 0 then
@@ -14595,8 +14596,8 @@ end;
 function TDoubleArray.GetRange(const LoIdx, HiIdx: Integer): DoubleArray;
 var L, H : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
   if H >= L then
     Result := Copy(FData, L, H - L + 1) else
     Result := nil;
@@ -14605,9 +14606,9 @@ end;
 procedure TDoubleArray.SetRange(const LoIdx, HiIdx: Integer; const V: DoubleArray);
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(MinI(Length(V), H - L + 1), 0);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(MinInt(Length(V), H - L + 1), 0);
   if C > 0 then
     Move(V[0], FData[L], C * Sizeof(Double));
 end;
@@ -14628,9 +14629,9 @@ end;
 function TDoubleArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(0, H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(0, H - L + 1);
   Result := CreateInstance as TDoubleArray;
   TDoubleArray(Result).FCount := C;
   if C > 0 then
@@ -14764,8 +14765,8 @@ end;
 function TExtendedArray.GetRange(const LoIdx, HiIdx: Integer): ExtendedArray;
 var L, H : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
   if H >= L then
     Result := Copy(FData, L, H - L + 1) else
     Result := nil;
@@ -14774,9 +14775,9 @@ end;
 procedure TExtendedArray.SetRange(const LoIdx, HiIdx: Integer; const V: ExtendedArray);
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(MinI(Length(V), H - L + 1), 0);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(MinInt(Length(V), H - L + 1), 0);
   if C > 0 then
     Move(V[0], FData[L], C * Sizeof(Extended));
 end;
@@ -14797,9 +14798,9 @@ end;
 function TExtendedArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(0, H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(0, H - L + 1);
   Result := CreateInstance as TExtendedArray;
   TExtendedArray(Result).FCount := C;
   if C > 0 then
@@ -14933,8 +14934,8 @@ end;
 function TAnsiStringArray.GetRange(const LoIdx, HiIdx: Integer): AnsiStringArray;
 var L, H : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
   if H >= L then
     Result := Copy(FData, L, H - L + 1) else
     Result := nil;
@@ -14943,9 +14944,9 @@ end;
 procedure TAnsiStringArray.SetRange(const LoIdx, HiIdx: Integer; const V: AnsiStringArray);
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(MinI(Length(V), H - L + 1), 0);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(MinInt(Length(V), H - L + 1), 0);
   if C > 0 then
     Move(V[0], FData[L], C * Sizeof(AnsiString));
 end;
@@ -14966,9 +14967,9 @@ end;
 function TAnsiStringArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(0, H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(0, H - L + 1);
   Result := CreateInstance as TAnsiStringArray;
   TAnsiStringArray(Result).FCount := C;
   if C > 0 then
@@ -15102,8 +15103,8 @@ end;
 function TRawByteStringArray.GetRange(const LoIdx, HiIdx: Integer): RawByteStringArray;
 var L, H : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
   if H >= L then
     Result := Copy(FData, L, H - L + 1) else
     Result := nil;
@@ -15112,9 +15113,9 @@ end;
 procedure TRawByteStringArray.SetRange(const LoIdx, HiIdx: Integer; const V: RawByteStringArray);
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(MinI(Length(V), H - L + 1), 0);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(MinInt(Length(V), H - L + 1), 0);
   if C > 0 then
     Move(V[0], FData[L], C * Sizeof(RawByteString));
 end;
@@ -15135,9 +15136,9 @@ end;
 function TRawByteStringArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(0, H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(0, H - L + 1);
   Result := CreateInstance as TRawByteStringArray;
   TRawByteStringArray(Result).FCount := C;
   if C > 0 then
@@ -15271,8 +15272,8 @@ end;
 function TWideStringArray.GetRange(const LoIdx, HiIdx: Integer): WideStringArray;
 var L, H : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
   if H >= L then
     Result := Copy(FData, L, H - L + 1) else
     Result := nil;
@@ -15281,9 +15282,9 @@ end;
 procedure TWideStringArray.SetRange(const LoIdx, HiIdx: Integer; const V: WideStringArray);
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(MinI(Length(V), H - L + 1), 0);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(MinInt(Length(V), H - L + 1), 0);
   if C > 0 then
     Move(V[0], FData[L], C * Sizeof(WideString));
 end;
@@ -15304,9 +15305,9 @@ end;
 function TWideStringArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(0, H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(0, H - L + 1);
   Result := CreateInstance as TWideStringArray;
   TWideStringArray(Result).FCount := C;
   if C > 0 then
@@ -15440,8 +15441,8 @@ end;
 function TUnicodeStringArray.GetRange(const LoIdx, HiIdx: Integer): UnicodeStringArray;
 var L, H : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
   if H >= L then
     Result := Copy(FData, L, H - L + 1) else
     Result := nil;
@@ -15450,9 +15451,9 @@ end;
 procedure TUnicodeStringArray.SetRange(const LoIdx, HiIdx: Integer; const V: UnicodeStringArray);
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(MinI(Length(V), H - L + 1), 0);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(MinInt(Length(V), H - L + 1), 0);
   if C > 0 then
     Move(V[0], FData[L], C * Sizeof(UnicodeString));
 end;
@@ -15473,9 +15474,9 @@ end;
 function TUnicodeStringArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(0, H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(0, H - L + 1);
   Result := CreateInstance as TUnicodeStringArray;
   TUnicodeStringArray(Result).FCount := C;
   if C > 0 then
@@ -15609,8 +15610,8 @@ end;
 function TStringArray.GetRange(const LoIdx, HiIdx: Integer): StringArray;
 var L, H : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
   if H >= L then
     Result := Copy(FData, L, H - L + 1) else
     Result := nil;
@@ -15619,9 +15620,9 @@ end;
 procedure TStringArray.SetRange(const LoIdx, HiIdx: Integer; const V: StringArray);
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(MinI(Length(V), H - L + 1), 0);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(MinInt(Length(V), H - L + 1), 0);
   if C > 0 then
     Move(V[0], FData[L], C * Sizeof(String));
 end;
@@ -15642,9 +15643,9 @@ end;
 function TStringArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(0, H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(0, H - L + 1);
   Result := CreateInstance as TStringArray;
   TStringArray(Result).FCount := C;
   if C > 0 then
@@ -15778,8 +15779,8 @@ end;
 function TPointerArray.GetRange(const LoIdx, HiIdx: Integer): PointerArray;
 var L, H : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
   if H >= L then
     Result := Copy(FData, L, H - L + 1) else
     Result := nil;
@@ -15788,9 +15789,9 @@ end;
 procedure TPointerArray.SetRange(const LoIdx, HiIdx: Integer; const V: PointerArray);
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(MinI(Length(V), H - L + 1), 0);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(MinInt(Length(V), H - L + 1), 0);
   if C > 0 then
     Move(V[0], FData[L], C * Sizeof(Pointer));
 end;
@@ -15811,9 +15812,9 @@ end;
 function TPointerArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(0, H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(0, H - L + 1);
   Result := CreateInstance as TPointerArray;
   TPointerArray(Result).FCount := C;
   if C > 0 then
@@ -15978,7 +15979,7 @@ end;
 
 function TObjectArray.GetRange(const LoIdx, HiIdx: Integer): ObjectArray;
 begin
-  Result := Copy(FData, LoIdx, MinI(HiIdx, FCount - 1) - LoIdx + 1);
+  Result := Copy(FData, LoIdx, MinInt(HiIdx, FCount - 1) - LoIdx + 1);
 end;
 
 procedure TObjectArray.SetData(const Data: ObjectArray);
@@ -15995,7 +15996,7 @@ var I : Integer;
     V : TObject;
 begin
   Result := CreateInstance as TObjectArray;
-  for I := LoIdx to MinI(HiIdx, FCount - 1) do
+  for I := LoIdx to MinInt(HiIdx, FCount - 1) do
     begin
       V := FData[I];
       if V is AType then
@@ -16125,8 +16126,8 @@ end;
 function TInterfaceArray.GetRange(const LoIdx, HiIdx: Integer): InterfaceArray;
 var L, H : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
   if H >= L then
     Result := Copy(FData, L, H - L + 1) else
     Result := nil;
@@ -16135,9 +16136,9 @@ end;
 procedure TInterfaceArray.SetRange(const LoIdx, HiIdx: Integer; const V: InterfaceArray);
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(MinI(Length(V), H - L + 1), 0);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(MinInt(Length(V), H - L + 1), 0);
   if C > 0 then
     Move(V[0], FData[L], C * Sizeof(IInterface));
 end;
@@ -16158,9 +16159,9 @@ end;
 function TInterfaceArray.DuplicateRange(const LoIdx, HiIdx: Integer): AArray;
 var L, H, C : Integer;
 begin
-  L := MaxI(0, LoIdx);
-  H := MinI(HiIdx, FCount);
-  C := MaxI(0, H - L + 1);
+  L := MaxInt(0, LoIdx);
+  H := MinInt(HiIdx, FCount);
+  C := MaxInt(0, H - L + 1);
   Result := CreateInstance as TInterfaceArray;
   TInterfaceArray(Result).FCount := C;
   if C > 0 then
@@ -16207,7 +16208,7 @@ begin
   if (Idx < 0) or (Idx >= FCount) then
     RaiseIndexError(Idx);
   {$ENDIF}
-  Result := cUtils.IsBitSet32(FData[Idx shr 5], Idx and 31);
+  Result := IsBitSet32(FData[Idx shr 5], Idx and 31);
 end;
 
 procedure TBitArray.SetBit(const Idx: Integer; const Value: Boolean);
@@ -16219,9 +16220,9 @@ begin
   {$ENDIF}
   L := @FData[Idx shr 5];
   if Value then
-    L^ := cUtils.SetBit32(L^, Idx and 31)
+    L^ := SetBit32(L^, Idx and 31)
   else
-    L^ := cUtils.ClearBit32(L^, Idx and 31);
+    L^ := ClearBit32(L^, Idx and 31);
 end;
 
 function TBitArray.GetCount: Integer;
@@ -16461,7 +16462,7 @@ var I, L, V : Integer;
     P : PInteger;
 begin
   // Delete lookup
-  for I := MaxI(0, Idx) to MinI(FCount, Idx + Count - 1) do
+  for I := MaxInt(0, Idx) to MinInt(FCount, Idx + Count - 1) do
     if LocateItemHash(FData[I], L, V) then
       DynArrayRemove(FLookup[L], V, 1);
   // Delete array
@@ -16645,7 +16646,7 @@ var I, L, V : Integer;
     P : PInteger;
 begin
   // Delete lookup
-  for I := MaxI(0, Idx) to MinI(FCount, Idx + Count - 1) do
+  for I := MaxInt(0, Idx) to MinInt(FCount, Idx + Count - 1) do
     if LocateItemHash(FData[I], L, V) then
       DynArrayRemove(FLookup[L], V, 1);
   // Delete array

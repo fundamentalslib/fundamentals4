@@ -125,6 +125,9 @@
 {   Unicode functions in this unit work from data in source code form.         }
 {   All tables were generated from the Unicode 3.2 data.                       }
 {                                                                              }
+{ Todo:                                                                        }
+{   - StrP/StrPW functions.                                                    }
+{   - Bytes functions.                                                         }
 {******************************************************************************}
 
 {$INCLUDE ..\cFundamentals.inc}
@@ -175,105 +178,6 @@ type
 {$ENDIF}
 
 
-
-{                                                                              }
-{ ASCII constants                                                              }
-{                                                                              }
-const
-  AsciiNULL = AsciiChar(#0);
-  AsciiSOH  = AsciiChar(#1);
-  AsciiSTX  = AsciiChar(#2);
-  AsciiETX  = AsciiChar(#3);
-  AsciiEOT  = AsciiChar(#4);
-  AsciiENQ  = AsciiChar(#5);
-  AsciiACK  = AsciiChar(#6);
-  AsciiBEL  = AsciiChar(#7);
-  AsciiBS   = AsciiChar(#8);
-  AsciiHT   = AsciiChar(#9);
-  AsciiLF   = AsciiChar(#10);
-  AsciiVT   = AsciiChar(#11);
-  AsciiFF   = AsciiChar(#12);
-  AsciiCR   = AsciiChar(#13);
-  AsciiSO   = AsciiChar(#14);
-  AsciiSI   = AsciiChar(#15);
-  AsciiDLE  = AsciiChar(#16);
-  AsciiDC1  = AsciiChar(#17);
-  AsciiDC2  = AsciiChar(#18);
-  AsciiDC3  = AsciiChar(#19);
-  AsciiDC4  = AsciiChar(#20);
-  AsciiNAK  = AsciiChar(#21);
-  AsciiSYN  = AsciiChar(#22);
-  AsciiETB  = AsciiChar(#23);
-  AsciiCAN  = AsciiChar(#24);
-  AsciiEM   = AsciiChar(#25);
-  AsciiEOF  = AsciiChar(#26);
-  AsciiESC  = AsciiChar(#27);
-  AsciiFS   = AsciiChar(#28);
-  AsciiGS   = AsciiChar(#29);
-  AsciiRS   = AsciiChar(#30);
-  AsciiUS   = AsciiChar(#31);
-  AsciiSP   = AsciiChar(#32);
-  AsciiDEL  = AsciiChar(#127);
-  AsciiXON  = AsciiDC1;
-  AsciiXOFF = AsciiDC3;
-
-  AsciiCRLF = AsciiCR + AsciiLF;
-
-  AsciiDecimalPoint = AsciiChar(#46);
-  AsciiComma        = AsciiChar(#44);
-  AsciiBackSlash    = AsciiChar(#92);
-  AsciiForwardSlash = AsciiChar(#47);
-  AsciiPercent      = AsciiChar(#37);
-  AsciiAmpersand    = AsciiChar(#38);
-  AsciiPlus         = AsciiChar(#43);
-  AsciiMinus        = AsciiChar(#45);
-  AsciiEqualSign    = AsciiChar(#61);
-  AsciiSingleQuote  = AsciiChar(#39);
-  AsciiDoubleQuote  = AsciiChar(#34);
-
-  AsciiDigit0 = AsciiChar(#48);
-  AsciiDigit9 = AsciiChar(#57);
-  AsciiUpperA = AsciiChar(#65);
-  AsciiUpperZ = AsciiChar(#90);
-  AsciiLowerA = AsciiChar(#97);
-  AsciiLowerZ = AsciiChar(#122);
-
-  AsciiLowCaseLookup: Array[AsciiChar] of AsciiChar = (
-    #$00, #$01, #$02, #$03, #$04, #$05, #$06, #$07,
-    #$08, #$09, #$0A, #$0B, #$0C, #$0D, #$0E, #$0F,
-    #$10, #$11, #$12, #$13, #$14, #$15, #$16, #$17,
-    #$18, #$19, #$1A, #$1B, #$1C, #$1D, #$1E, #$1F,
-    #$20, #$21, #$22, #$23, #$24, #$25, #$26, #$27,
-    #$28, #$29, #$2A, #$2B, #$2C, #$2D, #$2E, #$2F,
-    #$30, #$31, #$32, #$33, #$34, #$35, #$36, #$37,
-    #$38, #$39, #$3A, #$3B, #$3C, #$3D, #$3E, #$3F,
-    #$40, #$61, #$62, #$63, #$64, #$65, #$66, #$67,
-    #$68, #$69, #$6A, #$6B, #$6C, #$6D, #$6E, #$6F,
-    #$70, #$71, #$72, #$73, #$74, #$75, #$76, #$77,
-    #$78, #$79, #$7A, #$5B, #$5C, #$5D, #$5E, #$5F,
-    #$60, #$61, #$62, #$63, #$64, #$65, #$66, #$67,
-    #$68, #$69, #$6A, #$6B, #$6C, #$6D, #$6E, #$6F,
-    #$70, #$71, #$72, #$73, #$74, #$75, #$76, #$77,
-    #$78, #$79, #$7A, #$7B, #$7C, #$7D, #$7E, #$7F,
-    #$80, #$81, #$82, #$83, #$84, #$85, #$86, #$87,
-    #$88, #$89, #$8A, #$8B, #$8C, #$8D, #$8E, #$8F,
-    #$90, #$91, #$92, #$93, #$94, #$95, #$96, #$97,
-    #$98, #$99, #$9A, #$9B, #$9C, #$9D, #$9E, #$9F,
-    #$A0, #$A1, #$A2, #$A3, #$A4, #$A5, #$A6, #$A7,
-    #$A8, #$A9, #$AA, #$AB, #$AC, #$AD, #$AE, #$AF,
-    #$B0, #$B1, #$B2, #$B3, #$B4, #$B5, #$B6, #$B7,
-    #$B8, #$B9, #$BA, #$BB, #$BC, #$BD, #$BE, #$BF,
-    #$C0, #$C1, #$C2, #$C3, #$C4, #$C5, #$C6, #$C7,
-    #$C8, #$C9, #$CA, #$CB, #$CC, #$CD, #$CE, #$CF,
-    #$D0, #$D1, #$D2, #$D3, #$D4, #$D5, #$D6, #$D7,
-    #$D8, #$D9, #$DA, #$DB, #$DC, #$DD, #$DE, #$DF,
-    #$E0, #$E1, #$E2, #$E3, #$E4, #$E5, #$E6, #$E7,
-    #$E8, #$E9, #$EA, #$EB, #$EC, #$ED, #$EE, #$EF,
-    #$F0, #$F1, #$F2, #$F3, #$F4, #$F5, #$F6, #$F7,
-    #$F8, #$F9, #$FA, #$FB, #$FC, #$FD, #$FE, #$FF);
-
-
-
 {                                                                              }
 { AnsiChar constants                                                           }
 {                                                                              }
@@ -321,7 +225,7 @@ const
   csNotNumeric      = csComplete - csNumeric;
   csAlphaNumeric    = csNumeric + csAlpha;
   csNotAlphaNumeric = csComplete - csAlphaNumeric;
-  csWhiteSpace      = csAsciiCtl + [AsciiSP];
+  csWhiteSpace      = csAsciiCtl + [#32];
   csSign            = [chPlus, chMinus];
   csExponent        = ['E', 'e'];
   csBinaryDigit     = ['0'..'1'];
@@ -337,73 +241,6 @@ const
                        '[', ']', '{', '}', '+', '=', '-', '\', '(', ')',
                        '*', '&', '^', '%', '$', '#', '@', '!', '`', '~'];
   csSlash           = [chBackSlash, chForwardSlash];
-
-
-
-{                                                                              }
-{ WideChar constants                                                           }
-{                                                                              }
-const
-  WideNULL = WideChar(#0);
-  WideSOH  = WideChar(#1);
-  WideSTX  = WideChar(#2);
-  WideETX  = WideChar(#3);
-  WideEOT  = WideChar(#4);
-  WideENQ  = WideChar(#5);
-  WideACK  = WideChar(#6);
-  WideBEL  = WideChar(#7);
-  WideBS   = WideChar(#8);
-  WideHT   = WideChar(#9);
-  WideLF   = WideChar(#10);
-  WideVT   = WideChar(#11);
-  WideFF   = WideChar(#12);
-  WideCR   = WideChar(#13);
-  WideSO   = WideChar(#14);
-  WideSI   = WideChar(#15);
-  WideDLE  = WideChar(#16);
-  WideDC1  = WideChar(#17);
-  WideDC2  = WideChar(#18);
-  WideDC3  = WideChar(#19);
-  WideDC4  = WideChar(#20);
-  WideNAK  = WideChar(#21);
-  WideSYN  = WideChar(#22);
-  WideETB  = WideChar(#23);
-  WideCAN  = WideChar(#24);
-  WideEM   = WideChar(#25);
-  WideEOF  = WideChar(#26);
-  WideESC  = WideChar(#27);
-  WideFS   = WideChar(#28);
-  WideGS   = WideChar(#29);
-  WideRS   = WideChar(#30);
-  WideUS   = WideChar(#31);
-  WideSP   = WideChar(#32);
-  WideDEL  = WideChar(#127);
-  WideXON  = WideDC1;
-  WideXOFF = WideDC3;
-
-  WideSingleQuote = WideChar('''');
-  WideDoubleQuote = WideChar('"');
-
-  WideNoBreakSpace       = WideChar(#$00A0);
-  WideLineSeparator      = WideChar(#$2028);
-  WideParagraphSeparator = WideChar(#$2029);
-
-  WideBOM_MSB_First      = WideChar(#$FFFE);
-  WideBOM_LSB_First      = WideChar(#$FEFF);
-
-  WideObjectReplacement  = WideChar(#$FFFC);
-  WideCharReplacement    = WideChar(#$FFFD);
-  WideInvalid            = WideChar(#$FFFF);
-
-  WideCopyrightSign      = WideChar(#$00A9);
-  WideRegisteredSign     = WideChar(#$00AE);
-
-  WideHighSurrogateFirst        = WideChar(#$D800);
-  WideHighSurrogateLast         = WideChar(#$DB7F);
-  WideLowSurrogateFirst         = WideChar(#$DC00);
-  WideLowSurrogateLast          = WideChar(#$DFFF);
-  WidePrivateHighSurrogateFirst = WideChar(#$DB80);
-  WidePrivateHighSurrogateLast  = WideChar(#$DBFF);
 
 
 
@@ -519,6 +356,12 @@ function  UnicodeUpperCaseFoldingU(const S: UnicodeString): UnicodeString;
 function  UnicodeLowerCaseFoldingW(const S: WideString): WideString;
 function  UnicodeLowerCaseFoldingU(const S: UnicodeString): UnicodeString;
 
+function  CharCompareNoUnicodeCaseW(const A, B: WideChar): Integer;
+function  StrPCompareNoUnicodeCaseW(const A, B: PWideChar; const Len: Integer): Integer;
+
+function  StrCompareNoUnicodeCaseW(const A, B: WideString): Integer;
+function  StrCompareNoUnicodeCaseU(const A, B: UnicodeString): Integer;
+
 
 
 {                                                                              }
@@ -552,11 +395,6 @@ function  ToStringB(const A: RawByteString): String; {$IFDEF UseInline}inline;{$
 function  ToStringW(const A: WideString): String; {$IFDEF UseInline}inline;{$ENDIF}
 function  ToStringU(const A: UnicodeString): String; {$IFDEF UseInline}inline;{$ENDIF}
 
-function  ToAnsiString(const A: String): AnsiString; {$IFDEF UseInline}inline;{$ENDIF}
-function  ToRawByteString(const A: String): RawByteString; {$IFDEF UseInline}inline;{$ENDIF}
-function  ToWideString(const A: String): WideString; {$IFDEF UseInline}inline;{$ENDIF}
-function  ToUnicodeString(const A: String): UnicodeString; {$IFDEF UseInline}inline;{$ENDIF}
-
 {$IFNDEF ManagedCode}
 function  StrZLenA(const S: PAnsiChar): Integer;
 function  StrZLenW(const S: PWideChar): Integer;
@@ -567,149 +405,6 @@ function  StrPToStrB(const P: PAnsiChar; const L: Integer): RawByteString;
 function  StrPToStrW(const P: PWideChar; const L: Integer): WideString;
 function  StrPToStrU(const P: PWideChar; const L: Integer): UnicodeString;
 function  StrPToStr(const P: PChar; const L: Integer): String;
-{$ENDIF}
-
-
-
-{                                                                              }
-{ ASCII case conversion                                                        }
-{                                                                              }
-function  AsciiLowCaseA(const C: AnsiChar): AnsiChar;
-function  AsciiLowCaseW(const C: WideChar): WideChar;
-function  AsciiLowCase(const C: Char): Char;
-
-function  AsciiUpCaseA(const C: AnsiChar): AnsiChar;
-function  AsciiUpCaseW(const C: WideChar): WideChar;
-function  AsciiUpCase(const C: Char): Char;
-
-procedure AsciiConvertUpperA(var S: AnsiString);
-procedure AsciiConvertUpperB(var S: RawByteString);
-procedure AsciiConvertUpperW(var S: WideString);
-procedure AsciiConvertUpperU(var S: UnicodeString);
-procedure AsciiConvertUpper(var S: String);
-
-procedure AsciiConvertLowerA(var S: AnsiString);
-procedure AsciiConvertLowerB(var S: RawByteString);
-procedure AsciiConvertLowerW(var S: WideString);
-procedure AsciiConvertLowerU(var S: UnicodeString);
-procedure AsciiConvertLower(var S: String);
-
-function  AsciiUpperCaseA(const A: AnsiString): AnsiString;
-function  AsciiUpperCaseB(const A: RawByteString): RawByteString;
-function  AsciiUpperCaseW(const A: WideString): WideString;
-function  AsciiUpperCaseU(const A: UnicodeString): UnicodeString;
-function  AsciiUpperCase(const A: String): String;
-
-function  AsciiLowerCaseA(const A: AnsiString): AnsiString;
-function  AsciiLowerCaseB(const A: RawByteString): RawByteString;
-function  AsciiLowerCaseW(const A: WideString): WideString;
-function  AsciiLowerCaseU(const A: UnicodeString): UnicodeString;
-function  AsciiLowerCase(const A: String): String;
-
-procedure AsciiConvertFirstUpA(var S: AnsiString);
-procedure AsciiConvertFirstUpB(var S: RawByteString);
-procedure AsciiConvertFirstUpW(var S: WideString);
-procedure AsciiConvertFirstUp(var S: String);
-
-function  AsciiFirstUpA(const S: AnsiString): AnsiString;
-function  AsciiFirstUpB(const S: RawByteString): RawByteString;
-function  AsciiFirstUpW(const S: WideString): WideString;
-function  AsciiFirstUp(const S: String): String;
-
-procedure AsciiConvertArrayUpper(var S: AsciiStringArray);
-procedure AsciiConvertArrayLower(var S: AsciiStringArray);
-
-
-
-{                                                                              }
-{ ASCII string                                                                 }
-{                                                                              }
-function  IsAsciiCharA(const C: AnsiChar): Boolean; {$IFDEF UseInline}inline;{$ENDIF}
-function  IsAsciiCharW(const C: WideChar): Boolean; {$IFDEF UseInline}inline;{$ENDIF}
-function  IsAsciiChar(const C: Char): Boolean;      {$IFDEF UseInline}inline;{$ENDIF}
-
-function  IsAsciiStringA(const S: AnsiString): Boolean;
-function  IsAsciiStringB(const S: RawByteString): Boolean;
-function  IsAsciiStringW(const S: WideString): Boolean;
-function  IsAsciiStringU(const S: UnicodeString): Boolean;
-function  IsAsciiString(const S: String): Boolean;
-
-
-
-{                                                                              }
-{ ASCII functions                                                              }
-{                                                                              }
-function  AsciiHexCharValue(const C: AnsiChar): Integer;
-function  AsciiHexCharValueW(const C: WideChar): Integer;
-
-function  AsciiIsHexChar(const C: AnsiChar): Boolean;
-function  AsciiIsHexCharW(const C: WideChar): Boolean;
-
-function  AsciiDecimalCharValue(const C: AnsiChar): Integer;
-function  AsciiDecimalCharValueW(const C: WideChar): Integer;
-
-function  AsciiIsDecimalChar(const C: AnsiChar): Boolean;
-function  AsciiIsDecimalCharW(const C: WideChar): Boolean;
-
-function  AsciiOctalCharValue(const C: AnsiChar): Integer;
-function  AsciiOctalCharValueW(const C: WideChar): Integer;
-
-function  AsciiIsOctalChar(const C: AnsiChar): Boolean;
-function  AsciiIsOctalCharW(const C: WideChar): Boolean;
-
-
-
-{                                                                              }
-{ Compare                                                                      }
-{                                                                              }
-{   Returns  -1  if A < B                                                      }
-{             0  if A = B                                                      }
-{             1  if A > B                                                      }
-{                                                                              }
-function  CharCompareA(const A, B: AnsiChar): Integer; {$IFDEF UseInline}inline;{$ENDIF}
-function  CharCompareW(const A, B: WideChar): Integer; {$IFDEF UseInline}inline;{$ENDIF}
-function  CharCompare(const A, B: Char): Integer;      {$IFDEF UseInline}inline;{$ENDIF}
-
-function  CharCompareNoAsciiCaseA(const A, B: AnsiChar): Integer; {$IFDEF UseInline}inline;{$ENDIF}
-function  CharCompareNoAsciiCaseW(const A, B: WideChar): Integer; {$IFDEF UseInline}inline;{$ENDIF}
-function  CharCompareNoAsciiCase(const A, B: Char): Integer;      {$IFDEF UseInline}inline;{$ENDIF}
-
-function  CharCompareNoUnicodeCaseW(const A, B: WideChar): Integer; {$IFDEF UseInline}inline;{$ENDIF}
-
-function  CharEqualNoAsciiCaseA(const A, B: AnsiChar): Boolean;  {$IFDEF UseInline}inline;{$ENDIF}
-function  CharEqualNoAsciiCaseW(const A, B: WideChar): Boolean;  {$IFDEF UseInline}inline;{$ENDIF}
-function  CharEqualNoAsciiCase(const A, B: Char): Boolean;       {$IFDEF UseInline}inline;{$ENDIF}
-
-{$IFDEF ManagedCode}
-function  StrPCompareA(const A, B: AnsiString; const Len: Integer): Integer;
-function  StrPCompareNoAsciiCaseA(const A, B: AnsiString; const Len: Integer): Integer;
-{$ELSE}
-function  StrPCompareA(const A, B: PAnsiChar; const Len: Integer): Integer;
-function  StrPCompareW(const A, B: PWideChar; const Len: Integer): Integer;
-function  StrPCompare(const A, B: PChar; const Len: Integer): Integer;
-
-function  StrPCompareNoAsciiCaseA(const A, B: PAnsiChar; const Len: Integer): Integer;
-function  StrPCompareNoAsciiCaseW(const A, B: PWideChar; const Len: Integer): Integer;
-function  StrPCompareNoAsciiCase(const A, B: PChar; const Len: Integer): Integer;
-
-function  StrPCompareNoUnicodeCaseW(const A, B: PWideChar; const Len: Integer): Integer;
-{$ENDIF}
-
-{$IFNDEF CLR}
-function  StrCompareA(const A, B: AnsiString): Integer;
-function  StrCompareB(const A, B: RawByteString): Integer;
-function  StrCompareW(const A, B: WideString): Integer;
-function  StrCompareU(const A, B: UnicodeString): Integer;
-function  StrCompare(const A, B: String): Integer;
-
-function  StrCompareNoAsciiCaseA(const A, B: AnsiString): Integer;
-function  StrCompareNoAsciiCaseB(const A, B: RawByteString): Integer;
-function  StrCompareNoAsciiCaseW(const A, B: WideString): Integer;
-function  StrCompareNoAsciiCaseU(const A, B: UnicodeString): Integer;
-function  StrCompareNoAsciiCase(const A, B: String): Integer;
-
-function  StrCompareNoUnicodeCaseW(const A, B: WideString): Integer;
-function  StrCompareNoUnicodeCaseU(const A, B: UnicodeString): Integer;
 {$ENDIF}
 
 
@@ -5172,34 +4867,41 @@ begin
       if AnsiChar(Ord(Ch)) in ['a'..'z'] then
         Result := WideChar(Ord(Ch) - (Ord('a') - Ord('A'))) else
         Result := Ch;
-    end else
+    end
+  else
     begin
       I := UnicodeLocateLetterInfo(Ch);
       if I >= 0 then
         begin
           P := @UnicodeLetterInfo[I];
           if P^.Attr = laUpper then
-            Result := Ch else
+            Result := Ch
+          else
             begin
               C := P^.CaseCode;
               if C = #$FFFF then
-                Result := Ch else
+                Result := Ch
+              else
                 Result := C;
             end;
-        end else
+        end
+      else
         begin
           J := UnicodeLocateTitleCaseLetterInfo(Ch);
           if J >= 0 then
             begin
               C := UnicodeTitleCaseLetterInfo[J].Upper;
               if C = #$FFFF then
-                Result := Ch else
+                Result := Ch
+              else
                 Result := C;
-            end else
+            end
+          else
             begin
               C := UnicodeLocateOtherLowerCase(Ch);
               if C = #$0000 then
-                Result := Ch else
+                Result := Ch
+              else
                 Result := C;
             end;
         end;
@@ -5264,34 +4966,41 @@ begin
       if AnsiChar(Ord(Ch)) in ['A'..'Z'] then
         Result := WideChar(Ord(Ch) + (Ord('a') - Ord('A'))) else
         Result := Ch;
-    end else
+    end
+  else
     begin
       I := UnicodeLocateLetterInfo(Ch);
       if I >= 0 then
         begin
           P := @UnicodeLetterInfo[I];
           if P^.Attr = laLower then
-            Result := Ch else
+            Result := Ch
+          else
             begin
               C := P^.CaseCode;
               if C = #$FFFF then
-                Result := Ch else
+                Result := Ch
+              else
                 Result := C;
             end;
-        end else
+        end
+      else
         begin
           J := UnicodeLocateTitleCaseLetterInfo(Ch);
           if J >= 0 then
             begin
               C := UnicodeTitleCaseLetterInfo[J].Lower;
               if C = #$FFFF then
-                Result := Ch else
+                Result := Ch
+              else
                 Result := C;
-            end else
+            end
+          else
             begin
               C := UnicodeLocateOtherUpperCase(Ch);
               if C = #$0000 then
-                Result := Ch else
+                Result := Ch
+              else
                 Result := C;
             end;
         end;
@@ -10615,6 +10324,88 @@ begin
     Result := Result + UnicodeLowCaseFoldingU(S[I]);
 end;
 
+function CharCompareNoUnicodeCaseW(const A, B: WideChar): Integer;
+var C, D : WideChar;
+begin
+  C := UnicodeUpCase(A);
+  D := UnicodeUpCase(B);
+  if Ord(C) < Ord(D) then
+    Result := -1 else
+    if Ord(C) > Ord(D) then
+      Result := 1
+    else
+      Result := 0;
+end;
+
+function StrPCompareNoUnicodeCaseW(const A, B: PWideChar; const Len: Integer): Integer;
+var P, Q : PWideChar;
+    C, D : WideChar;
+    I    : Integer;
+begin
+  P := A;
+  Q := B;
+  if P <> Q then
+    for I := 1 to Len do
+      begin
+        C := UnicodeUpCase(P^);
+        D := UnicodeUpCase(Q^);
+        if C = D then
+          begin
+            Inc(P);
+            Inc(Q);
+          end
+        else
+          begin
+            if C < D then
+              Result := -1
+            else
+              Result := 1;
+            exit;
+          end;
+      end;
+  Result := 0;
+end;
+
+function StrCompareNoUnicodeCaseW(const A, B: WideString): Integer;
+var L, M, I: Integer;
+begin
+  L := Length(A);
+  M := Length(B);
+  if L < M then
+    I := L
+  else
+    I := M;
+  Result := StrPCompareNoUnicodeCaseW(Pointer(A), Pointer(B), I);
+  if Result <> 0 then
+    exit;
+  if L = M then
+    Result := 0 else
+  if L < M then
+    Result := -1
+  else
+    Result := 1;
+end;
+
+function StrCompareNoUnicodeCaseU(const A, B: UnicodeString): Integer;
+var L, M, I: Integer;
+begin
+  L := Length(A);
+  M := Length(B);
+  if L < M then
+    I := L
+  else
+    I := M;
+  Result := StrPCompareNoUnicodeCaseW(Pointer(A), Pointer(B), I);
+  if Result <> 0 then
+    exit;
+  if L = M then
+    Result := 0 else
+  if L < M then
+    Result := -1
+  else
+    Result := 1;
+end;
+
 
 
 {                                                                              }
@@ -10897,34 +10688,6 @@ begin
   {$ENDIF}
 end;
 
-function ToAnsiString(const A: String): AnsiString;
-begin
-  {$IFDEF StringIsUnicode}
-  Result := AnsiString(A);
-  {$ELSE}
-  Result := A;
-  {$ENDIF}
-end;
-
-function ToRawByteString(const A: String): RawByteString;
-begin
-  {$IFDEF StringIsUnicode}
-  Result := RawByteString(A);
-  {$ELSE}
-  Result := A;
-  {$ENDIF}
-end;
-
-function ToWideString(const A: String): WideString;
-begin
-  Result := WideString(A);
-end;
-
-function ToUnicodeString(const A: String): UnicodeString;
-begin
-  Result := UnicodeString(A);
-end;
-
 {$IFNDEF ManagedCode}
 function StrZLenA(const S: PAnsiChar): Integer;
 var P : PAnsiChar;
@@ -11021,1229 +10784,6 @@ end;
 
 
 {                                                                              }
-{ ASCII case conversion                                                        }
-{                                                                              }
-const
-  AsciiCaseDiff = Byte(AsciiLowerA) - Byte(AsciiUpperA);
-
-{$IFDEF ASM386_DELPHI}
-function AsciiLowCaseA(const C: AnsiChar): AnsiChar; register; assembler;
-asm
-      CMP     AL, AsciiUpperA
-      JB      @@exit
-      CMP     AL, AsciiUpperZ
-      JA      @@exit
-      ADD     AL, AsciiCaseDiff
-@@exit:
-end;
-{$ELSE}
-function AsciiLowCaseA(const C: AnsiChar): AnsiChar;
-begin
-  if C in [AsciiUpperA..AsciiUpperZ] then
-    Result := AsciiChar(Byte(C) + AsciiCaseDiff)
-  else
-    Result := C;
-end;
-{$ENDIF}
-
-function AsciiLowCaseW(const C: WideChar): WideChar;
-begin
-  case Ord(C) of
-    Ord(AsciiUpperA)..Ord(AsciiUpperZ) : Result := WideChar(Ord(C) + AsciiCaseDiff)
-  else
-    Result := C;
-  end;
-end;
-
-function AsciiLowCase(const C: Char): Char;
-begin
-  case Ord(C) of
-    Ord(AsciiUpperA)..Ord(AsciiUpperZ) : Result := Char(Ord(C) + AsciiCaseDiff)
-  else
-    Result := C;
-  end;
-end;
-
-{$IFDEF ASM386_DELPHI}
-function AsciiUpCaseA(const C: AnsiChar): AnsiChar; register; assembler;
-asm
-      CMP     AL, AsciiLowerA
-      JB      @@exit
-      CMP     AL, AsciiLowerZ
-      JA      @@exit
-      SUB     AL, AsciiLowerA - AsciiUpperA
-@@exit:
-end;
-{$ELSE}
-function AsciiUpCaseA(const C: AnsiChar): AnsiChar;
-begin
-  if C in [AsciiLowerA..AsciiLowerZ] then
-    Result := AsciiChar(Byte(C) - AsciiCaseDiff)
-  else
-    Result := C;
-end;
-{$ENDIF}
-
-function AsciiUpCaseW(const C: WideChar): WideChar;
-begin
-  case Ord(C) of
-    Ord(AsciiLowerA)..Ord(AsciiLowerZ) : Result := WideChar(Ord(C) - AsciiCaseDiff)
-  else
-    Result := C;
-  end;
-end;
-
-function AsciiUpCase(const C: Char): Char;
-begin
-  case Ord(C) of
-    Ord(AsciiLowerA)..Ord(AsciiLowerZ) : Result := Char(Ord(C) - AsciiCaseDiff)
-  else
-    Result := C;
-  end;
-end;
-
-{$IFDEF ASM386_DELPHI}
-procedure AsciiConvertUpperA(var S: AnsiString);
-asm
-      OR      EAX, EAX
-      JZ      @Exit
-      PUSH    EAX
-      MOV     EAX, [EAX]
-      OR      EAX, EAX
-      JZ      @ExitP
-      MOV     ECX, [EAX - 4]
-      OR      ECX, ECX
-      JZ      @ExitP
-      XOR     DH, DH
-  @L2:
-      DEC     ECX
-      MOV     DL, [EAX + ECX]
-      CMP     DL, AsciiLowerA
-      JB      @L1
-      CMP     DL, AsciiLowerZ
-      JA      @L1
-      OR      DH, DH
-      JZ      @Uniq
-  @L3:
-      SUB     DL, AsciiCaseDiff
-      MOV     [EAX + ECX], DL
-  @L1:
-      OR      ECX, ECX
-      JNZ     @L2
-      OR      DH, DH
-      JNZ     @Exit
-  @ExitP:
-      POP     EAX
-  @Exit:
-      RET
-  @Uniq:
-      POP     EAX
-      PUSH    ECX
-      PUSH    EDX
-      CALL    UniqueString
-      POP     EDX
-      POP     ECX
-      MOV     DH, 1
-      JMP     @L3
-end;
-{$ELSE}
-procedure AsciiConvertUpperA(var S: AnsiString);
-var F : Integer;
-begin
-  for F := 1 to Length(S) do
-    if S[F] in [AsciiLowerA..AsciiLowerZ] then
-      S[F] := AnsiChar(Ord(S[F]) - AsciiCaseDiff);
-end;
-{$ENDIF}
-
-procedure AsciiConvertUpperB(var S: RawByteString);
-var F : Integer;
-begin
-  for F := 1 to Length(S) do
-    if S[F] in [AsciiLowerA..AsciiLowerZ] then
-      S[F] := AnsiChar(Ord(S[F]) - AsciiCaseDiff);
-end;
-
-procedure AsciiConvertUpperW(var S: WideString);
-var F : Integer;
-    C : WideChar;
-begin
-  for F := 1 to Length(S) do
-    begin
-      C := S[F];
-      if Ord(C) <= $FF then
-        if AnsiChar(Ord(C)) in [AsciiLowerA..AsciiLowerZ] then
-          S[F] := WideChar(Ord(C) - AsciiCaseDiff);
-    end;
-end;
- 
-procedure AsciiConvertUpperU(var S: UnicodeString);
-var F : Integer;
-    C : WideChar;
-begin
-  for F := 1 to Length(S) do
-    begin
-      C := S[F];
-      if Ord(C) <= $FF then
-        if AnsiChar(Ord(C)) in [AsciiLowerA..AsciiLowerZ] then
-          S[F] := WideChar(Ord(C) - AsciiCaseDiff);
-    end;
-end;
-
-procedure AsciiConvertUpper(var S: String);
-var F : Integer;
-    C : Char;
-begin
-  for F := 1 to Length(S) do
-    begin
-      C := S[F];
-      {$IFDEF StringIsUnicode}
-      if Ord(C) <= $FF then
-      {$ENDIF}
-        if AnsiChar(Ord(C)) in [AsciiLowerA..AsciiLowerZ] then
-          S[F] := Char(Ord(C) - AsciiCaseDiff);
-    end;
-end;
-
-{$IFDEF ASM386_DELPHI}
-procedure AsciiConvertLowerA(var S: AsciiString);
-asm
-      OR      EAX, EAX
-      JZ      @Exit
-      PUSH    EAX
-      MOV     EAX, [EAX]
-      OR      EAX, EAX
-      JZ      @ExitP
-      MOV     ECX, [EAX - 4]
-      OR      ECX, ECX
-      JZ      @ExitP
-      XOR     DH, DH
-  @L2:
-      DEC     ECX
-      MOV     DL, [EAX + ECX]
-      CMP     DL, AsciiUpperA
-      JB      @L1
-      CMP     DL, AsciiUpperZ
-      JA      @L1
-      OR      DH, DH
-      JZ      @Uniq
-  @L3:
-      ADD     DL, AsciiCaseDiff
-      MOV     [EAX + ECX], DL
-  @L1:
-      OR      ECX, ECX
-      JNZ     @L2
-      OR      DH, DH
-      JNZ     @Exit
-  @ExitP:
-      POP     EAX
-  @Exit:
-      RET
-  @Uniq:
-      POP     EAX
-      PUSH    ECX
-      PUSH    EDX
-      CALL    UniqueString
-      POP     EDX
-      POP     ECX
-      MOV     DH, 1
-      JMP     @L3
-end;
-{$ELSE}
-procedure AsciiConvertLowerA(var S: AnsiString);
-var F : Integer;
-begin
-  for F := 1 to Length(S) do
-    if S[F] in [AsciiUpperA..AsciiUpperZ] then
-      S[F] := AnsiChar(Ord(S[F]) + AsciiCaseDiff);
-end;
-{$ENDIF}
-
-procedure AsciiConvertLowerB(var S: RawByteString);
-var F : Integer;
-begin
-  for F := 1 to Length(S) do
-    if S[F] in [AsciiUpperA..AsciiUpperZ] then
-      S[F] := AnsiChar(Ord(S[F]) + AsciiCaseDiff);
-end;
-
-procedure AsciiConvertLowerW(var S: WideString);
-var F : Integer;
-    C : WideChar;
-begin
-  for F := 1 to Length(S) do
-    begin
-      C := S[F];
-      if Ord(C) <= $FF then
-        if AnsiChar(Ord(C)) in [AsciiUpperA..AsciiUpperZ] then
-          S[F] := WideChar(Ord(C) + AsciiCaseDiff);
-    end;
-end;
-
-procedure AsciiConvertLowerU(var S: UnicodeString);
-var F : Integer;
-    C : WideChar;
-begin
-  for F := 1 to Length(S) do
-    begin
-      C := S[F];
-      if Ord(C) <= $FF then
-        if AnsiChar(Ord(C)) in [AsciiUpperA..AsciiUpperZ] then
-          S[F] := WideChar(Ord(C) + AsciiCaseDiff);
-    end;
-end;
-
-procedure AsciiConvertLower(var S: String);
-var F : Integer;
-    C : Char;
-begin
-  for F := 1 to Length(S) do
-    begin
-      C := S[F];
-      {$IFDEF StringIsUnicode}
-      if Ord(C) <= $FF then
-      {$ENDIF}
-        if AnsiChar(Ord(C)) in [AsciiUpperA..AsciiUpperZ] then
-          S[F] := Char(Ord(C) + AsciiCaseDiff);
-    end;
-end;
-
-function AsciiUpperCaseA(const A: AnsiString): AnsiString;
-begin
-  Result := A;
-  AsciiConvertUpperA(Result);
-end;
-
-function AsciiUpperCaseB(const A: RawByteString): RawByteString;
-begin
-  Result := A;
-  AsciiConvertUpperB(Result);
-end;
-
-function AsciiUpperCaseW(const A: WideString): WideString;
-begin
-  Result := A;
-  AsciiConvertUpperW(Result);
-end;
-
-function AsciiUpperCaseU(const A: UnicodeString): UnicodeString;
-begin
-  Result := A;
-  AsciiConvertUpperU(Result);
-end;
-
-function AsciiUpperCase(const A: String): String;
-begin
-  Result := A;
-  AsciiConvertUpper(Result);
-end;
-
-function AsciiLowerCaseA(const A: AnsiString): AnsiString;
-begin
-  Result := A;
-  AsciiConvertLowerA(Result);
-end;
-
-function AsciiLowerCaseB(const A: RawByteString): RawByteString;
-begin
-  Result := A;
-  AsciiConvertLowerB(Result);
-end;
-
-function AsciiLowerCaseW(const A: WideString): WideString;
-begin
-  Result := A;
-  AsciiConvertLowerW(Result);
-end;
-
-function AsciiLowerCaseU(const A: UnicodeString): UnicodeString;
-begin
-  Result := A;
-  AsciiConvertLowerU(Result);
-end;
-
-function AsciiLowerCase(const A: String): String;
-begin
-  Result := A;
-  AsciiConvertLower(Result);
-end;
-
-procedure AsciiConvertFirstUpA(var S: AnsiString);
-var C : AnsiChar;
-begin
-  if S <> '' then
-    begin
-      C := S[1];
-      if C in [AsciiLowerA..AsciiLowerZ] then
-        S[1] := AsciiUpCaseA(C);
-    end;
-end;
-
-procedure AsciiConvertFirstUpB(var S: RawByteString);
-var C : AnsiChar;
-begin
-  if S <> '' then
-    begin
-      C := S[1];
-      if C in [AsciiLowerA..AsciiLowerZ] then
-        S[1] := AsciiUpCaseA(C);
-    end;
-end;
-
-procedure AsciiConvertFirstUpW(var S: WideString);
-var C : WideChar;
-begin
-  if S <> '' then
-    begin
-      C := S[1];
-      if (C >= AsciiLowerA) and (C <= AsciiLowerZ) then
-        S[1] := AsciiUpCaseW(C);
-    end;
-end;
-
-procedure AsciiConvertFirstUp(var S: String);
-var C : Char;
-begin
-  if S <> '' then
-    begin
-      C := S[1];
-      if (C >= AsciiLowerA) and (C <= AsciiLowerZ) then
-        S[1] := AsciiUpCase(C);
-    end;
-end;
-
-function AsciiFirstUpA(const S: AnsiString): AnsiString;
-begin
-  Result := S;
-  AsciiConvertFirstUpA(Result);
-end;
-
-function AsciiFirstUpB(const S: RawByteString): RawByteString;
-begin
-  Result := S;
-  AsciiConvertFirstUpB(Result);
-end;
-
-function AsciiFirstUpW(const S: WideString): WideString;
-begin
-  Result := S;
-  AsciiConvertFirstUpW(Result);
-end;
-
-function AsciiFirstUp(const S: String): String;
-begin
-  Result := S;
-  AsciiConvertFirstUp(Result);
-end;
-
-procedure AsciiConvertArrayUpper(var S: AsciiStringArray);
-var I : Integer;
-begin
-  for I := 0 to Length(S) - 1 do
-    AsciiConvertUpperA(S[I]);
-end;
-
-procedure AsciiConvertArrayLower(var S: AsciiStringArray);
-var I : Integer;
-begin
-  for I := 0 to Length(S) - 1 do
-    AsciiConvertLowerA(S[I]);
-end;
-
-
-
-{                                                                              }
-{ ASCII string                                                                 }
-{                                                                              }
-function IsAsciiCharA(const C: AnsiChar): Boolean;
-begin
-  Result := C in [#0..#127];
-end;
-
-function IsAsciiCharW(const C: WideChar): Boolean;
-begin
-  Result := Ord(C) <= 127;
-end;
-
-function IsAsciiChar(const C: Char): Boolean;
-begin
-  Result := Ord(C) <= 127;
-end;
-
-function IsAsciiStringA(const S: AnsiString): Boolean;
-var I : Integer;
-begin
-  for I := 1 to Length(S) do
-    if not IsAsciiCharA(S[I]) then
-      begin
-        Result := False;
-        exit;
-      end;
-  Result := True;
-end;
-
-function IsAsciiStringB(const S: RawByteString): Boolean;
-var I : Integer;
-begin
-  for I := 1 to Length(S) do
-    if not IsAsciiCharA(S[I]) then
-      begin
-        Result := False;
-        exit;
-      end;
-  Result := True;
-end;
-
-function IsAsciiStringW(const S: WideString): Boolean;
-var I : Integer;
-begin
-  for I := 1 to Length(S) do
-    if not IsAsciiCharW(S[I]) then
-      begin
-        Result := False;
-        exit;
-      end;
-  Result := True;
-end;
-
-function IsAsciiStringU(const S: UnicodeString): Boolean;
-var I : Integer;
-begin
-  for I := 1 to Length(S) do
-    if not IsAsciiCharW(S[I]) then
-      begin
-        Result := False;
-        exit;
-      end;
-  Result := True;
-end;
-
-function IsAsciiString(const S: String): Boolean;
-var I : Integer;
-begin
-  for I := 1 to Length(S) do
-    if not IsAsciiChar(S[I]) then
-      begin
-        Result := False;
-        exit;
-      end;
-  Result := True;
-end;
-
-
-
-{                                                                              }
-{ ASCII functions                                                              }
-{                                                                              }
-function AsciiHexCharValue(const C: AnsiChar): Integer;
-begin
-  case C of
-    '0'..'9' : Result := Ord(C) - Ord('0');
-    'A'..'F' : Result := Ord(C) - Ord('A') + 10;
-    'a'..'f' : Result := Ord(C) - Ord('a') + 10;
-  else
-    Result := -1;
-  end;
-end;
-
-function AsciiHexCharValueW(const C: WideChar): Integer;
-begin
-  if Ord(C) >= $80 then
-    Result := -1
-  else
-    Result := AsciiHexCharValue(AnsiChar(Ord(C)));
-end;
-
-function AsciiIsHexChar(const C: AnsiChar): Boolean;
-begin
-  Result := AsciiHexCharValue(C) >= 0;
-end;
-
-function AsciiIsHexCharW(const C: WideChar): Boolean;
-begin
-  Result := AsciiHexCharValueW(C) >= 0;
-end;
-
-function AsciiDecimalCharValue(const C: AnsiChar): Integer;
-begin
-  case C of
-    '0'..'9' : Result := Ord(C) - Ord('0');
-  else
-    Result := -1;
-  end;
-end;
-
-function AsciiDecimalCharValueW(const C: WideChar): Integer;
-begin
-  if Ord(C) >= $80 then
-    Result := -1
-  else
-    Result := AsciiDecimalCharValue(AnsiChar(Ord(C)));
-end;
-
-function AsciiIsDecimalChar(const C: AnsiChar): Boolean;
-begin
-  Result := AsciiDecimalCharValue(C) >= 0;
-end;
-
-function AsciiIsDecimalCharW(const C: WideChar): Boolean;
-begin
-  Result := AsciiDecimalCharValueW(C) >= 0;
-end;
-
-function AsciiOctalCharValue(const C: AnsiChar): Integer;
-begin
-  case C of
-    '0'..'7' : Result := Ord(C) - Ord('0');
-  else
-    Result := -1;
-  end;
-end;
-
-function AsciiOctalCharValueW(const C: WideChar): Integer;
-begin
-  if Ord(C) >= $80 then
-    Result := -1
-  else
-    Result := AsciiOctalCharValue(AnsiChar(Ord(C)));
-end;
-
-function AsciiIsOctalChar(const C: AnsiChar): Boolean;
-begin
-  Result := AsciiOctalCharValue(C) >= 0;
-end;
-
-function AsciiIsOctalCharW(const C: WideChar): Boolean;
-begin
-  Result := AsciiOctalCharValueW(C) >= 0;
-end;
-
-
-
-{                                                                              }
-{ Compare                                                                      }
-{                                                                              }
-function CharCompareA(const A, B: AnsiChar): Integer;
-begin
-  if Ord(A) < Ord(B) then
-    Result := -1 else
-    if Ord(A) > Ord(B) then
-      Result := 1
-    else
-      Result := 0;
-end;
-
-function CharCompareW(const A, B: WideChar): Integer;
-begin
-  if Ord(A) < Ord(B) then
-    Result := -1 else
-    if Ord(A) > Ord(B) then
-      Result := 1
-    else
-      Result := 0;
-end;
-
-function CharCompare(const A, B: Char): Integer;
-begin
-  {$IFDEF CharIsWide}
-  Result := CharCompareW(A, B);
-  {$ELSE}
-  Result := CharCompareA(A, B);
-  {$ENDIF}
-end;
-
-function CharCompareNoAsciiCaseA(const A, B: AnsiChar): Integer;
-var C, D : AnsiChar;
-begin
-  C := AsciiUpCaseA(A);
-  D := AsciiUpCaseA(B);
-  if Ord(C) < Ord(D) then
-    Result := -1 else
-    if Ord(C) > Ord(D) then
-      Result := 1
-    else
-      Result := 0;
-end;
-
-function CharCompareNoAsciiCaseW(const A, B: WideChar): Integer;
-var C, D : WideChar;
-begin
-  C := AsciiUpCaseW(A);
-  D := AsciiUpCaseW(B);
-  if Ord(C) < Ord(D) then
-    Result := -1 else
-    if Ord(C) > Ord(D) then
-      Result := 1
-    else
-      Result := 0;
-end;
-
-function CharCompareNoAsciiCase(const A, B: Char): Integer;
-var C, D : Char;
-begin
-  C := AsciiUpCase(A);
-  D := AsciiUpCase(B);
-  if Ord(C) < Ord(D) then
-    Result := -1 else
-    if Ord(C) > Ord(D) then
-      Result := 1
-    else
-      Result := 0;
-end;
-
-function CharCompareNoUnicodeCaseW(const A, B: WideChar): Integer;
-var C, D : WideChar;
-begin
-  C := UnicodeUpCase(A);
-  D := UnicodeUpCase(B);
-  if Ord(C) < Ord(D) then
-    Result := -1 else
-    if Ord(C) > Ord(D) then
-      Result := 1
-    else
-      Result := 0;
-end;
-
-function CharEqualNoAsciiCaseA(const A, B: AnsiChar): Boolean;
-begin
-  Result := AsciiUpCaseA(A) = AsciiUpCaseA(B);
-end;
-
-function CharEqualNoAsciiCaseW(const A, B: WideChar): Boolean;
-begin
-  Result := AsciiUpCaseW(A) = AsciiUpCaseW(B);
-end;
-
-function CharEqualNoAsciiCase(const A, B: Char): Boolean;
-begin
-  Result := AsciiUpCase(A) = AsciiUpCase(B);
-end;
-
-{$IFDEF CLR}
-function StrPCompareA(const A, B: AnsiString; const Len: Integer): Integer;
-var C, D : Integer;
-    I    : Integer;
-begin
-  for I := 1 to Len do
-    begin
-      C := Ord(A[I]);
-      D := Ord(B[I]);
-      if C <> D then
-        begin
-          if C < D then
-            Result := -1
-          else
-            Result := 1;
-          exit;
-        end;
-    end;
-  Result := 0;
-end;
-
-function StrPCompareNoAsciiCaseA(const A, B: AnsiString; const Len: Integer): Integer;
-var C, D : Integer;
-    I    : Integer;
-begin
-  for I := 1 to Len do
-    begin
-      C := Ord(AsciiLowCaseLookup[A[I]]);
-      D := Ord(AsciiLowCaseLookup[B[I]]);
-      if C <> D then
-        begin
-          if C < D then
-            Result := -1
-          else
-            Result := 1;
-          exit;
-        end;
-    end;
-  Result := 0;
-end;
-{$ELSE}
-function StrPCompareA(const A, B: PAnsiChar; const Len: Integer): Integer;
-var P, Q : PAnsiChar;
-    I    : Integer;
-begin
-  P := A;
-  Q := B;
-  if P <> Q then
-    for I := 1 to Len do
-      if P^ = Q^ then
-        begin
-          Inc(P);
-          Inc(Q);
-        end
-      else
-        begin
-          if Ord(P^) < Ord(Q^) then
-            Result := -1
-          else
-            Result := 1;
-          exit;
-        end;
-  Result := 0;
-end;
-
-function StrPCompareW(const A, B: PWideChar; const Len: Integer): Integer;
-var P, Q : PWideChar;
-    I    : Integer;
-begin
-  P := A;
-  Q := B;
-  if P <> Q then
-    for I := 1 to Len do
-      if Ord(P^) = Ord(Q^) then
-        begin
-          Inc(P);
-          Inc(Q);
-        end
-      else
-        begin
-          if Ord(P^) < Ord(Q^) then
-            Result := -1
-          else
-            Result := 1;
-          exit;
-        end;
-  Result := 0;
-end;
-
-function StrPCompare(const A, B: PChar; const Len: Integer): Integer;
-var P, Q : PChar;
-    I    : Integer;
-begin
-  P := A;
-  Q := B;
-  if P <> Q then
-    for I := 1 to Len do
-      if Ord(P^) = Ord(Q^) then
-        begin
-          Inc(P);
-          Inc(Q);
-        end
-      else
-        begin
-          if Ord(P^) < Ord(Q^) then
-            Result := -1
-          else
-            Result := 1;
-          exit;
-        end;
-  Result := 0;
-end;
-
-function StrPCompareNoAsciiCaseA(const A, B: PAnsiChar; const Len: Integer): Integer;
-var P, Q : PAnsiChar;
-    C, D : Integer;
-    I    : Integer;
-begin
-  P := A;
-  Q := B;
-  if P <> Q then
-    for I := 1 to Len do
-      begin
-        C := Integer(AsciiLowCaseLookup[P^]);
-        D := Integer(AsciiLowCaseLookup[Q^]);
-        if C = D then
-          begin
-            Inc(P);
-            Inc(Q);
-          end
-        else
-          begin
-            if Ord(C) < Ord(D) then
-              Result := -1
-            else
-              Result := 1;
-            exit;
-          end;
-      end;
-  Result := 0;
-end;
-
-function StrPCompareNoAsciiCaseW(const A, B: PWideChar; const Len: Integer): Integer;
-var P, Q : PWideChar;
-    C, D : Integer;
-    I    : Integer;
-begin
-  P := A;
-  Q := B;
-  if P <> Q then
-    for I := 1 to Len do
-      begin
-        C := Ord(P^);
-        D := Ord(Q^);
-        if C <= $7F then
-          C := Integer(AsciiLowCaseLookup[AnsiChar(Byte(C))]);
-        if D <= $7F then
-          D := Integer(AsciiLowCaseLookup[AnsiChar(Byte(D))]);
-        if C = D then
-          begin
-            Inc(P);
-            Inc(Q);
-          end
-        else
-          begin
-            if C < D then
-              Result := -1
-            else
-              Result := 1;
-            exit;
-          end;
-      end;
-  Result := 0;
-end;
-
-function StrPCompareNoAsciiCase(const A, B: PChar; const Len: Integer): Integer;
-var P, Q : PChar;
-    C, D : Integer;
-    I    : Integer;
-begin
-  P := A;
-  Q := B;
-  if P <> Q then
-    for I := 1 to Len do
-      begin
-        C := Ord(P^);
-        D := Ord(Q^);
-        if C <= $7F then
-          C := Integer(AsciiLowCaseLookup[AnsiChar(Byte(C))]);
-        if D <= $7F then
-          D := Integer(AsciiLowCaseLookup[AnsiChar(Byte(D))]);
-        if C = D then
-          begin
-            Inc(P);
-            Inc(Q);
-          end
-        else
-          begin
-            if C < D then
-              Result := -1
-            else
-              Result := 1;
-            exit;
-          end;
-      end;
-  Result := 0;
-end;
-
-function StrPCompareNoUnicodeCaseW(const A, B: PWideChar; const Len: Integer): Integer;
-var P, Q : PWideChar;
-    C, D : WideChar;
-    I    : Integer;
-begin
-  P := A;
-  Q := B;
-  if P <> Q then
-    for I := 1 to Len do
-      begin
-        C := UnicodeUpCase(P^);
-        D := UnicodeUpCase(Q^);
-        if C = D then
-          begin
-            Inc(P);
-            Inc(Q);
-          end
-        else
-          begin
-            if C < D then
-              Result := -1
-            else
-              Result := 1;
-            exit;
-          end;
-      end;
-  Result := 0;
-end;
-{$ENDIF}
-
-{$IFDEF CLR}
-function StrCompare(const A, B: AnsiString): Integer;
-var L, M, I: Integer;
-begin
-  L := Length(A);
-  M := Length(B);
-  if L < M then
-    I := L
-  else
-    I := M;
-  Result := StrPCompareA(A, B, I);
-  if Result <> 0 then
-    exit;
-  if L = M then
-    Result := 0 else
-  if L < M then
-    Result := -1
-  else
-    Result := 1;
-end;
-
-function StrCompareNoCase(const A, B: AnsiString): Integer;
-var L, M, I: Integer;
-begin
-  L := Length(A);
-  M := Length(B);
-  if L < M then
-    I := L
-  else
-    I := M;
-  Result := StrPCompareNoAsciiCaseA(A, B, I);
-  if Result <> 0 then
-    exit;
-  if L = M then
-    Result := 0 else
-  if L < M then
-    Result := -1
-  else
-    Result := 1;
-end;
-{$ENDIF}
-
-{$IFNDEF CLR}
-function StrCompareA(const A, B: AnsiString): Integer;
-var L, M, I: Integer;
-begin
-  L := Length(A);
-  M := Length(B);
-  if L < M then
-    I := L
-  else
-    I := M;
-  Result := StrPCompareA(Pointer(A), Pointer(B), I);
-  if Result <> 0 then
-    exit;
-  if L = M then
-    Result := 0 else
-  if L < M then
-    Result := -1
-  else
-    Result := 1;
-end;
-
-function StrCompareB(const A, B: RawByteString): Integer;
-var L, M, I: Integer;
-begin
-  L := Length(A);
-  M := Length(B);
-  if L < M then
-    I := L
-  else
-    I := M;
-  Result := StrPCompareA(Pointer(A), Pointer(B), I);
-  if Result <> 0 then
-    exit;
-  if L = M then
-    Result := 0 else
-  if L < M then
-    Result := -1
-  else
-    Result := 1;
-end;
-
-function StrCompareW(const A, B: WideString): Integer;
-var L, M, I: Integer;
-begin
-  L := Length(A);
-  M := Length(B);
-  if L < M then
-    I := L
-  else
-    I := M;
-  Result := StrPCompareW(Pointer(A), Pointer(B), I);
-  if Result <> 0 then
-    exit;
-  if L = M then
-    Result := 0 else
-  if L < M then
-    Result := -1
-  else
-    Result := 1;
-end;
-
-function StrCompareU(const A, B: UnicodeString): Integer;
-var L, M, I: Integer;
-begin
-  L := Length(A);
-  M := Length(B);
-  if L < M then
-    I := L
-  else
-    I := M;
-  Result := StrPCompareW(Pointer(A), Pointer(B), I);
-  if Result <> 0 then
-    exit;
-  if L = M then
-    Result := 0 else
-  if L < M then
-    Result := -1
-  else
-    Result := 1;
-end;
-
-function StrCompare(const A, B: String): Integer;
-var L, M, I: Integer;
-begin
-  L := Length(A);
-  M := Length(B);
-  if L < M then
-    I := L
-  else
-    I := M;
-  Result := StrPCompare(Pointer(A), Pointer(B), I);
-  if Result <> 0 then
-    exit;
-  if L = M then
-    Result := 0 else
-  if L < M then
-    Result := -1
-  else
-    Result := 1;
-end;
-
-function StrCompareNoAsciiCaseA(const A, B: AnsiString): Integer;
-var L, M, I: Integer;
-begin
-  L := Length(A);
-  M := Length(B);
-  if L < M then
-    I := L
-  else
-    I := M;
-  Result := StrPCompareNoAsciiCaseA(Pointer(A), Pointer(B), I);
-  if Result <> 0 then
-    exit;
-  if L = M then
-    Result := 0 else
-  if L < M then
-    Result := -1
-  else
-    Result := 1;
-end;
-
-function StrCompareNoAsciiCaseB(const A, B: RawByteString): Integer;
-var L, M, I: Integer;
-begin
-  L := Length(A);
-  M := Length(B);
-  if L < M then
-    I := L
-  else
-    I := M;
-  Result := StrPCompareNoAsciiCaseA(Pointer(A), Pointer(B), I);
-  if Result <> 0 then
-    exit;
-  if L = M then
-    Result := 0 else
-  if L < M then
-    Result := -1
-  else
-    Result := 1;
-end;
-
-function StrCompareNoAsciiCaseW(const A, B: WideString): Integer;
-var L, M, I: Integer;
-begin
-  L := Length(A);
-  M := Length(B);
-  if L < M then
-    I := L
-  else
-    I := M;
-  Result := StrPCompareNoAsciiCaseW(Pointer(A), Pointer(B), I);
-  if Result <> 0 then
-    exit;
-  if L = M then
-    Result := 0 else
-  if L < M then
-    Result := -1
-  else
-    Result := 1;
-end;
-
-function StrCompareNoAsciiCaseU(const A, B: UnicodeString): Integer;
-var L, M, I: Integer;
-begin
-  L := Length(A);
-  M := Length(B);
-  if L < M then
-    I := L
-  else
-    I := M;
-  Result := StrPCompareNoAsciiCaseW(Pointer(A), Pointer(B), I);
-  if Result <> 0 then
-    exit;
-  if L = M then
-    Result := 0 else
-  if L < M then
-    Result := -1
-  else
-    Result := 1;
-end;
-
-function StrCompareNoAsciiCase(const A, B: String): Integer;
-var L, M, I: Integer;
-begin
-  L := Length(A);
-  M := Length(B);
-  if L < M then
-    I := L
-  else
-    I := M;
-  Result := StrPCompareNoAsciiCase(Pointer(A), Pointer(B), I);
-  if Result <> 0 then
-    exit;
-  if L = M then
-    Result := 0 else
-  if L < M then
-    Result := -1
-  else
-    Result := 1;
-end;
-
-function StrCompareNoUnicodeCaseW(const A, B: WideString): Integer;
-var L, M, I: Integer;
-begin
-  L := Length(A);
-  M := Length(B);
-  if L < M then
-    I := L
-  else
-    I := M;
-  Result := StrPCompareNoUnicodeCaseW(Pointer(A), Pointer(B), I);
-  if Result <> 0 then
-    exit;
-  if L = M then
-    Result := 0 else
-  if L < M then
-    Result := -1
-  else
-    Result := 1;
-end;
-
-function StrCompareNoUnicodeCaseU(const A, B: UnicodeString): Integer;
-var L, M, I: Integer;
-begin
-  L := Length(A);
-  M := Length(B);
-  if L < M then
-    I := L
-  else
-    I := M;
-  Result := StrPCompareNoUnicodeCaseW(Pointer(A), Pointer(B), I);
-  if Result <> 0 then
-    exit;
-  if L = M then
-    Result := 0 else
-  if L < M then
-    Result := -1
-  else
-    Result := 1;
-end;
-{$ENDIF}
-
-
-
-{                                                                              }
 { Match                                                                        }
 {                                                                              }
 function WideCharInCharSet(const A: WideChar; const C: CharSet): Boolean;
@@ -12278,14 +10818,14 @@ end;
 {$ELSE}
 function CharMatchNoAsciiCaseA(const A, B: AnsiChar): Boolean;
 begin
-  Result := AsciiLowCaseLookup[A] = AsciiLowCaseLookup[B];
+  Result := AsciiLowCaseLookup[Ord(A)] = AsciiLowCaseLookup[Ord(B)];
 end;
 {$ENDIF}
 
 function CharMatchNoAsciiCaseW(const A, B: WideChar): Boolean;
 begin
   if (Ord(A) <= $7F) and (Ord(B) <= $7F) then
-    Result := AsciiLowCaseLookup[AnsiChar(Ord(A))] = AsciiLowCaseLookup[AnsiChar(Ord(B))]
+    Result := AsciiLowCaseLookup[Ord(A)] = AsciiLowCaseLookup[Ord(B)]
   else
     Result := Ord(A) = Ord(B);
 end;
@@ -12293,7 +10833,7 @@ end;
 function CharMatchNoAsciiCaseAW(const A: AnsiChar; const B: WideChar): Boolean;
 begin
   if (Ord(A) <= $7F) and (Ord(B) <= $7F) then
-    Result := AsciiLowCaseLookup[AnsiChar(Ord(A))] = AsciiLowCaseLookup[AnsiChar(Ord(B))]
+    Result := AsciiLowCaseLookup[Ord(A)] = AsciiLowCaseLookup[Ord(B)]
   else
     Result := Ord(A) = Ord(B);
 end;
@@ -12301,7 +10841,7 @@ end;
 function CharMatchNoAsciiCaseAS(const A: AnsiChar; const B: Char): Boolean;
 begin
   if (Ord(A) <= $7F) and (Ord(B) <= $7F) then
-    Result := AsciiLowCaseLookup[AnsiChar(Ord(A))] = AsciiLowCaseLookup[AnsiChar(Ord(B))]
+    Result := AsciiLowCaseLookup[Ord(A)] = AsciiLowCaseLookup[Ord(B)]
   else
     Result := Ord(A) = Ord(B);
 end;
@@ -12309,7 +10849,7 @@ end;
 function CharMatchNoAsciiCase(const A, B: Char): Boolean;
 begin
   if (Ord(A) <= $7F) and (Ord(B) <= $7F) then
-    Result := AsciiLowCaseLookup[AnsiChar(Ord(A))] = AsciiLowCaseLookup[AnsiChar(Ord(B))]
+    Result := AsciiLowCaseLookup[Ord(A)] = AsciiLowCaseLookup[Ord(B)]
   else
     Result := Ord(A) = Ord(B);
 end;
@@ -12328,7 +10868,7 @@ begin
   if AsciiCaseSensitive then
     Result := A = B
   else
-    Result := AsciiLowCaseLookup[A] = AsciiLowCaseLookup[B];
+    Result := AsciiLowCaseLookup[Ord(A)] = AsciiLowCaseLookup[Ord(B)];
 end;
 {$ENDIF}
 
@@ -12338,7 +10878,7 @@ begin
     Result := A = B
   else
     if (Ord(A) <= $7F) and (Ord(B) <= $7F) then
-      Result := AsciiLowCaseLookup[AnsiChar(Ord(A))] = AsciiLowCaseLookup[AnsiChar(Ord(B))]
+      Result := AsciiLowCaseLookup[Ord(A)] = AsciiLowCaseLookup[Ord(B)]
     else
       Result := A = B;
 end;
@@ -12349,7 +10889,7 @@ begin
     Result := Ord(A) = Ord(B)
   else
     if (Ord(A) <= $7F) and (Ord(B) <= $7F) then
-      Result := AsciiLowCaseLookup[AnsiChar(Ord(A))] = AsciiLowCaseLookup[AnsiChar(Ord(B))]
+      Result := AsciiLowCaseLookup[Ord(A)] = AsciiLowCaseLookup[Ord(B)]
     else
       Result := Ord(A) = Ord(B);
 end;
@@ -12360,7 +10900,7 @@ begin
     Result := Ord(A) = Ord(B)
   else
     if (Ord(A) <= $7F) and (Ord(B) <= $7F) then
-      Result := AsciiLowCaseLookup[AnsiChar(Ord(A))] = AsciiLowCaseLookup[AnsiChar(Ord(B))]
+      Result := AsciiLowCaseLookup[Ord(A)] = AsciiLowCaseLookup[Ord(B)]
     else
       Result := Ord(A) = Ord(B);
 end;
@@ -12371,7 +10911,7 @@ begin
     Result := A = B
   else
     if (Ord(A) <= $7F) and (Ord(B) <= $7F) then
-      Result := AsciiLowCaseLookup[AnsiChar(Ord(A))] = AsciiLowCaseLookup[AnsiChar(Ord(B))]
+      Result := AsciiLowCaseLookup[Ord(A)] = AsciiLowCaseLookup[Ord(B)]
     else
       Result := A = B;
 end;
@@ -12753,22 +11293,23 @@ begin
 end;
 
 function StrPMatchNoAsciiCaseA(const A, B: PAnsiChar; const Len: Integer): Boolean;
-var P, Q : PAnsiChar;
-    C, D : Integer;
+var P, Q : PByte;
+    C, D : Byte;
     I    : Integer;
 begin
-  P := A;
-  Q := B;
+  P := Pointer(A);
+  Q := Pointer(B);
   if P <> Q then
     for I := 1 to Len do
       begin
-        C := Integer(AsciiLowCaseLookup[P^]);
-        D := Integer(AsciiLowCaseLookup[Q^]);
+        C := AsciiLowCaseLookup[P^];
+        D := AsciiLowCaseLookup[Q^];
         if C = D then
           begin
             Inc(P);
             Inc(Q);
-          end else
+          end
+        else
           begin
             Result := False;
             exit;
@@ -12790,7 +11331,8 @@ begin
           begin
             Inc(P);
             Inc(Q);
-          end else
+          end
+        else
           begin
             Result := False;
             exit;
@@ -12812,7 +11354,8 @@ begin
         begin
           Inc(P);
           Inc(Q);
-        end else
+        end
+      else
         begin
           Result := False;
           exit;
@@ -12834,7 +11377,8 @@ begin
         begin
           Inc(P);
           Inc(Q);
-        end else
+        end
+      else
         begin
           Result := False;
           exit;
@@ -12878,7 +11422,8 @@ begin
           begin
             Inc(P);
             Inc(Q);
-          end else
+          end
+        else
           begin
             Result := False;
             exit;
@@ -14048,9 +12593,9 @@ begin
 end;
 
 function StrZMatchStrNoAsciiCaseA(const P: PAnsiChar; const M: AnsiString): Boolean;
-var T, Q : PAnsiChar;
+var T, Q : PByte;
     I, L : Integer;
-    C, D : AnsiChar;
+    C, D : Byte;
 begin
   L := Length(M);
   if L = 0 then
@@ -14058,12 +12603,12 @@ begin
       Result := False;
       exit;
     end;
-  T := P;
+  T := Pointer(P);
   Q := Pointer(M);
   for I := 1 to L do
     begin
       C := T^;
-      if C = #0 then
+      if C = 0 then
         begin
           Result := False;
           exit;
@@ -14086,9 +12631,9 @@ begin
 end;
 
 function StrZMatchStrNoAsciiCaseB(const P: PAnsiChar; const M: RawByteString): Boolean;
-var T, Q : PAnsiChar;
+var T, Q : PByte;
     I, L : Integer;
-    C, D : AnsiChar;
+    C, D : Byte;
 begin
   L := Length(M);
   if L = 0 then
@@ -14096,12 +12641,12 @@ begin
       Result := False;
       exit;
     end;
-  T := P;
+  T := Pointer(P);
   Q := Pointer(M);
   for I := 1 to L do
     begin
       C := T^;
-      if C = #0 then
+      if C = 0 then
         begin
           Result := False;
           exit;
@@ -14127,7 +12672,7 @@ function StrZMatchStrNoAsciiCaseW(const P: PWideChar; const M: WideString): Bool
 var T, Q : PWideChar;
     I, L : Integer;
     C, D : WideChar;
-    E, F : AnsiChar;
+    E, F : Byte;
 begin
   L := Length(M);
   if L = 0 then
@@ -14153,8 +12698,8 @@ begin
               Result := False;
               exit;
             end;
-          E := AsciiLowCaseLookup[AnsiChar(Ord(C))];
-          F := AsciiLowCaseLookup[AnsiChar(Ord(D))];
+          E := AsciiLowCaseLookup[Ord(C)];
+          F := AsciiLowCaseLookup[Ord(D)];
           if E <> F then
             begin
               Result := False;
@@ -14173,7 +12718,7 @@ var T    : PWideChar;
     I, L : Integer;
     C    : WideChar;
     D    : AnsiChar;
-    E, F : AnsiChar;
+    E, F : Byte;
 begin
   L := Length(M);
   if L = 0 then
@@ -14199,8 +12744,8 @@ begin
               Result := False;
               exit;
             end;
-          E := AsciiLowCaseLookup[AnsiChar(Ord(C))];
-          F := AsciiLowCaseLookup[D];
+          E := AsciiLowCaseLookup[Ord(C)];
+          F := AsciiLowCaseLookup[Ord(D)];
           if E <> F then
             begin
               Result := False;
@@ -14219,7 +12764,7 @@ var T    : PWideChar;
     I, L : Integer;
     C    : WideChar;
     D    : AnsiChar;
-    E, F : AnsiChar;
+    E, F : Byte;
 begin
   L := Length(M);
   if L = 0 then
@@ -14245,8 +12790,8 @@ begin
               Result := False;
               exit;
             end;
-          E := AsciiLowCaseLookup[AnsiChar(Ord(C))];
-          F := AsciiLowCaseLookup[D];
+          E := AsciiLowCaseLookup[Ord(C)];
+          F := AsciiLowCaseLookup[Ord(D)];
           if E <> F then
             begin
               Result := False;
@@ -14263,7 +12808,7 @@ function StrZMatchStrNoAsciiCaseU(const P: PWideChar; const M: UnicodeString): B
 var T, Q : PWideChar;
     I, L : Integer;
     C, D : WideChar;
-    E, F : AnsiChar;
+    E, F : Byte;
 begin
   L := Length(M);
   if L = 0 then
@@ -14289,8 +12834,8 @@ begin
               Result := False;
               exit;
             end;
-          E := AsciiLowCaseLookup[AnsiChar(Ord(C))];
-          F := AsciiLowCaseLookup[AnsiChar(Ord(D))];
+          E := AsciiLowCaseLookup[Ord(C)];
+          F := AsciiLowCaseLookup[Ord(D)];
           if E <> F then
             begin
               Result := False;
@@ -14307,7 +12852,7 @@ function StrZMatchStrNoAsciiCase(const P: PChar; const M: String): Boolean;
 var T, Q : PChar;
     I, L : Integer;
     C, D : Char;
-    E, F : AnsiChar;
+    E, F : Byte;
 begin
   L := Length(M);
   if L = 0 then
@@ -14335,8 +12880,8 @@ begin
               exit;
             end;
           {$ENDIF}
-          E := AsciiLowCaseLookup[AnsiChar(Ord(C))];
-          F := AsciiLowCaseLookup[AnsiChar(Ord(D))];
+          E := AsciiLowCaseLookup[Ord(C)];
+          F := AsciiLowCaseLookup[Ord(D)];
           if E <> F then
             begin
               Result := False;
@@ -15151,7 +13696,7 @@ var P : PAnsiChar;
 begin
   P := PAnsiChar(S);
   M := PAnsiChar(F);
-  for I := MaxI(1, StartIndex) to Length(S) do
+  for I := MaxInt(1, StartIndex) to Length(S) do
     begin
       Len := StrZMatchPatternA(M, P, G);
       if Len >= 0 then
@@ -15173,7 +13718,7 @@ var P : PWideChar;
 begin
   P := PWideChar(S);
   M := PWideChar(F);
-  for I := MaxI(1, StartIndex) to Length(S) do
+  for I := MaxInt(1, StartIndex) to Length(S) do
     begin
       Len := StrZMatchPatternW(M, P, G);
       if Len >= 0 then
@@ -15195,7 +13740,7 @@ var P : PWideChar;
 begin
   P := PWideChar(S);
   M := PWideChar(F);
-  for I := MaxI(1, StartIndex) to Length(S) do
+  for I := MaxInt(1, StartIndex) to Length(S) do
     begin
       Len := StrZMatchPatternW(M, P, G);
       if Len >= 0 then
@@ -20210,7 +18755,7 @@ begin
   if Cut then
     L := Len
   else
-    L := MaxI(Len, M);
+    L := MaxInt(Len, M);
   P := L - M;
   if P < 0 then
     P := 0;
@@ -20253,7 +18798,7 @@ begin
   if Cut then
     L := Len
   else
-    L := MaxI(Len, M);
+    L := MaxInt(Len, M);
   P := L - M;
   if P < 0 then
     P := 0;
@@ -20296,7 +18841,7 @@ begin
   if Cut then
     L := Len
   else
-    L := MaxI(Len, M);
+    L := MaxInt(Len, M);
   P := L - M;
   if P < 0 then
     P := 0;
@@ -20339,7 +18884,7 @@ begin
   if Cut then
     L := Len
   else
-    L := MaxI(Len, M);
+    L := MaxInt(Len, M);
   P := L - M;
   if P < 0 then
     P := 0;
@@ -20382,7 +18927,7 @@ begin
   if Cut then
     L := Len
   else
-    L := MaxI(Len, M);
+    L := MaxInt(Len, M);
   P := L - M;
   if P < 0 then
     P := 0;
@@ -20461,7 +19006,7 @@ begin
   if Cut then
     L := Len
   else
-    L := MaxI(Len, M);
+    L := MaxInt(Len, M);
   P := L - M;
   if P < 0 then
     P := 0;
@@ -20503,7 +19048,7 @@ begin
   if Cut then
     L := Len
   else
-    L := MaxI(Len, M);
+    L := MaxInt(Len, M);
   P := L - M;
   if P < 0 then
     P := 0;
@@ -20545,7 +19090,7 @@ begin
   if Cut then
     L := Len
   else
-    L := MaxI(Len, M);
+    L := MaxInt(Len, M);
   P := L - M;
   if P < 0 then
     P := 0;
@@ -20587,7 +19132,7 @@ begin
   if Cut then
     L := Len
   else
-    L := MaxI(Len, M);
+    L := MaxInt(Len, M);
   P := L - M;
   if P < 0 then
     P := 0;
@@ -20629,7 +19174,7 @@ begin
   if Cut then
     L := Len
   else
-    L := MaxI(Len, M);
+    L := MaxInt(Len, M);
   P := L - M;
   if P < 0 then
     P := 0;
@@ -27337,7 +25882,7 @@ begin
   if StopIndex < 0 then
     Stop := Length(S)
   else
-    Stop := MinI(StopIndex, Length(S));
+    Stop := MinInt(StopIndex, Length(S));
   MatchPos := 0;
   if (Length(MatchSeq) = 0) or (StartIndex > Stop) or (StartIndex <= 0) then
     begin
@@ -27622,7 +26167,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Length(V) - 1;
@@ -27648,7 +26193,7 @@ begin
             Result := -1;
     end else
     begin // linear search
-      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
         if StrEqualNoAsciiCaseA(V[I], Find) then
           begin
             Result := I;
@@ -27664,7 +26209,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Length(V) - 1;
@@ -27690,7 +26235,7 @@ begin
             Result := -1;
     end else
     begin // linear search
-      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
         if StrEqualNoAsciiCaseB(V[I], Find) then
           begin
             Result := I;
@@ -27706,7 +26251,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Length(V) - 1;
@@ -27732,7 +26277,7 @@ begin
             Result := -1;
     end else
     begin // linear search
-      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
         if StrEqualNoAsciiCaseU(V[I], Find) then
           begin
             Result := I;

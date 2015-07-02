@@ -2,8 +2,8 @@
 {                                                                              }
 {   Library:          Fundamentals 4.00                                        }
 {   File name:        cUtils.pas                                               }
-{   File version:     4.55                                                     }
-{   Description:      Utility functions for simple data types                  }
+{   File version:     4.57                                                     }
+{   Description:      Simple data types: Definitions and utility functions.    }
 {                                                                              }
 {   Copyright:        Copyright (c) 2000-2015, David J Butler                  }
 {                     All rights reserved.                                     }
@@ -103,6 +103,8 @@
 {   2013/05/12  4.53  Added string type definitions.                           }
 {   2013/11/15  4.54  Revision.                                                }
 {   2015/03/13  4.55  RawByteString functions.                                 }
+{   2015/05/06  4.56  Add UTF functions from unit cUnicodeCodecs.              }
+{   2015/06/07  4.57  Moved bit functions to unit cBits32.                     }
 {                                                                              }
 { Supported compilers:                                                         }
 {                                                                              }
@@ -117,12 +119,14 @@
 {   Delphi XE2 Win64                    4.54  2014/01/31                       }
 {   Delphi XE3 Win64                    4.51  2013/01/29                       }
 {   Delphi XE7 Win32                    4.54  2014/12/28                       }
-{   Delphi XE7 Win64                    4.55  2015/03/13                       }
+{   Delphi XE7 Win64                    4.56  2015/05/06                       }
 {   FreePascal 2.0.4 Linux i386                                                }
 {   FreePascal 2.4.0 OSX x86-64         4.46  2010/06/27                       }
 {   FreePascal 2.6.0 Win32              4.50  2012/08/30                       }
 {   FreePascal 2.6.2 Linux x64          4.55  2015/04/01                       }
 {                                                                              }
+{ Todo:                                                                        }
+{ - F5 cSystem/cSysUtils.                                                      }
 {******************************************************************************}
 
 {$INCLUDE ..\cFundamentals.inc}
@@ -164,7 +168,7 @@ const
 {   Byte        unsigned 8 bits           ShortInt   signed 8 bits             }
 {   Word        unsigned 16 bits          SmallInt   signed 16 bits            }
 {   LongWord    unsigned 32 bits          LongInt    signed 32 bits            }
-{   -                                     Int64      signed 64 bits            }
+{   UInt64      unsigned 64 bits          Int64      signed 64 bits            }
 {   Cardinal    unsigned 32 bits          Integer    signed 32 bits            }
 {   NativeUInt  unsigned system word      NativeInt  signed system word        }
 {                                                                              }
@@ -184,8 +188,6 @@ type
   Word16    = UInt16;
   Word32    = UInt32;
   Word64    = UInt64;
-
-  LargeInt  = Int64;
 
   {$IFNDEF SupportNativeInt}
   {$IFDEF CPU_X86_64}
@@ -225,8 +227,6 @@ type
   PInt8     = ^Int8;
   PInt16    = ^Int16;
   PInt32    = ^Int32;
-
-  PLargeInt = ^LargeInt;
 
   PWord8    = ^Word8;
   PWord16   = ^Word16;
@@ -284,24 +284,6 @@ const
   NativeWordSize    = SizeOf(NativeInt);
   BitsPerNativeWord = NativeWordSize * 8;
 
-{ Min returns smallest of A and B                                              }
-{ Max returns greatest of A and B                                              }
-function  MinI(const A, B: Integer): Integer;   {$IFDEF UseInline}inline;{$ENDIF}
-function  MaxI(const A, B: Integer): Integer;   {$IFDEF UseInline}inline;{$ENDIF}
-function  MinC(const A, B: Cardinal): Cardinal; {$IFDEF UseInline}inline;{$ENDIF}
-function  MaxC(const A, B: Cardinal): Cardinal; {$IFDEF UseInline}inline;{$ENDIF}
-
-{ Clip returns Value if in Low..High range, otherwise Low or High              }
-function  Clip(const Value: LongInt; const Low, High: LongInt): LongInt; overload; {$IFDEF UseInline}inline;{$ENDIF}
-function  Clip(const Value: Int64; const Low, High: Int64): Int64; overload;       {$IFDEF UseInline}inline;{$ENDIF}
-function  ClipByte(const Value: LongInt): LongInt; overload;                       {$IFDEF UseInline}inline;{$ENDIF}
-function  ClipByte(const Value: Int64): Int64; overload;                           {$IFDEF UseInline}inline;{$ENDIF}
-function  ClipWord(const Value: LongInt): LongInt; overload;                       {$IFDEF UseInline}inline;{$ENDIF}
-function  ClipWord(const Value: Int64): Int64; overload;                           {$IFDEF UseInline}inline;{$ENDIF}
-function  ClipLongWord(const Value: Int64): LongWord;                              {$IFDEF UseInline}inline;{$ENDIF}
-function  SumClipI(const A, I: Integer): Integer;
-function  SumClipC(const A: Cardinal; const I: Integer): Cardinal;
-
 
 
 {                                                                              }
@@ -329,161 +311,6 @@ type
   PBool8    = ^Bool8;
   PBool16   = ^Bool16;
   PBool32   = ^Bool32;
-
-
-
-{                                                                              }
-{ String types                                                                 }
-{                                                                              }
-
-{                                                                              }
-{ AnsiString                                                                   }
-{   AnsiChar is a byte character.                                              }
-{   AnsiString is a reference counted, code page aware, byte string.           }
-{                                                                              }
-{$IFNDEF SupportAnsiChar}
-type
-  AnsiChar = type Byte;
-  PAnsiChar = ^AnsiChar;
-{$ENDIF}
-
-{$IFNDEF SupportAnsiString}
-type
-  AnsiString = array of AnsiChar;
-{$ENDIF}
-
-{$IFNDEF SupportAnsiString}
-const
-  StrEmptyA = AnsiString(nil);
-{$ELSE}
-const
-  StrEmptyA = '';
-{$ENDIF}
-
-
-
-{                                                                              }
-{ RawByteString                                                                }
-{   RawByteString is an alias for AnsiString where all bytes are raw bytes     }
-{   that do not undergo any character set translation.                         }
-{   Under Delphi 2009 RawByteString is defined as "type AnsiString($FFFF)".    }
-{                                                                              }
-type
-  RawByteChar = AnsiChar;
-  PRawByteChar = ^RawByteChar;
-  {$IFNDEF SupportRawByteString}
-  RawByteString = AnsiString;
-  PRawByteString = ^RawByteString;
-  {$ENDIF}
-  RawByteCharSet = set of RawByteChar;
-
-const
-  StrEmptyB = '';
-
-
-
-{                                                                              }
-{ UTF8String                                                                   }
-{   UTF8String is a variable character length encoding for Unicode strings.    }
-{   For Ascii values, a UTF8String is the same as a AsciiString.               }
-{   Under Delphi 2009 UTF8String is defined as "type AnsiString($FDE9)"        }
-{                                                                              }
-type
-  {$IFNDEF SupportUTF8String}
-  UTF8Char = AnsiChar;
-  PUTF8Char = ^UTF8Char;
-  UTF8String = AnsiString;
-  PUTF8String = ^UTF8String;
-  {$ENDIF}
-  UTF8StringArray = array of UTF8String;
-
-
-
-{                                                                              }
-{ AsciiString                                                                  }
-{   AsciiString is an alias for AnsiString where all bytes are from Ascii.     }
-{                                                                              }
-type
-  AsciiChar = AnsiChar;
-  PAsciiChar = ^AsciiChar;
-  AsciiString = AnsiString;
-  AsciiCharSet = set of AsciiChar;
-  AsciiStringArray = array of AsciiString;
-
-
-
-{                                                                              }
-{ WideString                                                                   }
-{   WideChar is a 16-bit character.                                            }
-{   WideString is not reference counted.                                       }
-{                                                                              }
-{$IFNDEF SupportWideChar}
-type
-  WideChar = type Word;
-  PWideChar = ^WideChar;
-{$ENDIF}
-
-{$IFNDEF SupportWideString}
-type
-  WideString = array of WideChar;
-{$ENDIF}
-
-type
-  TWideCharMatchFunction = function (const Ch: WideChar): Boolean;
-
-{$IFNDEF SupportWideString}
-const
-  StrEmptyW = WideString(nil);
-{$ELSE}
-const
-  StrEmptyW = '';
-{$ENDIF}
-
-
-
-{                                                                              }
-{ UnicodeString                                                                }
-{   UnicodeString in Delphi 2009 is reference counted, code page aware,        }
-{   variable character length unicode string. Defaults to UTF-16 encoding.     }
-{   WideString is not reference counted.                                       }
-{                                                                              }
-type
-  UnicodeChar = WideChar;
-  PUnicodeChar = ^UnicodeChar;
-  {$IFNDEF SupportUnicodeString}
-  UnicodeString = WideString;
-  PUnicodeString = ^UnicodeString;
-  {$ENDIF}
-
-
-
-{                                                                              }
-{ UCS4String                                                                   }
-{   UCS4Char is a 32-bit character from the Unicode character set.             }
-{   UCS4String is a reference counted string of UCS4Char characters.           }
-{                                                                              }
-type
-  {$IFNDEF SupportUCS4String}
-  UCS4Char = type LongWord;
-  PUCS4Char = ^UCS4Char;
-  UCS4String = array of UCS4Char;
-  {$ENDIF}
-  UCS4StringArray = array of UCS4String;
-
-
-
-{                                                                              }
-{ Comparison                                                                   }
-{                                                                              }
-type
-  TCompareResult = (
-      crLess,
-      crEqual,
-      crGreater,
-      crUndefined);
-  TCompareResultSet = set of TCompareResult;
-
-function  ReverseCompareResult(const C: TCompareResult): TCompareResult;
 
 
 
@@ -550,6 +377,226 @@ const
   ExtendedInfinity : ExtendedRec = (Mantissa:($00000000, $80000000); Exponent:$7FFF);
 {$ENDIF}
 {$ENDIF}
+
+
+
+{                                                                              }
+{ String types                                                                 }
+{                                                                              }
+{   AnsiString                                                                 }
+{   RawByteString                                                              }
+{   UTF8String                                                                 }
+{   AsciiString                                                                }
+{   WideString                                                                 }
+{   UnicodeString                                                              }
+{   UCS4String                                                                 }
+{                                                                              }
+
+
+
+{                                                                              }
+{ AnsiString                                                                   }
+{   AnsiChar is a byte character.                                              }
+{   AnsiString is a reference counted, code page aware, byte string.           }
+{                                                                              }
+{$IFNDEF SupportAnsiChar}
+type
+  AnsiChar = Byte;
+  PAnsiChar = ^AnsiChar;
+{$DEFINE AnsiCharIsOrd}
+{$ENDIF}
+
+{$IFNDEF SupportAnsiString}
+type
+  AnsiString = array of AnsiChar;
+{$DEFINE AnsiStringIsArray}
+{$ENDIF}
+
+{$IFNDEF SupportAnsiString}
+const
+  StrEmptyA = nil;
+  StrBaseA = 0;
+{$ELSE}
+const
+  StrEmptyA = '';
+  StrBaseA = 1;
+{$ENDIF}
+
+
+
+{                                                                              }
+{ RawByteString                                                                }
+{   RawByteString is an alias for AnsiString where all bytes are raw bytes     }
+{   that do not undergo any character set translation.                         }
+{   Under Delphi 2009 RawByteString is defined as "type AnsiString($FFFF)".    }
+{                                                                              }
+type
+  RawByteChar = AnsiChar;
+  PRawByteChar = ^RawByteChar;
+  {$IFNDEF SupportRawByteString}
+  RawByteString = AnsiString;
+  PRawByteString = ^RawByteString;
+  {$ENDIF}
+  RawByteCharSet = set of RawByteChar;
+
+const
+  StrEmptyB = StrEmptyA;
+  StrBaseB  = StrBaseA;
+
+
+
+{                                                                              }
+{ UTF8String                                                                   }
+{   UTF8String is a variable character length encoding for Unicode strings.    }
+{   For Ascii values, a UTF8String is the same as a AsciiString.               }
+{   Under Delphi 2009 UTF8String is defined as "type AnsiString($FDE9)"        }
+{                                                                              }
+type
+  {$IFNDEF SupportUTF8String}
+  UTF8Char = AnsiChar;
+  PUTF8Char = ^UTF8Char;
+  UTF8String = AnsiString;
+  PUTF8String = ^UTF8String;
+  {$ENDIF}
+  UTF8StringArray = array of UTF8String;
+
+
+
+{                                                                              }
+{ AsciiString                                                                  }
+{   AsciiString is an alias for AnsiString where all bytes are from Ascii.     }
+{                                                                              }
+type
+  AsciiChar = AnsiChar;
+  PAsciiChar = ^AsciiChar;
+  AsciiString = AnsiString;
+  AsciiCharSet = set of AsciiChar;
+  AsciiStringArray = array of AsciiString;
+
+
+
+{                                                                              }
+{ WideString                                                                   }
+{   WideChar is a 16-bit character.                                            }
+{   WideString is not reference counted.                                       }
+{                                                                              }
+{$IFNDEF SupportWideChar}
+type
+  WideChar = Word;
+  PWideChar = ^WideChar;
+{$DEFINE WideCharIsOrd}
+{$ENDIF}
+
+{$IFNDEF SupportWideString}
+type
+  WideString = array of WideChar;
+{$DEFINE WideStringIsArray}
+{$ENDIF}
+
+type
+  TWideCharMatchFunction = function (const Ch: WideChar): Boolean;
+
+{$IFNDEF SupportWideString}
+const
+  StrEmptyW = nil;
+  StrBaseW = 0;
+{$ELSE}
+const
+  StrEmptyW = '';
+  StrBaseW = 1;
+{$ENDIF}
+
+
+
+{                                                                              }
+{ UnicodeString                                                                }
+{   UnicodeString in Delphi 2009 is reference counted, code page aware,        }
+{   variable character length unicode string. Defaults to UTF-16 encoding.     }
+{   WideString is not reference counted.                                       }
+{                                                                              }
+type
+  UnicodeChar = WideChar;
+  PUnicodeChar = ^UnicodeChar;
+  {$IFNDEF SupportUnicodeString}
+  UnicodeString = WideString;
+  PUnicodeString = ^UnicodeString;
+  {$ENDIF}
+
+
+
+{                                                                              }
+{ UCS4String                                                                   }
+{   UCS4Char is a 32-bit character from the Unicode character set.             }
+{   UCS4String is a reference counted string of UCS4Char characters.           }
+{                                                                              }
+type
+  {$IFNDEF SupportUCS4String}
+  UCS4Char = LongWord;
+  PUCS4Char = ^UCS4Char;
+  UCS4String = array of UCS4Char;
+  {$ENDIF}
+  UCS4StringArray = array of UCS4String;
+
+const
+  UCS4_STRING_TERMINATOR = $9C;
+  UCS4_LF                = $0A;
+  UCS4_CR                = $0D;
+
+
+
+{                                                                              }
+{ TBytes                                                                       }
+{   TBytes is a dynamic array of bytes.                                        }
+{                                                                              }
+{$IFNDEF TBytesDeclared}
+type
+  TBytes = array of Byte;
+{$ENDIF}
+
+
+
+{                                                                              }
+{ Compare result                                                               }
+{   Generic compare result enumeration.                                        }
+{                                                                              }
+type
+  TCompareResult = (
+      crLess,
+      crEqual,
+      crGreater,
+      crUndefined
+      );
+  TCompareResultSet = set of TCompareResult;
+
+function InverseCompareResult(const C: TCompareResult): TCompareResult;
+
+
+
+{                                                                              }
+{ Integer functions                                                            }
+{                                                                              }
+
+{ Min returns smallest of A and B                                              }
+{ Max returns greatest of A and B                                              }
+function  MinInt(const A, B: Integer): Integer;   {$IFDEF UseInline}inline;{$ENDIF}
+function  MaxInt(const A, B: Integer): Integer;   {$IFDEF UseInline}inline;{$ENDIF}
+function  MinCrd(const A, B: Cardinal): Cardinal; {$IFDEF UseInline}inline;{$ENDIF}
+function  MaxCrd(const A, B: Cardinal): Cardinal; {$IFDEF UseInline}inline;{$ENDIF}
+
+{ Bounded returns Value if in Min..Max range, otherwise Min or Max             }
+function  Int32Bounded(const Value: LongInt; const Min, Max: LongInt): LongInt; {$IFDEF UseInline}inline;{$ENDIF}
+function  Int64Bounded(const Value: Int64; const Min, Max: Int64): Int64;       {$IFDEF UseInline}inline;{$ENDIF}
+function  Int32BoundedByte(const Value: LongInt): LongInt;                      {$IFDEF UseInline}inline;{$ENDIF}
+function  Int64BoundedByte(const Value: Int64): Int64;                          {$IFDEF UseInline}inline;{$ENDIF}
+function  Int32BoundedWord(const Value: LongInt): LongInt;                      {$IFDEF UseInline}inline;{$ENDIF}
+function  Int64BoundedWord(const Value: Int64): Int64;                          {$IFDEF UseInline}inline;{$ENDIF}
+function  Int64BoundedLongWord(const Value: Int64): LongWord;                   {$IFDEF UseInline}inline;{$ENDIF}
+
+
+
+{                                                                              }
+{ Float functions                                                              }
+{                                                                              }
 
 { Min returns smallest of A and B                                              }
 { Max returns greatest of A and B                                              }
@@ -675,66 +722,420 @@ function  FloatApproxCompare(const A, B: Float;
 
 
 {                                                                              }
-{ Bit functions                                                                }
+{ ASCII constants                                                              }
 {                                                                              }
-function  ClearBit32(const Value, BitIndex: Word32): Word32;
-function  SetBit32(const Value, BitIndex: Word32): Word32;
-function  IsBitSet32(const Value, BitIndex: Word32): Boolean;
-function  ToggleBit32(const Value, BitIndex: Word32): Word32;
-function  IsHighBitSet32(const Value: Word32): Boolean;
-
-function  SetBitScanForward32(const Value: Word32): Integer; overload;
-function  SetBitScanForward32(const Value, BitIndex: Word32): Integer; overload;
-function  SetBitScanReverse32(const Value: Word32): Integer; overload;
-function  SetBitScanReverse32(const Value, BitIndex: Word32): Integer; overload;
-function  ClearBitScanForward32(const Value: Word32): Integer; overload;
-function  ClearBitScanForward32(const Value, BitIndex: Word32): Integer; overload;
-function  ClearBitScanReverse32(const Value: Word32): Integer; overload;
-function  ClearBitScanReverse32(const Value, BitIndex: Word32): Integer; overload;
-
-function  ReverseBits32(const Value: Word32): Word32; overload;
-function  ReverseBits32(const Value: Word32; const BitCount: Integer): Word32; overload;
-function  SwapEndian32(const Value: Word32): Word32;
-{$IFDEF ManagedCode}
-procedure SwapEndianBuf32(var Buf: array of Word32);
-{$ELSE}
-procedure SwapEndianBuf32(var Buf; const Count: Integer);
-{$ENDIF}
-function  TwosComplement32(const Value: Word32): Word32;
-
-function  RotateLeftBits16(const Value: Word; const Bits: Byte): Word;
-function  RotateLeftBits32(const Value: Word32; const Bits: Byte): Word32;
-function  RotateRightBits16(const Value: Word; const Bits: Byte): Word;
-function  RotateRightBits32(const Value: Word32; const Bits: Byte): Word32;
-
-function  BitCount32(const Value: Word32): Word32;
-function  IsPowerOfTwo32(const Value: Word32): Boolean;
-
-function  LowBitMask32(const HighBitIndex: Word32): Word32;
-function  HighBitMask32(const LowBitIndex: Word32): Word32;
-function  RangeBitMask32(const LowBitIndex, HighBitIndex: Word32): Word32;
-
-function  SetBitRange32(const Value: Word32;
-          const LowBitIndex, HighBitIndex: Word32): Word32;
-function  ClearBitRange32(const Value: Word32;
-          const LowBitIndex, HighBitIndex: Word32): Word32;
-function  ToggleBitRange32(const Value: Word32;
-          const LowBitIndex, HighBitIndex: Word32): Word32;
-function  IsBitRangeSet32(const Value: Word32;
-          const LowBitIndex, HighBitIndex: Word32): Boolean;
-function  IsBitRangeClear32(const Value: Word32;
-          const LowBitIndex, HighBitIndex: Word32): Boolean;
-
 const
-  BitMaskTable32: array[0..31] of Word32 =
-    ($00000001, $00000002, $00000004, $00000008,
-     $00000010, $00000020, $00000040, $00000080,
-     $00000100, $00000200, $00000400, $00000800,
-     $00001000, $00002000, $00004000, $00008000,
-     $00010000, $00020000, $00040000, $00080000,
-     $00100000, $00200000, $00400000, $00800000,
-     $01000000, $02000000, $04000000, $08000000,
-     $10000000, $20000000, $40000000, $80000000);
+  AsciiNULL = AsciiChar(#0);
+  AsciiSOH  = AsciiChar(#1);
+  AsciiSTX  = AsciiChar(#2);
+  AsciiETX  = AsciiChar(#3);
+  AsciiEOT  = AsciiChar(#4);
+  AsciiENQ  = AsciiChar(#5);
+  AsciiACK  = AsciiChar(#6);
+  AsciiBEL  = AsciiChar(#7);
+  AsciiBS   = AsciiChar(#8);
+  AsciiHT   = AsciiChar(#9);
+  AsciiLF   = AsciiChar(#10);
+  AsciiVT   = AsciiChar(#11);
+  AsciiFF   = AsciiChar(#12);
+  AsciiCR   = AsciiChar(#13);
+  AsciiSO   = AsciiChar(#14);
+  AsciiSI   = AsciiChar(#15);
+  AsciiDLE  = AsciiChar(#16);
+  AsciiDC1  = AsciiChar(#17);
+  AsciiDC2  = AsciiChar(#18);
+  AsciiDC3  = AsciiChar(#19);
+  AsciiDC4  = AsciiChar(#20);
+  AsciiNAK  = AsciiChar(#21);
+  AsciiSYN  = AsciiChar(#22);
+  AsciiETB  = AsciiChar(#23);
+  AsciiCAN  = AsciiChar(#24);
+  AsciiEM   = AsciiChar(#25);
+  AsciiEOF  = AsciiChar(#26);
+  AsciiESC  = AsciiChar(#27);
+  AsciiFS   = AsciiChar(#28);
+  AsciiGS   = AsciiChar(#29);
+  AsciiRS   = AsciiChar(#30);
+  AsciiUS   = AsciiChar(#31);
+  AsciiSP   = AsciiChar(#32);
+  AsciiDEL  = AsciiChar(#127);
+  AsciiXON  = AsciiDC1;
+  AsciiXOFF = AsciiDC3;
+
+  AsciiCRLF = AsciiCR + AsciiLF;
+
+  AsciiDecimalPoint = AsciiChar(#46);
+  AsciiComma        = AsciiChar(#44);
+  AsciiBackSlash    = AsciiChar(#92);
+  AsciiForwardSlash = AsciiChar(#47);
+  AsciiPercent      = AsciiChar(#37);
+  AsciiAmpersand    = AsciiChar(#38);
+  AsciiPlus         = AsciiChar(#43);
+  AsciiMinus        = AsciiChar(#45);
+  AsciiEqualSign    = AsciiChar(#61);
+  AsciiSingleQuote  = AsciiChar(#39);
+  AsciiDoubleQuote  = AsciiChar(#34);
+
+  AsciiDigit0 = AsciiChar(#48);
+  AsciiDigit9 = AsciiChar(#57);
+  AsciiUpperA = AsciiChar(#65);
+  AsciiUpperZ = AsciiChar(#90);
+  AsciiLowerA = AsciiChar(#97);
+  AsciiLowerZ = AsciiChar(#122);
+
+  AsciiLowCaseLookup: array[Byte] of Byte = (
+    $00, $01, $02, $03, $04, $05, $06, $07,
+    $08, $09, $0A, $0B, $0C, $0D, $0E, $0F,
+    $10, $11, $12, $13, $14, $15, $16, $17,
+    $18, $19, $1A, $1B, $1C, $1D, $1E, $1F,
+    $20, $21, $22, $23, $24, $25, $26, $27,
+    $28, $29, $2A, $2B, $2C, $2D, $2E, $2F,
+    $30, $31, $32, $33, $34, $35, $36, $37,
+    $38, $39, $3A, $3B, $3C, $3D, $3E, $3F,
+    $40, $61, $62, $63, $64, $65, $66, $67,
+    $68, $69, $6A, $6B, $6C, $6D, $6E, $6F,
+    $70, $71, $72, $73, $74, $75, $76, $77,
+    $78, $79, $7A, $5B, $5C, $5D, $5E, $5F,
+    $60, $61, $62, $63, $64, $65, $66, $67,
+    $68, $69, $6A, $6B, $6C, $6D, $6E, $6F,
+    $70, $71, $72, $73, $74, $75, $76, $77,
+    $78, $79, $7A, $7B, $7C, $7D, $7E, $7F,
+    $80, $81, $82, $83, $84, $85, $86, $87,
+    $88, $89, $8A, $8B, $8C, $8D, $8E, $8F,
+    $90, $91, $92, $93, $94, $95, $96, $97,
+    $98, $99, $9A, $9B, $9C, $9D, $9E, $9F,
+    $A0, $A1, $A2, $A3, $A4, $A5, $A6, $A7,
+    $A8, $A9, $AA, $AB, $AC, $AD, $AE, $AF,
+    $B0, $B1, $B2, $B3, $B4, $B5, $B6, $B7,
+    $B8, $B9, $BA, $BB, $BC, $BD, $BE, $BF,
+    $C0, $C1, $C2, $C3, $C4, $C5, $C6, $C7,
+    $C8, $C9, $CA, $CB, $CC, $CD, $CE, $CF,
+    $D0, $D1, $D2, $D3, $D4, $D5, $D6, $D7,
+    $D8, $D9, $DA, $DB, $DC, $DD, $DE, $DF,
+    $E0, $E1, $E2, $E3, $E4, $E5, $E6, $E7,
+    $E8, $E9, $EA, $EB, $EC, $ED, $EE, $EF,
+    $F0, $F1, $F2, $F3, $F4, $F5, $F6, $F7,
+    $F8, $F9, $FA, $FB, $FC, $FD, $FE, $FF);
+
+
+
+{                                                                              }
+{ WideChar constants                                                           }
+{                                                                              }
+const
+  WideNULL = WideChar(#0);
+  WideSOH  = WideChar(#1);
+  WideSTX  = WideChar(#2);
+  WideETX  = WideChar(#3);
+  WideEOT  = WideChar(#4);
+  WideENQ  = WideChar(#5);
+  WideACK  = WideChar(#6);
+  WideBEL  = WideChar(#7);
+  WideBS   = WideChar(#8);
+  WideHT   = WideChar(#9);
+  WideLF   = WideChar(#10);
+  WideVT   = WideChar(#11);
+  WideFF   = WideChar(#12);
+  WideCR   = WideChar(#13);
+  WideSO   = WideChar(#14);
+  WideSI   = WideChar(#15);
+  WideDLE  = WideChar(#16);
+  WideDC1  = WideChar(#17);
+  WideDC2  = WideChar(#18);
+  WideDC3  = WideChar(#19);
+  WideDC4  = WideChar(#20);
+  WideNAK  = WideChar(#21);
+  WideSYN  = WideChar(#22);
+  WideETB  = WideChar(#23);
+  WideCAN  = WideChar(#24);
+  WideEM   = WideChar(#25);
+  WideEOF  = WideChar(#26);
+  WideESC  = WideChar(#27);
+  WideFS   = WideChar(#28);
+  WideGS   = WideChar(#29);
+  WideRS   = WideChar(#30);
+  WideUS   = WideChar(#31);
+  WideSP   = WideChar(#32);
+  WideDEL  = WideChar(#127);
+  WideXON  = WideDC1;
+  WideXOFF = WideDC3;
+
+  WideSingleQuote = WideChar('''');
+  WideDoubleQuote = WideChar('"');
+
+  WideNoBreakSpace       = WideChar(#$00A0);
+  WideLineSeparator      = WideChar(#$2028);
+  WideParagraphSeparator = WideChar(#$2029);
+
+  WideBOM_MSB_First      = WideChar(#$FFFE);
+  WideBOM_LSB_First      = WideChar(#$FEFF);
+
+  WideObjectReplacement  = WideChar(#$FFFC);
+  WideCharReplacement    = WideChar(#$FFFD);
+  WideInvalid            = WideChar(#$FFFF);
+
+  WideCopyrightSign      = WideChar(#$00A9);
+  WideRegisteredSign     = WideChar(#$00AE);
+
+  WideHighSurrogateFirst        = WideChar(#$D800);
+  WideHighSurrogateLast         = WideChar(#$DB7F);
+  WideLowSurrogateFirst         = WideChar(#$DC00);
+  WideLowSurrogateLast          = WideChar(#$DFFF);
+  WidePrivateHighSurrogateFirst = WideChar(#$DB80);
+  WidePrivateHighSurrogateLast  = WideChar(#$DBFF);
+
+
+
+{                                                                              }
+{ ASCII functions                                                              }
+{                                                                              }
+function  IsAsciiCharA(const C: AnsiChar): Boolean; {$IFDEF UseInline}inline;{$ENDIF}
+function  IsAsciiCharW(const C: WideChar): Boolean; {$IFDEF UseInline}inline;{$ENDIF}
+function  IsAsciiChar(const C: Char): Boolean;      {$IFDEF UseInline}inline;{$ENDIF}
+
+function  IsAsciiBufB(const S: Pointer; const Len: Integer): Boolean;
+function  IsAsciiBufW(const Buf: Pointer; const Len: Integer): Boolean;
+
+function  IsAsciiStringA(const S: AnsiString): Boolean;    {$IFDEF UseInline}inline;{$ENDIF}
+function  IsAsciiStringB(const S: RawByteString): Boolean; {$IFDEF UseInline}inline;{$ENDIF}
+function  IsAsciiStringW(const S: WideString): Boolean;    {$IFDEF UseInline}inline;{$ENDIF}
+function  IsAsciiStringU(const S: UnicodeString): Boolean; {$IFDEF UseInline}inline;{$ENDIF}
+function  IsAsciiString(const S: String): Boolean;         {$IFDEF UseInline}inline;{$ENDIF}
+
+function  AsciiHexCharValue(const C: AnsiChar): Integer;
+function  AsciiHexCharValueW(const C: WideChar): Integer;
+
+function  AsciiIsHexChar(const C: AnsiChar): Boolean;
+function  AsciiIsHexCharW(const C: WideChar): Boolean;
+
+function  AsciiDecimalCharValue(const C: AnsiChar): Integer;
+function  AsciiDecimalCharValueW(const C: WideChar): Integer;
+
+function  AsciiIsDecimalChar(const C: AnsiChar): Boolean;
+function  AsciiIsDecimalCharW(const C: WideChar): Boolean;
+
+function  AsciiOctalCharValue(const C: AnsiChar): Integer;
+function  AsciiOctalCharValueW(const C: WideChar): Integer;
+
+function  AsciiIsOctalChar(const C: AnsiChar): Boolean;
+function  AsciiIsOctalCharW(const C: WideChar): Boolean;
+
+
+
+{                                                                              }
+{ ASCII case conversion                                                        }
+{                                                                              }
+function  AsciiLowCaseA(const C: AnsiChar): AnsiChar;
+function  AsciiLowCaseW(const C: WideChar): WideChar;
+function  AsciiLowCase(const C: Char): Char;
+
+function  AsciiUpCaseA(const C: AnsiChar): AnsiChar;
+function  AsciiUpCaseW(const C: WideChar): WideChar;
+function  AsciiUpCase(const C: Char): Char;
+
+procedure AsciiConvertUpperA(var S: AnsiString);
+procedure AsciiConvertUpperB(var S: RawByteString);
+procedure AsciiConvertUpperW(var S: WideString);
+procedure AsciiConvertUpperU(var S: UnicodeString);
+procedure AsciiConvertUpper(var S: String);
+
+procedure AsciiConvertLowerA(var S: AnsiString);
+procedure AsciiConvertLowerB(var S: RawByteString);
+procedure AsciiConvertLowerW(var S: WideString);
+procedure AsciiConvertLowerU(var S: UnicodeString);
+procedure AsciiConvertLower(var S: String);
+
+function  AsciiUpperCaseA(const A: AnsiString): AnsiString;
+function  AsciiUpperCaseB(const A: RawByteString): RawByteString;
+function  AsciiUpperCaseW(const A: WideString): WideString;
+function  AsciiUpperCaseU(const A: UnicodeString): UnicodeString;
+function  AsciiUpperCase(const A: String): String;
+
+function  AsciiLowerCaseA(const A: AnsiString): AnsiString;
+function  AsciiLowerCaseB(const A: RawByteString): RawByteString;
+function  AsciiLowerCaseW(const A: WideString): WideString;
+function  AsciiLowerCaseU(const A: UnicodeString): UnicodeString;
+function  AsciiLowerCase(const A: String): String;
+
+procedure AsciiConvertFirstUpA(var S: AnsiString);
+procedure AsciiConvertFirstUpB(var S: RawByteString);
+procedure AsciiConvertFirstUpW(var S: WideString);
+procedure AsciiConvertFirstUp(var S: String);
+
+function  AsciiFirstUpA(const S: AnsiString): AnsiString;
+function  AsciiFirstUpB(const S: RawByteString): RawByteString;
+function  AsciiFirstUpW(const S: WideString): WideString;
+function  AsciiFirstUp(const S: String): String;
+
+procedure AsciiConvertArrayUpper(var S: AsciiStringArray);
+procedure AsciiConvertArrayLower(var S: AsciiStringArray);
+
+
+
+{                                                                              }
+{ RawByteString conversion functions                                           }
+{                                                                              }
+procedure RawByteBufToWideBuf(const Buf: Pointer; const BufSize: Integer; const DestBuf: Pointer);
+function  RawByteStrPtrToWideString(const S: PAnsiChar; const Len: Integer): WideString;
+function  RawByteStrPtrToUnicodeString(const S: PAnsiChar; const Len: Integer): UnicodeString;
+function  RawByteStringToWideString(const S: RawByteString): WideString;
+function  RawByteStringToUnicodeString(const S: RawByteString): UnicodeString;
+
+procedure WideBufToRawByteBuf(const Buf: Pointer; const Len: Integer; const DestBuf: Pointer);
+function  WideBufToRawByteString(const P: PWideChar; const Len: Integer): RawByteString;
+
+function  WideStringToRawByteString(const S: WideString): RawByteString;
+function  UnicodeStringToRawByteString(const S: UnicodeString): RawByteString;
+
+
+
+{                                                                              }
+{ UTF-8 character conversion functions                                         }
+{                                                                              }
+type
+  TUTF8Error = (
+      UTF8ErrorNone,
+      UTF8ErrorInvalidEncoding,
+      UTF8ErrorIncompleteEncoding,
+      UTF8ErrorInvalidBuffer,
+      UTF8ErrorOutOfRange );
+
+function  UTF8ToUCS4Char(const P: PAnsiChar; const Size: Integer;
+          out SeqSize: Integer; out Ch: UCS4Char): TUTF8Error;
+function  UTF8ToWideChar(const P: PAnsiChar; const Size: Integer;
+          out SeqSize: Integer; out Ch: WideChar): TUTF8Error;
+
+procedure UCS4CharToUTF8(const Ch: UCS4Char; const Dest: Pointer;
+          const DestSize: Integer; out SeqSize: Integer);
+procedure WideCharToUTF8(const Ch: WideChar; const Dest: Pointer;
+          const DestSize: Integer; out SeqSize: Integer);
+
+
+
+{                                                                              }
+{ UTF-16 character conversion functions                                        }
+{                                                                              }
+procedure UCS4CharToUTF16BE(const Ch: UCS4Char; const Dest: Pointer;
+          const DestSize: Integer; out SeqSize: Integer);
+procedure UCS4CharToUTF16LE(const Ch: UCS4Char; const Dest: Pointer;
+          const DestSize: Integer; out SeqSize: Integer);
+
+
+
+{                                                                              }
+{ UTF-8 string functions                                                       }
+{                                                                              }
+const
+  UTF8BOMSize = 3;
+
+function  DetectUTF8BOM(const P: PAnsiChar; const Size: Integer): Boolean;
+
+function  UTF8CharSize(const P: PAnsiChar; const Size: Integer): Integer;
+function  UTF8BufLength(const P: PAnsiChar; const Size: Integer): Integer;
+function  UTF8StringLength(const S: RawByteString): Integer;
+function  UTF8StringToWideString(const S: RawByteString): WideString;
+function  UTF8StringToUnicodeString(const S: RawByteString): UnicodeString;
+function  UTF8StringToUnicodeStringP(const S: PAnsiChar; const Size: Integer): UnicodeString;
+function  UTF8StringToLongString(const S: RawByteString): RawByteString;
+function  UTF8StringToString(const S: RawByteString): String;
+
+function  UCS4CharToUTF8CharSize(const Ch: UCS4Char): Integer;
+function  WideBufToUTF8Size(const Buf: PWideChar; const Len: Integer): Integer;
+function  WideStringToUTF8Size(const S: WideString): Integer;
+function  UnicodeStringToUTF8Size(const S: UnicodeString): Integer;
+function  WideBufToUTF8String(const Buf: PWideChar; const Len: Integer): RawByteString;
+function  WideStringToUTF8String(const S: WideString): RawByteString;
+function  WideStringToUnicodeString(const S: WideString): UnicodeString;
+function  UnicodeStringToUTF8String(const S: UnicodeString): RawByteString;
+function  UnicodeStringToWideString(const S: UnicodeString): WideString;
+function  RawByteBufToUTF8Size(const Buf: PAnsiChar; const Len: Integer): Integer;
+function  RawByteStringToUTF8Size(const S: RawByteString): Integer;
+function  RawByteStringToUTF8String(const S: RawByteString): RawByteString;
+function  UCS4CharToUTF8String(const Ch: UCS4Char): RawByteString;
+function  ISO8859_1StringToUTF8String(const S: RawByteString): RawByteString;
+function  StringToUTF8String(const S: String): RawByteString;
+
+
+
+{                                                                              }
+{ UTF-16 functions                                                             }
+{                                                                              }
+const
+  UTF16BOMSize = 2;
+
+function  DetectUTF16BEBOM(const P: Pointer; const Size: Integer): Boolean;
+function  DetectUTF16LEBOM(const P: Pointer; const Size: Integer): Boolean;
+function  DetectUTF16BOM(const P: Pointer; const Size: Integer;
+          out SwapEndian: Boolean): Boolean;
+function  SwapUTF16Endian(const P: WideChar): WideChar;
+
+
+
+{                                                                              }
+{ String conversion functions                                                  }
+{                                                                              }
+function  ToAnsiString(const A: String): AnsiString;       {$IFDEF UseInline}inline;{$ENDIF}
+function  ToRawByteString(const A: String): RawByteString; {$IFDEF UseInline}inline;{$ENDIF}
+function  ToWideString(const A: String): WideString;       {$IFDEF UseInline}inline;{$ENDIF}
+function  ToUnicodeString(const A: String): UnicodeString; {$IFDEF UseInline}inline;{$ENDIF}
+
+
+
+{                                                                              }
+{ String append functions                                                      }
+{                                                                              }
+procedure StrAppendChA(var A: AnsiString; const C: AnsiChar);    {$IFDEF UseInline}inline;{$ENDIF}
+procedure StrAppendChB(var A: RawByteString; const C: AnsiChar); {$IFDEF UseInline}inline;{$ENDIF}
+procedure StrAppendChW(var A: WideString; const C: WideChar);    {$IFDEF UseInline}inline;{$ENDIF}
+procedure StrAppendChU(var A: UnicodeString; const C: WideChar); {$IFDEF UseInline}inline;{$ENDIF}
+procedure StrAppendCh(var A: String; const C: Char);             {$IFDEF UseInline}inline;{$ENDIF}
+
+
+
+{                                                                              }
+{ String compare functions                                                     }
+{                                                                              }
+{   Returns  -1  if A < B                                                      }
+{             0  if A = B                                                      }
+{             1  if A > B                                                      }
+{                                                                              }
+function  CharCompareA(const A, B: AnsiChar): Integer; {$IFDEF UseInline}inline;{$ENDIF}
+function  CharCompareW(const A, B: WideChar): Integer; {$IFDEF UseInline}inline;{$ENDIF}
+function  CharCompare(const A, B: Char): Integer;      {$IFDEF UseInline}inline;{$ENDIF}
+
+function  CharCompareNoAsciiCaseA(const A, B: AnsiChar): Integer; {$IFDEF UseInline}inline;{$ENDIF}
+function  CharCompareNoAsciiCaseW(const A, B: WideChar): Integer; {$IFDEF UseInline}inline;{$ENDIF}
+function  CharCompareNoAsciiCase(const A, B: Char): Integer;      {$IFDEF UseInline}inline;{$ENDIF}
+
+function  CharEqualNoAsciiCaseA(const A, B: AnsiChar): Boolean;  {$IFDEF UseInline}inline;{$ENDIF}
+function  CharEqualNoAsciiCaseW(const A, B: WideChar): Boolean;  {$IFDEF UseInline}inline;{$ENDIF}
+function  CharEqualNoAsciiCase(const A, B: Char): Boolean;       {$IFDEF UseInline}inline;{$ENDIF}
+{$IFDEF ManagedCode}
+function  StrPCompareA(const A, B: AnsiString; const Len: Integer): Integer;
+function  StrPCompareNoAsciiCaseA(const A, B: AnsiString; const Len: Integer): Integer;
+{$ELSE}
+function  StrPCompareA(const A, B: PAnsiChar; const Len: Integer): Integer;
+function  StrPCompareW(const A, B: PWideChar; const Len: Integer): Integer;
+function  StrPCompare(const A, B: PChar; const Len: Integer): Integer;
+
+function  StrPCompareNoAsciiCaseA(const A, B: PAnsiChar; const Len: Integer): Integer;
+function  StrPCompareNoAsciiCaseW(const A, B: PWideChar; const Len: Integer): Integer;
+function  StrPCompareNoAsciiCase(const A, B: PChar; const Len: Integer): Integer;
+{$ENDIF}
+
+{$IFNDEF CLR}
+function  StrCompareA(const A, B: AnsiString): Integer;
+function  StrCompareB(const A, B: RawByteString): Integer;
+function  StrCompareW(const A, B: WideString): Integer;
+function  StrCompareU(const A, B: UnicodeString): Integer;
+function  StrCompare(const A, B: String): Integer;
+
+function  StrCompareNoAsciiCaseA(const A, B: AnsiString): Integer;
+function  StrCompareNoAsciiCaseB(const A, B: RawByteString): Integer;
+function  StrCompareNoAsciiCaseW(const A, B: WideString): Integer;
+function  StrCompareNoAsciiCaseU(const A, B: UnicodeString): Integer;
+function  StrCompareNoAsciiCase(const A, B: String): Integer;
+{$ENDIF}
 
 
 
@@ -783,14 +1184,10 @@ procedure Swap(var X, Y: Boolean); overload;
 procedure Swap(var X, Y: Byte); overload;
 procedure Swap(var X, Y: Word); overload;
 procedure Swap(var X, Y: LongWord); overload;
-procedure Swap(var X, Y: NativeUInt); overload;
 procedure Swap(var X, Y: ShortInt); overload;
 procedure Swap(var X, Y: SmallInt); overload;
 procedure Swap(var X, Y: LongInt); overload;
 procedure Swap(var X, Y: Int64); overload;
-{$IFNDEF FREEPASCAL}
-procedure Swap(var X, Y: NativeInt); overload;
-{$ENDIF}
 procedure Swap(var X, Y: Single); overload;
 procedure Swap(var X, Y: Double); overload;
 procedure Swap(var X, Y: Extended); overload;
@@ -877,8 +1274,8 @@ type
 { Integer-String conversions                                                   }
 {                                                                              }
 const
-  StrHexDigitsUpper: String[16] = '0123456789ABCDEF';
-  StrHexDigitsLower: String[16] = '0123456789abcdef';
+  StrHexDigitsUpper : String = '0123456789ABCDEF';
+  StrHexDigitsLower : String = '0123456789abcdef';
 
 function  AnsiCharToInt(const A: AnsiChar): Integer;                            {$IFDEF UseInline}inline;{$ENDIF}
 function  WideCharToInt(const A: WideChar): Integer;                            {$IFDEF UseInline}inline;{$ENDIF}
@@ -1082,7 +1479,7 @@ function  StringToFloatDef(const A: String; const Default: Extended): Extended;
 function  EncodeBase64(const S, Alphabet: RawByteString;
           const Pad: Boolean = False;
           const PadMultiple: Integer = 4;
-          const PadChar: AnsiChar = '='): RawByteString;
+          const PadChar: AnsiChar = AnsiChar(Ord('='))): RawByteString;
 
 function  DecodeBase64(const S, Alphabet: RawByteString;
           const PadSet: CharSet{$IFNDEF CLR} = []{$ENDIF}): RawByteString;
@@ -1270,9 +1667,6 @@ type
   CharSetArray = array of CharSet;
   ByteSetArray = array of ByteSet;
 
-  {$IFNDEF TBytesDeclared}
-  TBytes = ByteArray;
-  {$ENDIF}
 
 
 {$IFDEF ManagedCode}
@@ -1472,6 +1866,7 @@ end;
 {                                                                              }
 { Range check error                                                            }
 {                                                                              }
+
 resourcestring
   SRangeCheckError = 'Range check error';
 
@@ -1485,7 +1880,7 @@ end;
 {                                                                              }
 { Integer                                                                      }
 {                                                                              }
-function MinI(const A, B: Integer): Integer;
+function MinInt(const A, B: Integer): Integer;
 begin
   if A < B then
     Result := A
@@ -1493,7 +1888,7 @@ begin
     Result := B;
 end;
 
-function MaxI(const A, B: Integer): Integer;
+function MaxInt(const A, B: Integer): Integer;
 begin
   if A > B then
     Result := A
@@ -1501,7 +1896,7 @@ begin
     Result := B;
 end;
 
-function MinC(const A, B: Cardinal): Cardinal;
+function MinCrd(const A, B: Cardinal): Cardinal;
 begin
   if A < B then
     Result := A
@@ -1509,7 +1904,7 @@ begin
     Result := B;
 end;
 
-function MaxC(const A, B: Cardinal): Cardinal;
+function MaxCrd(const A, B: Cardinal): Cardinal;
 begin
   if A > B then
     Result := A
@@ -1517,27 +1912,27 @@ begin
     Result := B;
 end;
 
-function Clip(const Value: LongInt; const Low, High: LongInt): LongInt;
+function Int32Bounded(const Value: LongInt; const Min, Max: LongInt): LongInt;
 begin
-  if Value < Low then
-    Result := Low else
-  if Value > High then
-    Result := High
+  if Value < Min then
+    Result := Min else
+  if Value > Max then
+    Result := Max
   else
     Result := Value;
 end;
 
-function Clip(const Value: Int64; const Low, High: Int64): Int64;
+function Int64Bounded(const Value: Int64; const Min, Max: Int64): Int64;
 begin
-  if Value < Low then
-    Result := Low else
-  if Value > High then
-    Result := High
+  if Value < Min then
+    Result := Min else
+  if Value > Max then
+    Result := Max
   else
     Result := Value;
 end;
 
-function ClipByte(const Value: LongInt): LongInt;
+function Int32BoundedByte(const Value: LongInt): LongInt;
 begin
   if Value < MinByte then
     Result := MinByte else
@@ -1547,7 +1942,7 @@ begin
     Result := Value;
 end;
 
-function ClipByte(const Value: Int64): Int64;
+function Int64BoundedByte(const Value: Int64): Int64;
 begin
   if Value < MinByte then
     Result := MinByte else
@@ -1557,7 +1952,7 @@ begin
     Result := Value;
 end;
 
-function ClipWord(const Value: LongInt): LongInt;
+function Int32BoundedWord(const Value: LongInt): LongInt;
 begin
   if Value < MinWord then
     Result := MinWord else
@@ -1567,7 +1962,7 @@ begin
     Result := Value;
 end;
 
-function ClipWord(const Value: Int64): Int64;
+function Int64BoundedWord(const Value: Int64): Int64;
 begin
   if Value < MinWord then
     Result := MinWord else
@@ -1577,7 +1972,7 @@ begin
     Result := Value;
 end;
 
-function ClipLongWord(const Value: Int64): LongWord;
+function Int64BoundedLongWord(const Value: Int64): LongWord;
 begin
   if Value < MinLongWord then
     Result := MinLongWord else
@@ -1585,38 +1980,6 @@ begin
     Result := MaxLongWord
   else
     Result := LongWord(Value);
-end;
-
-function SumClipI(const A, I: Integer): Integer;
-begin
-  if I >= 0 then
-    if A >= MaxInteger - I then
-      Result := MaxInteger
-    else
-      Result := A + I
-  else
-    if A <= MinInteger - I then
-      Result := MinInteger
-    else
-      Result := A + I;
-end;
-
-function SumClipC(const A: Cardinal; const I: Integer): Cardinal;
-var B : Cardinal;
-begin
-  if I >= 0 then
-    if A >= MaxCardinal - Cardinal(I) then
-      Result := MaxCardinal
-    else
-      Result := A + Cardinal(I)
-  else
-    begin
-      B := Cardinal(-I);
-      if A <= B then
-        Result := 0
-      else
-        Result := A - B;
-    end;
 end;
 
 
@@ -1956,585 +2319,2209 @@ end;
 
 
 {                                                                              }
-{ Bit functions                                                                }
+{ US-ASCII String functions                                                    }
 {                                                                              }
-{$IFDEF ASM386_DELPHI}
-function ReverseBits32(const Value: LongWord): LongWord; register; assembler;
-asm
-      BSWAP   EAX
-      MOV     EDX, EAX
-      AND     EAX, 0AAAAAAAAh
-      SHR     EAX, 1
-      AND     EDX, 055555555h
-      SHL     EDX, 1
-      OR      EAX, EDX
-      MOV     EDX, EAX
-      AND     EAX, 0CCCCCCCCh
-      SHR     EAX, 2
-      AND     EDX, 033333333h
-      SHL     EDX, 2
-      OR      EAX, EDX
-      MOV     EDX, EAX
-      AND     EAX, 0F0F0F0F0h
-      SHR     EAX, 4
-      AND     EDX, 00F0F0F0Fh
-      SHL     EDX, 4
-      OR      EAX, EDX
-end;
-{$ELSE}
-function ReverseBits32(const Value: LongWord): LongWord;
-var I : Byte;
+function IsAsciiCharA(const C: AnsiChar): Boolean;
 begin
-  Result := 0;
-  for I := 0 to 31 do
-    if Value and BitMaskTable32[I] <> 0 then
-      Result := Result or BitMaskTable32[31 - I];
+  Result := C in [AnsiChar(0)..AnsiChar(127)];
 end;
-{$ENDIF}
 
-function ReverseBits32(const Value: LongWord; const BitCount: Integer): LongWord;
+function IsAsciiCharW(const C: WideChar): Boolean;
+begin
+  Result := Ord(C) <= 127;
+end;
+
+function IsAsciiChar(const C: Char): Boolean;
+begin
+  Result := Ord(C) <= 127;
+end;
+
+function IsAsciiBufB(const S: Pointer; const Len: Integer): Boolean;
 var I : Integer;
-  V : LongWord;
+    P : PByte;
 begin
-  V := Value;
-  Result := 0;
-  for I := 0 to MinI(BitCount, BitsPerLongWord) - 1 do
-    begin
-      Result := (Result shl 1) or (V and 1);
-      V := V shr 1;
-    end;
-end;
-
-{$IFDEF ASM386_DELPHI}
-function SwapEndian32(const Value: LongWord): LongWord; register; assembler;
-asm
-      XCHG    AH, AL
-      ROL     EAX, 16
-      XCHG    AH, AL
-end;
-{$ELSE}
-function SwapEndian32(const Value: LongWord): LongWord;
-begin
-  Result := ((Value and $000000FF) shl 24)  or
-            ((Value and $0000FF00) shl 8)   or
-            ((Value and $00FF0000) shr 8)   or
-            ((Value and $FF000000) shr 24);
-end;
-{$ENDIF}
-
-{$IFDEF ManagedCode}
-procedure SwapEndianBuf32(var Buf: array of LongWord);
-var I : Integer;
-begin
-  for I := 0 to Length(Buf) - 1 do
-    Buf[I] := SwapEndian(Buf[I]);
-end;
-{$ELSE}
-procedure SwapEndianBuf32(var Buf; const Count: Integer);
-var P : PLongWord;
-    I : Integer;
-begin
-  P := @Buf;
-  for I := 1 to Count do
-    begin
-      P^ := SwapEndian32(P^);
+  P := S;
+  for I := 1 to Len do
+    if P^ >= $80 then
+      begin
+        Result := False;
+        exit;
+      end
+    else
       Inc(P);
+  Result := True;
+end;
+
+function IsAsciiBufW(const Buf: Pointer; const Len: Integer): Boolean;
+var I : Integer;
+    P : PWord16;
+begin
+  P := Buf;
+  for I := 1 to Len do
+    if P^ >= $80 then
+      begin
+        Result := False;
+        exit;
+      end
+    else
+      Inc(P);
+  Result := True;
+end;
+
+function IsAsciiStringA(const S: AnsiString): Boolean;
+begin
+  Result := IsAsciiBufB(PAnsiChar(S), Length(S));
+end;
+
+function IsAsciiStringB(const S: RawByteString): Boolean;
+begin
+  Result := IsAsciiBufB(PAnsiChar(S), Length(S));
+end;
+
+function IsAsciiStringW(const S: WideString): Boolean;
+begin
+  Result := IsAsciiBufW(PWideChar(S), Length(S));
+end;
+
+function IsAsciiStringU(const S: UnicodeString): Boolean;
+begin
+  Result := IsAsciiBufW(PWideChar(S), Length(S));
+end;
+
+function IsAsciiString(const S: String): Boolean;
+begin
+  {$IFDEF StringIsUnicode}
+  Result := IsAsciiStringU(S);
+  {$ELSE}
+  Result := IsAsciiStringA(S);
+  {$ENDIF}
+end;
+
+
+
+{                                                                              }
+{ ASCII functions                                                              }
+{                                                                              }
+function AsciiHexCharValue(const C: AnsiChar): Integer;
+begin
+  case Ord(C) of
+    Ord('0')..Ord('9') : Result := Ord(C) - Ord('0');
+    Ord('A')..Ord('F') : Result := Ord(C) - Ord('A') + 10;
+    Ord('a')..Ord('f') : Result := Ord(C) - Ord('a') + 10;
+  else
+    Result := -1;
+  end;
+end;
+
+function AsciiHexCharValueW(const C: WideChar): Integer;
+begin
+  if Ord(C) >= $80 then
+    Result := -1
+  else
+    Result := AsciiHexCharValue(AnsiChar(Ord(C)));
+end;
+
+function AsciiIsHexChar(const C: AnsiChar): Boolean;
+begin
+  Result := AsciiHexCharValue(C) >= 0;
+end;
+
+function AsciiIsHexCharW(const C: WideChar): Boolean;
+begin
+  Result := AsciiHexCharValueW(C) >= 0;
+end;
+
+function AsciiDecimalCharValue(const C: AnsiChar): Integer;
+begin
+  case Ord(C) of
+    Ord('0')..Ord('9') : Result := Ord(C) - Ord('0');
+  else
+    Result := -1;
+  end;
+end;
+
+function AsciiDecimalCharValueW(const C: WideChar): Integer;
+begin
+  if Ord(C) >= $80 then
+    Result := -1
+  else
+    Result := AsciiDecimalCharValue(AnsiChar(Ord(C)));
+end;
+
+function AsciiIsDecimalChar(const C: AnsiChar): Boolean;
+begin
+  Result := AsciiDecimalCharValue(C) >= 0;
+end;
+
+function AsciiIsDecimalCharW(const C: WideChar): Boolean;
+begin
+  Result := AsciiDecimalCharValueW(C) >= 0;
+end;
+
+function AsciiOctalCharValue(const C: AnsiChar): Integer;
+begin
+  case Ord(C) of
+    Ord('0')..Ord('7') : Result := Ord(C) - Ord('0');
+  else
+    Result := -1;
+  end;
+end;
+
+function AsciiOctalCharValueW(const C: WideChar): Integer;
+begin
+  if Ord(C) >= $80 then
+    Result := -1
+  else
+    Result := AsciiOctalCharValue(AnsiChar(Ord(C)));
+end;
+
+function AsciiIsOctalChar(const C: AnsiChar): Boolean;
+begin
+  Result := AsciiOctalCharValue(C) >= 0;
+end;
+
+function AsciiIsOctalCharW(const C: WideChar): Boolean;
+begin
+  Result := AsciiOctalCharValueW(C) >= 0;
+end;
+
+
+
+{                                                                              }
+{ ASCII case conversion                                                        }
+{                                                                              }
+const
+  AsciiCaseDiff = Byte(AsciiLowerA) - Byte(AsciiUpperA);
+
+{$IFDEF ASM386_DELPHI}
+function AsciiLowCaseA(const C: AnsiChar): AnsiChar; register; assembler;
+asm
+      CMP     AL, AsciiUpperA
+      JB      @@exit
+      CMP     AL, AsciiUpperZ
+      JA      @@exit
+      ADD     AL, AsciiCaseDiff
+@@exit:
+end;
+{$ELSE}
+function AsciiLowCaseA(const C: AnsiChar): AnsiChar;
+begin
+  if C in [AsciiUpperA..AsciiUpperZ] then
+    Result := AsciiChar(Byte(C) + AsciiCaseDiff)
+  else
+    Result := C;
+end;
+{$ENDIF}
+
+function AsciiLowCaseW(const C: WideChar): WideChar;
+begin
+  case Ord(C) of
+    Ord(AsciiUpperA)..Ord(AsciiUpperZ) : Result := WideChar(Ord(C) + AsciiCaseDiff)
+  else
+    Result := C;
+  end;
+end;
+
+function AsciiLowCase(const C: Char): Char;
+begin
+  case Ord(C) of
+    Ord(AsciiUpperA)..Ord(AsciiUpperZ) : Result := Char(Ord(C) + AsciiCaseDiff)
+  else
+    Result := C;
+  end;
+end;
+
+{$IFDEF ASM386_DELPHI}
+function AsciiUpCaseA(const C: AnsiChar): AnsiChar; register; assembler;
+asm
+      CMP     AL, AsciiLowerA
+      JB      @@exit
+      CMP     AL, AsciiLowerZ
+      JA      @@exit
+      SUB     AL, AsciiLowerA - AsciiUpperA
+@@exit:
+end;
+{$ELSE}
+function AsciiUpCaseA(const C: AnsiChar): AnsiChar;
+begin
+  if C in [AsciiLowerA..AsciiLowerZ] then
+    Result := AsciiChar(Byte(C) - AsciiCaseDiff)
+  else
+    Result := C;
+end;
+{$ENDIF}
+
+function AsciiUpCaseW(const C: WideChar): WideChar;
+begin
+  case Ord(C) of
+    Ord(AsciiLowerA)..Ord(AsciiLowerZ) : Result := WideChar(Ord(C) - AsciiCaseDiff)
+  else
+    Result := C;
+  end;
+end;
+
+function AsciiUpCase(const C: Char): Char;
+begin
+  case Ord(C) of
+    Ord(AsciiLowerA)..Ord(AsciiLowerZ) : Result := Char(Ord(C) - AsciiCaseDiff)
+  else
+    Result := C;
+  end;
+end;
+
+{$IFDEF ASM386_DELPHI}
+procedure AsciiConvertUpperA(var S: AnsiString);
+asm
+      OR      EAX, EAX
+      JZ      @Exit
+      PUSH    EAX
+      MOV     EAX, [EAX]
+      OR      EAX, EAX
+      JZ      @ExitP
+      MOV     ECX, [EAX - 4]
+      OR      ECX, ECX
+      JZ      @ExitP
+      XOR     DH, DH
+  @L2:
+      DEC     ECX
+      MOV     DL, [EAX + ECX]
+      CMP     DL, AsciiLowerA
+      JB      @L1
+      CMP     DL, AsciiLowerZ
+      JA      @L1
+      OR      DH, DH
+      JZ      @Uniq
+  @L3:
+      SUB     DL, AsciiCaseDiff
+      MOV     [EAX + ECX], DL
+  @L1:
+      OR      ECX, ECX
+      JNZ     @L2
+      OR      DH, DH
+      JNZ     @Exit
+  @ExitP:
+      POP     EAX
+  @Exit:
+      RET
+  @Uniq:
+      POP     EAX
+      PUSH    ECX
+      PUSH    EDX
+      CALL    UniqueString
+      POP     EDX
+      POP     ECX
+      MOV     DH, 1
+      JMP     @L3
+end;
+{$ELSE}
+procedure AsciiConvertUpperA(var S: AnsiString);
+var F : Integer;
+begin
+  for F := StrBaseA to Length(S) - (1 - StrBaseA) do
+    if S[F] in [AsciiLowerA..AsciiLowerZ] then
+      S[F] := AnsiChar(Ord(S[F]) - AsciiCaseDiff);
+end;
+{$ENDIF}
+
+procedure AsciiConvertUpperB(var S: RawByteString);
+var F : Integer;
+begin
+  for F := StrBaseB to Length(S) - (1 - StrBaseB) do
+    if S[F] in [AsciiLowerA..AsciiLowerZ] then
+      S[F] := AnsiChar(Ord(S[F]) - AsciiCaseDiff);
+end;
+
+procedure AsciiConvertUpperW(var S: WideString);
+var F : Integer;
+    C : WideChar;
+begin
+  for F := StrBaseW to Length(S) - (1 - StrBaseW) do
+    begin
+      C := S[F];
+      if Ord(C) <= $FF then
+        if AnsiChar(Ord(C)) in [AsciiLowerA..AsciiLowerZ] then
+          S[F] := WideChar(Ord(C) - AsciiCaseDiff);
     end;
 end;
-{$ENDIF}
 
-{$IFDEF ASM386_DELPHI}
-function TwosComplement32(const Value: LongWord): LongWord; register; assembler;
-asm
-      NEG     EAX
-end;
-{$ELSE}
-function TwosComplement32(const Value: LongWord): LongWord;
+procedure AsciiConvertUpperU(var S: UnicodeString);
+var F : Integer;
+    C : WideChar;
 begin
-  Result := LongWord(not Value + 1);
+  for F := 1 to Length(S) do
+    begin
+      C := S[F];
+      if Ord(C) <= $FF then
+        if AnsiChar(Ord(C)) in [AsciiLowerA..AsciiLowerZ] then
+          S[F] := WideChar(Ord(C) - AsciiCaseDiff);
+    end;
 end;
-{$ENDIF}
 
-{$IFDEF ASM386_DELPHI}
-function RotateLeftBits16(const Value: Word; const Bits: Byte): Word;
-asm
-      MOV     CL, DL
-      ROL     AX, CL
-end;
-{$ELSE}
-function RotateLeftBits16(const Value: Word; const Bits: Byte): Word;
-var I, B : Integer;
-    R : Word;
+procedure AsciiConvertUpper(var S: String);
+var F : Integer;
+    C : Char;
 begin
-  R := Value;
-  if Bits >= 16 then
-    B := Bits mod 16
-  else
-    B := Bits;
-  for I := 1 to B do
-    if R and $8000 = 0 then
-      R := Word(R shl 1)
-    else
-      R := Word(R shl 1) or 1;
-  Result := R;
-end;
-{$ENDIF}
-
-{$IFDEF ASM386_DELPHI}
-function RotateLeftBits32(const Value: LongWord; const Bits: Byte): LongWord;
-asm
-      MOV     CL, DL
-      ROL     EAX, CL
-end;
-{$ELSE}
-function RotateLeftBits32(const Value: LongWord; const Bits: Byte): LongWord;
-var I, B : Integer;
-    R : LongWord;
-begin
-  R := Value;
-  if Bits >= 32 then
-    B := Bits mod 32
-  else
-    B := Bits;
-  for I := 1 to B do
-    if R and $80000000 = 0 then
-      R := LongWord(R shl 1)
-    else
-      R := LongWord(R shl 1) or 1;
-  Result := R;
-end;
-{$ENDIF}
-
-{$IFDEF ASM386_DELPHI}
-function RotateRightBits16(const Value: Word; const Bits: Byte): Word;
-asm
-      MOV     CL, DL
-      ROR     AX, CL
-end;
-{$ELSE}
-function RotateRightBits16(const Value: Word; const Bits: Byte): Word;
-var I, B : Integer;
-    R : Word;
-begin
-  R := Value;
-  if Bits >= 16 then
-    B := Bits mod 16
-  else
-    B := Bits;
-  for I := 1 to B do
-    if R and 1 = 0 then
-      R := Word(R shr 1)
-    else
-      R := Word(R shr 1) or $8000;
-  Result := R;
-end;
-{$ENDIF}
-
-{$IFDEF ASM386_DELPHI}
-function RotateRightBits32(const Value: LongWord; const Bits: Byte): LongWord;
-asm
-      MOV     CL, DL
-      ROR     EAX, CL
-end;
-{$ELSE}
-function RotateRightBits32(const Value: LongWord; const Bits: Byte): LongWord;
-var I, B : Integer;
-    R : LongWord;
-begin
-  R := Value;
-  if Bits >= 32 then
-    B := Bits mod 32
-  else
-    B := Bits;
-  for I := 1 to B do
-    if R and 1 = 0 then
-      R := LongWord(R shr 1)
-    else
-      R := LongWord(R shr 1) or $80000000;
-  Result := R;
-end;
-{$ENDIF}
-
-{$IFDEF ASM386_DELPHI}
-function SetBit32(const Value, BitIndex: Word32): Word32;
-asm
-      {$IFOPT R+}
-      CMP     BitIndex, BitsPerLongWord
-      JB      @RangeOk
-      JMP     RaiseRangeCheckError
-  @RangeOk:
+  for F := 1 to Length(S) do
+    begin
+      C := S[F];
+      {$IFDEF StringIsUnicode}
+      if Ord(C) <= $FF then
       {$ENDIF}
-      OR      EAX, DWORD PTR [BitIndex * 4 + BitMaskTable32]
+        if AnsiChar(Ord(C)) in [AsciiLowerA..AsciiLowerZ] then
+          S[F] := Char(Ord(C) - AsciiCaseDiff);
+    end;
 end;
-{$ELSE}
-function SetBit32(const Value, BitIndex: Word32): Word32;
-begin
-  Result := Value or BitMaskTable32[BitIndex];
-end;
-{$ENDIF}
 
 {$IFDEF ASM386_DELPHI}
-function ClearBit32(const Value, BitIndex: Word32): Word32;
-asm
-      {$IFOPT R+}
-      CMP     BitIndex, BitsPerLongWord
-      JB      @RangeOk
-      JMP     RaiseRangeCheckError
-  @RangeOk:
-      {$ENDIF}
-      MOV     ECX, DWORD PTR [BitIndex * 4 + BitMaskTable32]
-      NOT     ECX
-      AND     EAX, ECX
-  @Fin:
-end;
-{$ELSE}
-function ClearBit32(const Value, BitIndex: Word32): Word32;
-begin
-  Result := Value and not BitMaskTable32[BitIndex];
-end;
-{$ENDIF}
-
-{$IFDEF ASM386_DELPHI}
-function ToggleBit32(const Value, BitIndex: Word32): Word32;
-asm
-      {$IFOPT R+}
-      CMP     BitIndex, BitsPerLongWord
-      JB      @RangeOk
-      JMP     RaiseRangeCheckError
-  @RangeOk:
-      {$ENDIF}
-      XOR     EAX, DWORD PTR [BitIndex * 4 + BitMaskTable32]
-end;
-{$ELSE}
-function ToggleBit32(const Value, BitIndex: Word32): Word32;
-begin
-  Result := Value xor BitMaskTable32[BitIndex];
-end;
-{$ENDIF}
-
-{$IFDEF ASM386_DELPHI}
-function IsHighBitSet32(const Value: Word32): Boolean; register; assembler;
-asm
-      TEST    Value, $80000000
-      SETNZ   AL
-end;
-{$ELSE}
-function IsHighBitSet32(const Value: Word32): Boolean;
-begin
-  Result := Value and $80000000 <> 0;
-end;
-{$ENDIF}
-
-{$IFDEF ASM386_DELPHI}
-function IsBitSet32(const Value, BitIndex: Word32): Boolean;
-asm
-      {$IFOPT R+}
-      CMP     BitIndex, BitsPerLongWord
-      JB      @RangeOk
-      JMP     RaiseRangeCheckError
-  @RangeOk:
-      {$ENDIF}
-      MOV     ECX, DWORD PTR BitMaskTable32 [BitIndex * 4]
-      TEST    Value, ECX
-      SETNZ   AL
-end;
-{$ELSE}
-function IsBitSet32(const Value, BitIndex: Word32): Boolean;
-begin
-  Result := Value and BitMaskTable32[BitIndex] <> 0;
-end;
-{$ENDIF}
-
-{$IFDEF ASM386_DELPHI}
-function SetBitScanForward32(const Value: Word32): Integer;
+procedure AsciiConvertLowerA(var S: AsciiString);
 asm
       OR      EAX, EAX
-      JZ      @NoBits
-      BSF     EAX, EAX
-      RET
-  @NoBits:
-      MOV     EAX, -1
-end;
-
-function SetBitScanForward32(const Value, BitIndex: Word32): Integer;
-asm
-      CMP     BitIndex, BitsPerLongWord
-      JAE     @NotFound
-      MOV     ECX, BitIndex
-      MOV     EDX, $FFFFFFFF
-      SHL     EDX, CL
-      AND     EDX, EAX
-      JE      @NotFound
-      BSF     EAX, EDX
-      RET
-  @NotFound:
-      MOV     EAX, -1
-end;
-{$ELSE}
-function SetBitScanForward32(const Value, BitIndex: Word32): Integer;
-var I : Integer;
-begin
-  if BitIndex < BitsPerLongWord then
-    for I := Integer(BitIndex) to 31 do
-      if Value and BitMaskTable32[I] <> 0 then
-        begin
-          Result := I;
-          exit;
-        end;
-  Result := -1;
-end;
-
-function SetBitScanForward32(const Value: Word32): Integer;
-begin
-  Result := SetBitScanForward32(Value, 0);
-end;
-{$ENDIF}
-
-{$IFDEF ASM386_DELPHI}
-function SetBitScanReverse32(const Value: Word32): Integer;
-asm
+      JZ      @Exit
+      PUSH    EAX
+      MOV     EAX, [EAX]
       OR      EAX, EAX
-      JZ      @NoBits
-      BSR     EAX, EAX
+      JZ      @ExitP
+      MOV     ECX, [EAX - 4]
+      OR      ECX, ECX
+      JZ      @ExitP
+      XOR     DH, DH
+  @L2:
+      DEC     ECX
+      MOV     DL, [EAX + ECX]
+      CMP     DL, AsciiUpperA
+      JB      @L1
+      CMP     DL, AsciiUpperZ
+      JA      @L1
+      OR      DH, DH
+      JZ      @Uniq
+  @L3:
+      ADD     DL, AsciiCaseDiff
+      MOV     [EAX + ECX], DL
+  @L1:
+      OR      ECX, ECX
+      JNZ     @L2
+      OR      DH, DH
+      JNZ     @Exit
+  @ExitP:
+      POP     EAX
+  @Exit:
       RET
-  @NoBits:
-      MOV     EAX, -1
-end;
-
-function SetBitScanReverse32(const Value, BitIndex: Word32): Integer;
-asm
-      CMP     EDX, BitsPerLongWord
-      JAE     @NotFound
-      LEA     ECX, [EDX - 31]
-      MOV     EDX, $FFFFFFFF
-      NEG     ECX
-      SHR     EDX, CL
-      AND     EDX, EAX
-      JE      @NotFound
-      BSR     EAX, EDX
-      RET
-  @NotFound:
-      MOV     EAX, -1
+  @Uniq:
+      POP     EAX
+      PUSH    ECX
+      PUSH    EDX
+      CALL    UniqueString
+      POP     EDX
+      POP     ECX
+      MOV     DH, 1
+      JMP     @L3
 end;
 {$ELSE}
-function SetBitScanReverse32(const Value, BitIndex: Word32): Integer;
+procedure AsciiConvertLowerA(var S: AnsiString);
+var F : Integer;
+begin
+  for F := StrBaseA to Length(S) - (1 - StrBaseA) do
+    if S[F] in [AsciiUpperA..AsciiUpperZ] then
+      S[F] := AnsiChar(Ord(S[F]) + AsciiCaseDiff);
+end;
+{$ENDIF}
+
+procedure AsciiConvertLowerB(var S: RawByteString);
+var F : Integer;
+begin
+  for F := StrBaseB to Length(S) - (1 - StrBaseB) do
+    if S[F] in [AsciiUpperA..AsciiUpperZ] then
+      S[F] := AnsiChar(Ord(S[F]) + AsciiCaseDiff);
+end;
+
+procedure AsciiConvertLowerW(var S: WideString);
+var F : Integer;
+    C : WideChar;
+begin
+  for F := StrBaseW to Length(S) - (1 - StrBaseW) do
+    begin
+      C := S[F];
+      if Ord(C) <= $FF then
+        if AnsiChar(Ord(C)) in [AsciiUpperA..AsciiUpperZ] then
+          S[F] := WideChar(Ord(C) + AsciiCaseDiff);
+    end;
+end;
+
+procedure AsciiConvertLowerU(var S: UnicodeString);
+var F : Integer;
+    C : WideChar;
+begin
+  for F := 1 to Length(S) do
+    begin
+      C := S[F];
+      if Ord(C) <= $FF then
+        if AnsiChar(Ord(C)) in [AsciiUpperA..AsciiUpperZ] then
+          S[F] := WideChar(Ord(C) + AsciiCaseDiff);
+    end;
+end;
+
+procedure AsciiConvertLower(var S: String);
+var F : Integer;
+    C : Char;
+begin
+  for F := 1 to Length(S) do
+    begin
+      C := S[F];
+      {$IFDEF StringIsUnicode}
+      if Ord(C) <= $FF then
+      {$ENDIF}
+        if AnsiChar(Ord(C)) in [AsciiUpperA..AsciiUpperZ] then
+          S[F] := Char(Ord(C) + AsciiCaseDiff);
+    end;
+end;
+
+function AsciiUpperCaseA(const A: AnsiString): AnsiString;
+begin
+  Result := A;
+  AsciiConvertUpperA(Result);
+end;
+
+function AsciiUpperCaseB(const A: RawByteString): RawByteString;
+begin
+  Result := A;
+  AsciiConvertUpperB(Result);
+end;
+
+function AsciiUpperCaseW(const A: WideString): WideString;
+begin
+  Result := A;
+  AsciiConvertUpperW(Result);
+end;
+
+function AsciiUpperCaseU(const A: UnicodeString): UnicodeString;
+begin
+  Result := A;
+  AsciiConvertUpperU(Result);
+end;
+
+function AsciiUpperCase(const A: String): String;
+begin
+  Result := A;
+  AsciiConvertUpper(Result);
+end;
+
+function AsciiLowerCaseA(const A: AnsiString): AnsiString;
+begin
+  Result := A;
+  AsciiConvertLowerA(Result);
+end;
+
+function AsciiLowerCaseB(const A: RawByteString): RawByteString;
+begin
+  Result := A;
+  AsciiConvertLowerB(Result);
+end;
+
+function AsciiLowerCaseW(const A: WideString): WideString;
+begin
+  Result := A;
+  AsciiConvertLowerW(Result);
+end;
+
+function AsciiLowerCaseU(const A: UnicodeString): UnicodeString;
+begin
+  Result := A;
+  AsciiConvertLowerU(Result);
+end;
+
+function AsciiLowerCase(const A: String): String;
+begin
+  Result := A;
+  AsciiConvertLower(Result);
+end;
+
+procedure AsciiConvertFirstUpA(var S: AnsiString);
+var C : AnsiChar;
+begin
+  if S <> StrEmptyA then
+    begin
+      C := S[StrBaseA];
+      if C in [AsciiLowerA..AsciiLowerZ] then
+        S[StrBaseA] := AsciiUpCaseA(C);
+    end;
+end;
+
+procedure AsciiConvertFirstUpB(var S: RawByteString);
+var C : AnsiChar;
+begin
+  if S <> StrEmptyA then
+    begin
+      C := S[StrBaseB];
+      if C in [AsciiLowerA..AsciiLowerZ] then
+        S[StrBaseB] := AsciiUpCaseA(C);
+    end;
+end;
+
+procedure AsciiConvertFirstUpW(var S: WideString);
+var C : WideChar;
+begin
+  if S <> StrEmptyW then
+    begin
+      C := S[StrBaseW];
+      if (Ord(C) >= Ord(AsciiLowerA)) and (Ord(C) <= Ord(AsciiLowerZ)) then
+        S[StrBaseW] := AsciiUpCaseW(C);
+    end;
+end;
+
+procedure AsciiConvertFirstUp(var S: String);
+var C : Char;
+begin
+  if S <> '' then
+    begin
+      C := S[1];
+      if (Ord(C) >= Ord(AsciiLowerA)) and (Ord(C) <= Ord(AsciiLowerZ)) then
+        S[1] := AsciiUpCase(C);
+    end;
+end;
+
+function AsciiFirstUpA(const S: AnsiString): AnsiString;
+begin
+  Result := S;
+  AsciiConvertFirstUpA(Result);
+end;
+
+function AsciiFirstUpB(const S: RawByteString): RawByteString;
+begin
+  Result := S;
+  AsciiConvertFirstUpB(Result);
+end;
+
+function AsciiFirstUpW(const S: WideString): WideString;
+begin
+  Result := S;
+  AsciiConvertFirstUpW(Result);
+end;
+
+function AsciiFirstUp(const S: String): String;
+begin
+  Result := S;
+  AsciiConvertFirstUp(Result);
+end;
+
+procedure AsciiConvertArrayUpper(var S: AsciiStringArray);
 var I : Integer;
 begin
-  if BitIndex < BitsPerLongWord then
-    for I := Integer(BitIndex) downto 0 do
-      if Value and BitMaskTable32[I] <> 0 then
-        begin
-          Result := I;
-          exit;
-        end;
-  Result := -1;
+  for I := 0 to Length(S) - 1 do
+    AsciiConvertUpperA(S[I]);
 end;
 
-function SetBitScanReverse32(const Value: Word32): Integer;
-begin
-  Result := SetBitScanReverse32(Value, 31);
-end;
-{$ENDIF}
-
-{$IFDEF ASM386_DELPHI}
-function ClearBitScanForward32(const Value: Word32): Integer;
-asm
-      NOT     EAX
-      OR      EAX, EAX
-      JZ      @NoBits
-      BSF     EAX, EAX
-      RET
-  @NoBits:
-      MOV     EAX, -1
-end;
-
-function ClearBitScanForward32(const Value, BitIndex: Word32): Integer;
-asm
-      CMP     EDX, BitsPerLongWord
-      JAE     @NotFound
-      MOV     ECX, EDX
-      MOV     EDX, $FFFFFFFF
-      NOT     EAX
-      SHL     EDX, CL
-      AND     EDX, EAX
-      JE      @NotFound
-      BSF     EAX, EDX
-      RET
-  @NotFound:
-      MOV     EAX, -1
-end;
-{$ELSE}
-function ClearBitScanForward32(const Value, BitIndex: Word32): Integer;
+procedure AsciiConvertArrayLower(var S: AsciiStringArray);
 var I : Integer;
 begin
-  if BitIndex < BitsPerLongWord then
-    for I := Integer(BitIndex) to 31 do
-      if Value and BitMaskTable32[I] = 0 then
-        begin
-          Result := I;
-          exit;
-        end;
-  Result := -1;
+  for I := 0 to Length(S) - 1 do
+    AsciiConvertLowerA(S[I]);
 end;
 
-function ClearBitScanForward32(const Value: Word32): Integer;
-begin
-  Result := ClearBitScanForward32(Value, 0);
-end;
-{$ENDIF}
 
-{$IFDEF ASM386_DELPHI}
-function ClearBitScanReverse32(const Value: Word32): Integer;
-asm
-      NOT     EAX
-      OR      EAX, EAX
-      JZ      @NoBits
-      BSR     EAX, EAX
-      RET
-  @NoBits:
-      MOV     EAX, -1
-end;
 
-function ClearBitScanReverse32(const Value, BitIndex: Word32): Integer;
-asm
-      CMP     EDX, BitsPerLongWord
-      JAE     @NotFound
-      LEA     ECX, [EDX - 31]
-      MOV     EDX, $FFFFFFFF
-      NEG     ECX
-      NOT     EAX
-      SHR     EDX, CL
-      AND     EDX, EAX
-      JE      @NotFound
-      BSR     EAX, EDX
-      RET
-  @NotFound:
-      MOV     EAX, -1
-end;
-{$ELSE}
-function ClearBitScanReverse32(const Value, BitIndex: Word32): Integer;
+{                                                                              }
+{ RawByteString conversion functions                                           }
+{                                                                              }
+
+resourcestring
+  SRawByteStringConvertError = 'RawByteString conversion error';
+
+procedure RawByteBufToWideBuf(const Buf: Pointer; const BufSize: Integer;
+    const DestBuf: Pointer);
 var I : Integer;
+    P : Pointer;
+    Q : Pointer;
+    V : LongWord;
 begin
-  if BitIndex < BitsPerLongWord then
-    for I := Integer(BitIndex) downto 0 do
-      if Value and BitMaskTable32[I] = 0 then
-        begin
-          Result := I;
-          exit;
-        end;
-  Result := -1;
+  if BufSize <= 0 then
+    exit;
+  P := Buf;
+  Q := DestBuf;
+  for I := 1 to BufSize div 4 do
+    begin
+      // convert 4 characters per iteration
+      V := PLongWord(P)^;
+      Inc(PLongWord(P));
+      PLongWord(Q)^ := (V and $FF) or ((V and $FF00) shl 8);
+      Inc(PLongWord(Q));
+      V := V shr 16;
+      PLongWord(Q)^ := (V and $FF) or ((V and $FF00) shl 8);
+      Inc(PLongWord(Q));
+    end;
+  // convert remaining (<4)
+  for I := 1 to BufSize mod 4 do
+    begin
+      PWord(Q)^ := PByte(P)^;
+      Inc(PByte(P));
+      Inc(PWord(Q));
+    end;
 end;
 
-function ClearBitScanReverse32(const Value: Word32): Integer;
+function RawByteStrPtrToWideString(const S: PAnsiChar; const Len: Integer): WideString;
 begin
-  Result := ClearBitScanReverse32(Value, 31);
-end;
-{$ENDIF}
-
-const
-  BitCountTable32 : array[Byte] of Byte =
-    (0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
-     1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
-     1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
-     2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-     1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
-     2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-     2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-     3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
-     1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
-     2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-     2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-     3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
-     2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-     3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
-     3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
-     4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8);
-
-{$IFDEF ASM386_DELPHI}
-function BitCount32(const Value: Word32): Word32; register; assembler;
-asm
-      MOVZX   EDX, AL
-      MOVZX   EDX, BYTE PTR [EDX + BitCountTable32]
-      MOVZX   ECX, AH
-      ADD     DL, BYTE PTR [ECX + BitCountTable32]
-      SHR     EAX, 16
-      MOVZX   ECX, AH
-      ADD     DL, BYTE PTR [ECX + BitCountTable32]
-      AND     EAX, $FF
-      ADD     DL, BYTE PTR [EAX + BitCountTable32]
-      MOV     AL, DL
-end;
-{$ELSE}
-function BitCount32(const Value: Word32): Word32;
-begin
-  Result := BitCountTable32[(Value and $000000FF)       ] +
-            BitCountTable32[(Value and $0000FF00) shr 8 ] +
-            BitCountTable32[(Value and $00FF0000) shr 16] +
-            BitCountTable32[(Value and $FF000000) shr 24];
-end;
-{$ENDIF}
-
-function IsPowerOfTwo32(const Value: Word32): Boolean;
-begin
-  Result := BitCount32(Value) = 1;
-end;
-
-function LowBitMask32(const HighBitIndex: Word32): Word32;
-begin
-  if HighBitIndex >= BitsPerLongWord then
-    Result := 0
+  if Len <= 0 then
+    Result := StrEmptyW
   else
-    Result := BitMaskTable32[HighBitIndex] - 1;
+    begin
+      SetLength(Result, Len);
+      RawByteBufToWideBuf(S, Len, PWideChar(Result));
+    end;
 end;
 
-function HighBitMask32(const LowBitIndex: Word32): Word32;
+function RawByteStrPtrToUnicodeString(const S: PAnsiChar; const Len: Integer): UnicodeString;
 begin
-  if LowBitIndex >= BitsPerLongWord then
-    Result := 0
+  if Len <= 0 then
+    Result := ''
   else
-    Result := not BitMaskTable32[LowBitIndex] + 1;
+    begin
+      SetLength(Result, Len);
+      RawByteBufToWideBuf(S, Len, PWideChar(Result));
+    end;
 end;
 
-function RangeBitMask32(const LowBitIndex, HighBitIndex: Word32): Word32;
+function RawByteStringToWideString(const S: RawByteString): WideString;
+var L : Integer;
 begin
-  if (LowBitIndex >= BitsPerLongWord) and (HighBitIndex >= BitsPerLongWord) then
+  L := Length(S);
+  SetLength(Result, L);
+  if L > 0 then
+    RawByteBufToWideBuf(PAnsiChar(S), L, PWideChar(Result));
+end;
+
+function RawByteStringToUnicodeString(const S: RawByteString): UnicodeString;
+var L : Integer;
+begin
+  L := Length(S);
+  SetLength(Result, L);
+  if L > 0 then
+    RawByteBufToWideBuf(PAnsiChar(S), L, PWideChar(Result));
+end;
+
+procedure WideBufToRawByteBuf(const Buf: Pointer; const Len: Integer;
+    const DestBuf: Pointer);
+var I : Integer;
+    S : PWideChar;
+    Q : PAnsiChar;
+    V : LongWord;
+    W : Word;
+begin
+  if Len <= 0 then
+    exit;
+  S := Buf;
+  Q := DestBuf;
+  for I := 1 to Len div 2 do
+    begin
+      // convert 2 characters per iteration
+      V := PLongWord(S)^;
+      if V and $FF00FF00 <> 0 then
+        raise EConvertError.Create(SRawByteStringConvertError);
+      Q^ := AnsiChar(V);
+      Inc(Q);
+      Q^ := AnsiChar(V shr 16);
+      Inc(Q);
+      Inc(S, 2);
+    end;
+  // convert remaining character
+  if Len mod 2 = 1 then
+    begin
+      W := Ord(S^);
+      if W > $FF then
+        raise EConvertError.Create(SRawByteStringConvertError);
+      Q^ := AnsiChar(W);
+    end;
+end;
+
+function WideBufToRawByteString(const P: PWideChar; const Len: Integer): RawByteString;
+var I : Integer;
+    S : PWideChar;
+    Q : PAnsiChar;
+    V : WideChar;
+begin
+  if Len <= 0 then
+    begin
+      Result := StrEmptyB;
+      exit;
+    end;
+  SetLength(Result, Len);
+  S := P;
+  Q := PAnsiChar(Result);
+  for I := 1 to Len do
+    begin
+      V := S^;
+      if Ord(V) > $FF then
+        raise EConvertError.Create(SRawByteStringConvertError);
+      Q^ := AnsiChar(Byte(V));
+      Inc(S);
+      Inc(Q);
+    end;
+end;
+
+function WideStringToRawByteString(const S: WideString): RawByteString;
+begin
+  Result := WideBufToRawByteString(PWideChar(S), Length(S));
+end;
+
+function UnicodeStringToRawByteString(const S: UnicodeString): RawByteString;
+begin
+  Result := WideBufToRawByteString(PWideChar(S), Length(S));
+end;
+
+
+
+{                                                                              }
+{ UTF-8 character conversion functions                                         }
+{                                                                              }
+
+resourcestring
+  SInvalidCodePoint = '$%x is not a valid %s code point';
+
+{ UTF8ToUCS4Char returns UTF8ErrorNone if a valid UTF-8 sequence was decoded   }
+{ (and Ch contains the decoded UCS4 character and SeqSize contains the size    }
+{ of the UTF-8 sequence). If an incomplete UTF-8 sequence is encountered, the  }
+{ function returns UTF8ErrorIncompleteEncoding and SeqSize > Size. If an       }
+{ invalid UTF-8 sequence is encountered, the function returns                  }
+{ UTF8ErrorInvalidEncoding and SeqSize (<= Size) is the size of the            }
+{ invalid sequence, and Ch may be the intended character.                      }
+function UTF8ToUCS4Char(const P: PAnsiChar; const Size: Integer;
+    out SeqSize: Integer; out Ch: UCS4Char): TUTF8Error;
+var C, D : Byte;
+    V    : LongWord;
+    I    : Integer;
+    Q    : PAnsiChar;
+begin
+  if not Assigned(P) or (Size <= 0) then
+    begin
+      SeqSize := 0;
+      Ch := 0;
+      Result := UTF8ErrorInvalidBuffer;
+      exit;
+    end;
+  C := Ord(P^);
+  if C < $80 then
+    begin
+      SeqSize := 1;
+      Ch := C;
+      Result := UTF8ErrorNone;
+      exit;
+    end;
+  // multi-byte characters always start with 11xxxxxx ($C0)
+  // following bytes always start with 10xxxxxx ($80)
+  if C and $C0 = $80 then
+    begin
+      SeqSize := 1;
+      Ch := C;
+      Result := UTF8ErrorInvalidEncoding;
+      exit;
+    end;
+  if C and $20 = 0 then // 2-byte sequence
+    begin
+      SeqSize := 2;
+      V := C and $1F;
+    end else
+  if C and $10 = 0 then // 3-byte sequence
+    begin
+      SeqSize := 3;
+      V := C and $0F;
+    end else
+  if C and $08 = 0 then // 4-byte sequence (max needed for Unicode $0-$1FFFFF)
+    begin
+      SeqSize := 4;
+      V := C and $07;
+    end else
+    begin
+      SeqSize := 1;
+      Ch := C;
+      Result := UTF8ErrorInvalidEncoding;
+      exit;
+    end;
+  if Size < SeqSize then // incomplete
+    begin
+      Ch := C;
+      Result := UTF8ErrorIncompleteEncoding;
+      exit;
+    end;
+  Q := P;
+  for I := 1 to SeqSize - 1 do
+    begin
+      Inc(Q);
+      D := Ord(Q^);
+      if D and $C0 <> $80 then // following byte must start with 10xxxxxx
+        begin
+          SeqSize := 1;
+          Ch := C;
+          Result := UTF8ErrorInvalidEncoding;
+          exit;
+        end;
+      V := (V shl 6) or (D and $3F); // decode 6 bits
+    end;
+  Ch := V;
+  Result := UTF8ErrorNone;
+end;
+
+function UTF8ToWideChar(const P: PAnsiChar; const Size: Integer;
+    out SeqSize: Integer; out Ch: WideChar): TUTF8Error;
+var Ch4 : UCS4Char;
+begin
+  Result := UTF8ToUCS4Char(P, Size, SeqSize, Ch4);
+  if Ch4 > $FFFF then
+    begin
+      Result := UTF8ErrorOutOfRange;
+      Ch := #$0000;
+    end else
+    Ch := WideChar(Ch4);
+end;
+
+{ UCS4CharToUTF8 transforms the UCS4 char Ch to UTF-8 encoding. SeqSize        }
+{ returns the number of bytes needed to transform Ch. Up to DestSize           }
+{ bytes of the UTF-8 encoding will be placed in Dest.                          }
+procedure UCS4CharToUTF8(const Ch: UCS4Char; const Dest: Pointer;
+    const DestSize: Integer; out SeqSize: Integer);
+var P : PByte;
+begin
+  P := Dest;
+  if Ch < $80 then // US-ASCII (1-byte sequence)
+    begin
+      SeqSize := 1;
+      if not Assigned(P) or (DestSize <= 0) then
+        exit;
+      P^ := Byte(Ch);
+    end else
+  if Ch < $800 then // 2-byte sequence
+    begin
+      SeqSize := 2;
+      if not Assigned(P) or (DestSize <= 0) then
+        exit;
+      P^ := $C0 or Byte(Ch shr 6);
+      if DestSize = 1 then
+        exit;
+      Inc(P);
+      P^ := $80 or (Ch and $3F);
+    end else
+  if Ch < $10000 then // 3-byte sequence
+    begin
+      SeqSize := 3;
+      if not Assigned(P) or (DestSize <= 0) then
+        exit;
+      P^ := $E0 or Byte(Ch shr 12);
+      if DestSize = 1 then
+        exit;
+      Inc(P);
+      P^ := $80 or ((Ch shr 6) and $3F);
+      if DestSize = 2 then
+        exit;
+      Inc(P);
+      P^ := $80 or (Ch and $3F);
+    end else
+  if Ch < $200000 then // 4-byte sequence
+    begin
+      SeqSize := 4;
+      if not Assigned(P) or (DestSize <= 0) then
+        exit;
+      P^ := $F0 or Byte(Ch shr 18);
+      if DestSize = 1 then
+        exit;
+      Inc(P);
+      P^ := $80 or ((Ch shr 12) and $3F);
+      if DestSize = 2 then
+        exit;
+      Inc(P);
+      P^ := $80 or ((Ch shr 6) and $3F);
+      if DestSize = 3 then
+        exit;
+      Inc(P);
+      P^ := $80 or (Ch and $3F);
+    end
+  else
+    raise EConvertError.CreateFmt(SInvalidCodePoint, [Ord(Ch), 'Unicode']);
+end;
+
+procedure WideCharToUTF8(const Ch: WideChar; const Dest: Pointer;
+    const DestSize: Integer; out SeqSize: Integer);
+begin
+  UCS4CharToUTF8(Ord(Ch), Dest, DestSize, SeqSize);
+end;
+
+
+
+{                                                                              }
+{ UTF-16 character conversion functions                                        }
+{                                                                              }
+
+resourcestring
+  SCannotConvertUCS4 = 'Cannot convert $%8.8X to %s';
+
+{ UCS4CharToUTF16BE transforms the UCS4 char Ch to UTF-16BE encoding. SeqSize  }
+{ returns the number of bytes needed to transform Ch. Up to DestSize           }
+{ bytes of the UTF-16BE encoding will be placed in Dest.                       }
+procedure UCS4CharToUTF16BE(const Ch: UCS4Char; const Dest: Pointer;
+  const DestSize: Integer; out SeqSize: Integer);
+var P : PByte;
+    HighSurrogate, LowSurrogate : Word;
+begin
+  P := Dest;
+  case Ch of
+  $00000000..$0000D7FF, $0000E000..$0000FFFF :
+    begin
+      SeqSize := 2;
+      if not Assigned(P) or (DestSize <= 0) then
+        exit;
+      {$IFDEF FREEPASCAL}
+      P^ := Byte((Ch and $FF00) shr 8);
+      {$ELSE}
+      P^ := Hi(Ch);
+      {$ENDIF}
+      if DestSize <= 1 then
+        exit;
+      Inc(P);
+      {$IFDEF FREEPASCAL}
+      P^ := Byte(Ch and $FF);
+      {$ELSE}
+      P^ := Lo(Ch);
+      {$ENDIF}
+    end;
+  $0000D800..$0000DFFF :
+    raise EConvertError.CreateFmt(SInvalidCodePoint, [Ch, 'UCS-4']);
+  $00010000..$0010FFFF :
+    begin
+      SeqSize := 4;
+      if not Assigned(P) or (DestSize <= 0) then
+        exit;
+      HighSurrogate := $D7C0 + (Ch shr 10);
+      P^ := Hi(HighSurrogate);
+      if DestSize <= 1 then
+        exit;
+      Inc(P);
+      P^ := Lo(HighSurrogate);
+      if DestSize <= 2 then
+        exit;
+      LowSurrogate := $DC00 xor (Ch and $3FF);
+      Inc(P);
+      P^ := Hi(LowSurrogate);
+      if DestSize <= 3 then
+        exit;
+      Inc(P);
+      P^ := Lo(LowSurrogate);
+    end;
+  else // out of UTF-16 range
+    raise EConvertError.CreateFmt(SCannotConvertUCS4, [Ch, 'UTF-16BE']);
+  end;
+end;
+
+{ UCS4CharToUTF16LE transforms the UCS4 char Ch to UTF-16LE encoding. SeqSize  }
+{ returns the number of bytes needed to transform Ch. Up to DestSize           }
+{ bytes of the UTF-16LE encoding will be placed in Dest.                       }
+procedure UCS4CharToUTF16LE(const Ch: UCS4Char; const Dest: Pointer;
+  const DestSize: Integer; out SeqSize: Integer);
+var P : PByte;
+    HighSurrogate, LowSurrogate : Word;
+begin
+  P := Dest;
+  case Ch of
+  $00000000..$0000D7FF, $0000E000..$0000FFFF :
+    begin
+      SeqSize := 2;
+      if not Assigned(P) or (DestSize <= 0) then
+        exit;
+      {$IFDEF FREEPASCAL}
+      P^ := Byte(Ch and $FF);
+      {$ELSE}
+      P^ := Lo(Ch);
+      {$ENDIF}
+      if DestSize <= 1 then
+        exit;
+      Inc(P);
+      {$IFDEF FREEPASCAL}
+      P^ := Byte((Ch and $FF00) shr 8);
+      {$ELSE}
+      P^ := Hi(Ch);
+      {$ENDIF}
+    end;
+  $0000D800..$0000DFFF :
+    raise EConvertError.CreateFmt(SInvalidCodePoint, [Ch, 'UCS-4']);
+  $00010000..$0010FFFF:
+    begin
+      SeqSize := 4;
+      if not Assigned(P) or (DestSize <= 0) then
+        exit;
+      HighSurrogate := $D7C0 + (Ch shr 10);
+      P^ := Lo(HighSurrogate);
+      if DestSize <= 1 then
+        exit;
+      Inc(P);
+      P^ := Hi(HighSurrogate);
+      if DestSize <= 2 then
+        exit;
+      LowSurrogate := $DC00 xor (Ch and $3FF);
+      Inc(P);
+      P^ := Lo(LowSurrogate);
+      if DestSize <= 3 then
+        exit;
+      Inc(P);
+      P^ := Hi(LowSurrogate);
+    end;
+  else // out of UTF-16 range
+    raise EConvertError.CreateFmt(SCannotConvertUCS4, [Ch, 'UTF-16LE']);
+  end;
+end;
+
+
+
+{                                                                              }
+{ UTF-8 string functions                                                       }
+{                                                                              }
+function DetectUTF8BOM(const P: PAnsiChar; const Size: Integer): Boolean;
+var Q : PAnsiChar;
+begin
+  Result := False;
+  if Assigned(P) and (Size >= 3) and (Ord(P^) = $EF) then
+    begin
+      Q := P;
+      Inc(Q);
+      if Ord(Q^) = $BB then
+        begin
+          Inc(Q);
+          if Ord(Q^) = $BF then
+            Result := True;
+        end;
+    end;
+end;
+
+function UTF8CharSize(const P: PAnsiChar; const Size: Integer): Integer;
+var C : Byte;
+    I : Integer;
+    Q : PAnsiChar;
+begin
+  if not Assigned(P) or (Size <= 0) then
     begin
       Result := 0;
       exit;
     end;
-  Result := $FFFFFFFF;
-  if LowBitIndex > 0 then
-    Result := Result xor (BitMaskTable32[LowBitIndex] - 1);
-  if HighBitIndex < 31 then
-    Result := Result xor (not BitMaskTable32[HighBitIndex + 1] + 1);
+  C := Ord(P^);
+  if C < $80 then // 1-byte (US-ASCII value)
+    Result := 1 else
+  if C and $C0 = $80 then // invalid encoding
+    Result := 1 else
+    begin
+      // multi-byte character
+      if C and $20 = 0 then
+        Result := 2 else
+      if C and $10 = 0 then
+        Result := 3 else
+      if C and $08 = 0 then
+        Result := 4 else
+        begin
+          Result := 1; // invalid encoding
+          exit;
+        end;
+      if Size < Result then // incomplete encoding
+        exit;
+      Q := P;
+      Inc(Q);
+      for I := 1 to Result - 1 do
+        if Ord(Q^) and $C0 <> $80 then
+          begin
+            Result := 1; // invalid encoding
+            exit;
+          end else
+          Inc(Q);
+    end;
 end;
 
-function SetBitRange32(const Value: Word32; const LowBitIndex, HighBitIndex: Word32): Word32;
+function UTF8BufLength(const P: PAnsiChar; const Size: Integer): Integer;
+var Q    : PAnsiChar;
+    L, C : Integer;
 begin
-  Result := Value or RangeBitMask32(LowBitIndex, HighBitIndex);
+  Q := P;
+  L := Size;
+  Result := 0;
+  while L > 0 do
+    begin
+      C := UTF8CharSize(Q, L);
+      Dec(L, C);
+      Inc(Q, C);
+      Inc(Result);
+    end;
 end;
 
-function ClearBitRange32(const Value: Word32; const LowBitIndex, HighBitIndex: Word32): Word32;
+function UTF8StringLength(const S: RawByteString): Integer;
 begin
-  Result := Value and not RangeBitMask32(LowBitIndex, HighBitIndex);
+  Result := UTF8BufLength(Pointer(S), Length(S));
 end;
 
-function ToggleBitRange32(const Value: Word32; const LowBitIndex, HighBitIndex: Word32): Word32;
+function UCS4CharToUTF8CharSize(const Ch: UCS4Char): Integer;
 begin
-  Result := Value xor RangeBitMask32(LowBitIndex, HighBitIndex);
+  if Ch < $80 then
+    Result := 1 else
+  if Ch < $800 then
+    Result := 2 else
+  if Ch < $10000 then
+    Result := 3 else
+  if Ch < $200000 then
+    Result := 4
+  else
+    raise EConvertError.CreateFmt(SInvalidCodePoint, [Ord(Ch), 'Unicode']);
 end;
 
-function IsBitRangeSet32(const Value: Word32; const LowBitIndex, HighBitIndex: Word32): Boolean;
-var M: Word32;
+function WideBufToUTF8Size(const Buf: PWideChar; const Len: Integer): Integer;
+var P : PWideChar;
+    I : Integer;
+    C : UCS4Char;
 begin
-  M := RangeBitMask32(LowBitIndex, HighBitIndex);
-  Result := Value and M = M;
+  P := Buf;
+  Result := 0;
+  for I := 1 to Len do
+    begin
+      C := UCS4Char(P^);
+      Inc(Result);
+      if C >= $80 then
+        if C >= $800 then
+          Inc(Result, 2) else
+          Inc(Result);
+      Inc(P);
+    end;
 end;
 
-function IsBitRangeClear32(const Value: Word32; const LowBitIndex, HighBitIndex: Word32): Boolean;
+function RawByteBufToUTF8Size(const Buf: PAnsiChar; const Len: Integer): Integer;
+var P : PAnsiChar;
+    I : Integer;
 begin
-  Result := Value and RangeBitMask32(LowBitIndex, HighBitIndex) = 0;
+  P := Buf;
+  Result := 0;
+  for I := 1 to Len do
+    begin
+      Inc(Result);
+      if Ord(P^) >= $80 then
+        Inc(Result);
+      Inc(P);
+    end;
 end;
+
+function WideStringToUTF8Size(const S: WideString): Integer;
+begin
+  Result := WideBufToUTF8Size(Pointer(S), Length(S));
+end;
+
+function UnicodeStringToUTF8Size(const S: UnicodeString): Integer;
+begin
+  Result := WideBufToUTF8Size(Pointer(S), Length(S));
+end;
+
+function RawByteStringToUTF8Size(const S: RawByteString): Integer;
+begin
+  Result := RawByteBufToUTF8Size(Pointer(S), Length(S));
+end;
+
+function UTF8StringToWideString(const S: RawByteString): WideString;
+var P       : PAnsiChar;
+    Q       : PWideChar;
+    L, M, I : Integer;
+    C       : WideChar;
+begin
+  L := Length(S);
+  if L = 0 then
+    begin
+      Result := StrEmptyW;
+      exit;
+    end;
+  if IsAsciiStringA(S) then // optimize for US-ASCII strings
+    begin
+      Result := RawByteStringToWideString(S);
+      exit;
+    end;
+  // Decode UTF-8
+  P := Pointer(S);
+  SetLength(Result, L); // maximum size
+  Q := Pointer(Result);
+  M := 0;
+  repeat
+    UTF8ToWideChar(P, L, I, C);
+    Assert(I > 0, 'I > 0');
+    Q^ := C;
+    Inc(Q);
+    Inc(M);
+    Inc(P, I);
+    Dec(L, I);
+  until L <= 0;
+  SetLength(Result, M); // actual size
+end;
+
+function UTF8StringToUnicodeStringP(const S: PAnsiChar; const Size: Integer): UnicodeString;
+var P       : PAnsiChar;
+    Q       : PWideChar;
+    L, M, I : Integer;
+    C       : WideChar;
+begin
+  if Size = 0 then
+    begin
+      Result := '';
+      exit;
+    end;
+  if IsAsciiBufB(S, Size) then // optimize for US-ASCII strings
+    begin
+      Result := RawByteStrPtrToUnicodeString(S, Size);
+      exit;
+    end;
+  // Decode UTF-8
+  L := Size;
+  P := S;
+  SetLength(Result, L); // maximum size
+  Q := Pointer(Result);
+  M := 0;
+  repeat
+    UTF8ToWideChar(P, Size, I, C);
+    Assert(I > 0);
+    Q^ := C;
+    Inc(Q);
+    Inc(M);
+    Inc(P, I);
+    Dec(L, I);
+  until L <= 0;
+  SetLength(Result, M); // actual size
+end;
+
+function UTF8StringToUnicodeString(const S: RawByteString): UnicodeString;
+begin
+  Result := UTF8StringToUnicodeStringP(Pointer(S), Length(S));
+end;
+
+function UTF8StringToLongString(const S: RawByteString): RawByteString;
+var P       : PAnsiChar;
+    Q       : PAnsiChar;
+    L, M, I : Integer;
+    C       : WideChar;
+begin
+  L := Length(S);
+  if L = 0 then
+    begin
+      Result := StrEmptyB;
+      exit;
+    end;
+  if IsAsciiStringA(S) then // optimize for US-ASCII strings
+    begin
+      Result := S;
+      exit;
+    end;
+  // Decode UTF-8
+  P := Pointer(S);
+  SetLength(Result, L); // maximum size
+  Q := Pointer(Result);
+  M := 0;
+  repeat
+    UTF8ToWideChar(P, L, I, C);
+    Assert(I > 0, 'I > 0');
+    if Ord(C) > $FF then
+      raise EConvertError.Create(SRawByteStringConvertError);
+    Q^ := AnsiChar(Ord(C));
+    Inc(Q);
+    Inc(M);
+    Inc(P, I);
+    Dec(L, I);
+  until L <= 0;
+  SetLength(Result, M); // actual size
+end;
+
+function UTF8StringToString(const S: RawByteString): String;
+begin
+  {$IFDEF StringIsUnicode}
+  Result := UTF8StringToUnicodeString(S);
+  {$ELSE}
+  Result := S;
+  {$ENDIF}
+end;
+
+function WideBufToUTF8String(const Buf: PWideChar; const Len: Integer): RawByteString;
+var P     : PWideChar;
+    Q     : PAnsiChar;
+    I, M,
+    N, J  : Integer;
+begin
+  if Len = 0 then
+    begin
+      Result := StrEmptyB;
+      exit;
+    end;
+  N := WideBufToUTF8Size(Buf, Len);
+  if N = Len then // optimize for US-ASCII strings
+    begin
+      Result := WideBufToRawByteString(Buf, Len);
+      exit;
+    end;
+  SetLength(Result, N);
+  P := Buf;
+  Q := Pointer(Result);
+  M := 0;
+  for I := 1 to Len do
+    begin
+      UCS4CharToUTF8(UCS4Char(P^), Q, N, J);
+      Inc(P);
+      Inc(Q, J);
+      Dec(N, J);
+      Inc(M, J);
+    end;
+  SetLength(Result, M); // actual size
+end;
+
+function RawByteStringToUTF8String(const S: RawByteString): RawByteString;
+var P       : PAnsiChar;
+    Q       : PAnsiChar;
+    I, M, N : Integer;
+    J, L    : Integer;
+begin
+  P := Pointer(S);
+  L := Length(S);
+  if L = 0 then
+    begin
+      Result := StrEmptyB;
+      exit;
+    end;
+  N := RawByteBufToUTF8Size(P, L);
+  if N = L then // optimize for US-ASCII strings
+    begin
+      Result := S;
+      exit;
+    end;
+  SetLength(Result, N);
+  Q := Pointer(Result);
+  M := 0;
+  for I := 1 to L do
+    begin
+      UCS4CharToUTF8(UCS4Char(Ord(P^)), Q, N, J);
+      Inc(P);
+      Inc(Q, J);
+      Dec(N, J);
+      Inc(M, J);
+    end;
+  SetLength(Result, M); // actual size
+end;
+
+function WideStringToUTF8String(const S: WideString): RawByteString;
+begin
+  Result := WideBufToUTF8String(Pointer(S), Length(S));
+end;
+
+{$IFNDEF SupportWideString}
+function WideStringToUnicodeString(const S: WideString): UnicodeString;
+var L, I : Integer;
+begin
+  L := Length(S);
+  SetLength(Result, L);
+  for I := 1 to L do
+    Result[I] := S[I - 1];
+end;
+{$ELSE}
+function WideStringToUnicodeString(const S: WideString): UnicodeString;
+begin
+  Result := S;
+end;
+{$ENDIF}
+
+function UnicodeStringToUTF8String(const S: UnicodeString): RawByteString;
+begin
+  Result := WideBufToUTF8String(Pointer(S), Length(S));
+end;
+
+{$IFNDEF SupportWideString}
+function UnicodeStringToWideString(const S: UnicodeString): WideString;
+var L, I : Integer;
+begin
+  L := Length(S);
+  SetLength(Result, L);
+  for I := 0 to L - 1 do
+    Result[I] := S[I + 1];
+end;
+{$ELSE}
+function UnicodeStringToWideString(const S: UnicodeString): WideString;
+begin
+  Result := S;
+end;
+{$ENDIF}
+
+const
+  MaxUTF8SequenceSize = 4;
+
+function UCS4CharToUTF8String(const Ch: UCS4Char): RawByteString;
+var Buf     : array[0..MaxUTF8SequenceSize - 1] of Byte;
+    Size, I : Integer;
+    P, Q    : PAnsiChar;
+begin
+  Size := 0;
+  UCS4CharToUTF8(Ch, @Buf, Sizeof(Buf), Size);
+  SetLength(Result, Size);
+  if Size > 0 then
+    begin
+      P := Pointer(Result);
+      Q := @Buf;
+      for I := 0 to Size - 1 do
+        begin
+          P^ := Q^;
+          Inc(P);
+          Inc(Q);
+        end;
+    end;
+end;
+
+function ISO8859_1StringToUTF8String(const S: RawByteString): RawByteString;
+var P, Q  : PAnsiChar;
+    L, I,
+    M, J  : Integer;
+begin
+  L := Length(S);
+  if L = 0 then
+    begin
+      Result := StrEmptyB;
+      exit;
+    end;
+  // Calculate size
+  M := L;
+  P := Pointer(S);
+  for I := 1 to L do
+    begin
+      if Ord(P^) >= $80 then
+        Inc(M); // 2 bytes required for #$80-#$FF
+      Inc(P);
+    end;
+  // Check if conversion is required
+  if M = L then
+    begin
+      // All characters are US-ASCII, return reference to same string
+      Result := S;
+      exit;
+    end;
+  // Convert
+  SetLength(Result, M);
+  Q := Pointer(Result);
+  P := Pointer(S);
+  for I := 1 to L do
+    begin
+      WideCharToUTF8(WideChar(P^), Q, M, J);
+      Inc(P);
+      Inc(Q, J);
+      Dec(M, J);
+    end;
+end;
+
+function StringToUTF8String(const S: String): RawByteString;
+begin
+  {$IFDEF StringIsUnicode}
+  Result := UnicodeStringToUTF8String(S);
+  {$ELSE}
+  Result := S;
+  {$ENDIF}
+end;
+
+
+
+{                                                                              }
+{ UTF-16 functions                                                             }
+{                                                                              }
+function DetectUTF16BEBOM(const P: Pointer; const Size: Integer): Boolean;
+begin
+  Result := Assigned(P) and (Size >= Sizeof(WideChar)) and
+            (PWideChar(P)^ = WideChar($FEFF));
+end;
+
+function DetectUTF16LEBOM(const P: Pointer; const Size: Integer): Boolean;
+begin
+  Result := Assigned(P) and (Size >= Sizeof(WideChar)) and
+            (PWideChar(P)^ = WideChar($FFFE));
+end;
+
+{ DetectUTF16Encoding returns True if the encoding was confirmed to be UTF-16. }
+{ SwapEndian is True if it was detected that the UTF-16 data is in reverse     }
+{ endian from that used by the cpu.                                            }
+function DetectUTF16BOM(const P: Pointer; const Size: Integer;
+    out SwapEndian: Boolean): Boolean;
+begin
+  if not Assigned(P) or (Size < Sizeof(WideChar)) then
+    begin
+      SwapEndian := False;
+      Result := False;
+    end else
+  if PWideChar(P)^ = WideChar($FEFF) then
+    begin
+      SwapEndian := False;
+      Result := True;
+    end else
+  if PWideChar(P)^ = WideChar($FFFE) then
+    begin
+      SwapEndian := True;
+      Result := True;
+    end
+  else
+    begin
+      SwapEndian := False;
+      Result := False;
+    end;
+end;
+
+function SwapUTF16Endian(const P: WideChar): WideChar;
+begin
+  Result := WideChar(((Ord(P) and $FF) shl 8) or (Ord(P) shr 8));
+end;
+
+
+
+{                                                                              }
+{ String conversion functions                                                  }
+{                                                                              }
+function ToAnsiString(const A: String): AnsiString;
+begin
+  {$IFDEF StringIsUnicode}
+  Result := AnsiString(A);
+  {$ELSE}
+  Result := A;
+  {$ENDIF}
+end;
+
+function ToRawByteString(const A: String): RawByteString;
+begin
+  {$IFDEF StringIsUnicode}
+  Result := RawByteString(A);
+  {$ELSE}
+  Result := A;
+  {$ENDIF}
+end;
+
+{$IFNDEF SupportWideString}
+{$IFDEF StringIsUnicode}
+function ToWideString(const A: String): WideString;
+var L : Integer;
+begin
+  L := Length(A);
+  SetLength(Result, L);
+  Move(PChar(A)^, PWideChar(Result)^, L * SizeOf(WideChar));
+end;
+{$ELSE}
+function ToWideString(const A: String): WideString;
+var L : Integer;
+begin
+  L := Length(A);
+  SetLength(Result, L);
+  RawByteBufToWideBuf(PChar(A), Length(A), PWideChar(Result));
+end;
+{$ENDIF}
+{$ELSE}
+function ToWideString(const A: String): WideString;
+begin
+  Result := WideString(A);
+end;
+{$ENDIF}
+
+function ToUnicodeString(const A: String): UnicodeString;
+begin
+  Result := UnicodeString(A);
+end;
+
+
+
+{                                                                              }
+{ String append functions                                                      }
+{                                                                              }
+{$IFNDEF SupportAnsiString}
+procedure StrAppendChA(var A: AnsiString; const C: AnsiChar);
+var L : Integer;
+begin
+  L := Length(A);
+  SetLength(A, L + 1);
+  A[L] := C;
+end;
+{$ELSE}
+procedure StrAppendChA(var A: AnsiString; const C: AnsiChar);
+begin
+  A := A + C;
+end;
+{$ENDIF}
+
+{$IFNDEF SupportAnsiString}
+procedure StrAppendChB(var A: RawByteString; const C: AnsiChar);
+var L : Integer;
+begin
+  L := Length(A);
+  SetLength(A, L + 1);
+  A[L] := C;
+end;
+{$ELSE}
+procedure StrAppendChB(var A: RawByteString; const C: AnsiChar);
+begin
+  A := A + C;
+end;
+{$ENDIF}
+
+{$IFNDEF SupportWideString}
+procedure StrAppendChW(var A: WideString; const C: WideChar);
+var L : Integer;
+begin
+  L := Length(A);
+  SetLength(A, L + 1);
+  A[L] := C;
+end;
+{$ELSE}
+procedure StrAppendChW(var A: WideString; const C: WideChar);
+begin
+  A := A + C;
+end;
+{$ENDIF}
+
+{$IFNDEF SupportUnicodeString}
+procedure StrAppendChU(var A: UnicodeString; const C: WideChar);
+var L : Integer;
+begin
+  L := Length(A);
+  SetLength(A, L + 1);
+  A[L] := C;
+end;
+{$ELSE}
+procedure StrAppendChU(var A: UnicodeString; const C: WideChar);
+begin
+  A := A + C;
+end;
+{$ENDIF}
+
+procedure StrAppendCh(var A: String; const C: Char);
+begin
+  A := A + C;
+end;
+
+
+
+{                                                                              }
+{ Compare                                                                      }
+{                                                                              }
+function CharCompareA(const A, B: AnsiChar): Integer;
+begin
+  if Ord(A) < Ord(B) then
+    Result := -1 else
+    if Ord(A) > Ord(B) then
+      Result := 1
+    else
+      Result := 0;
+end;
+
+function CharCompareW(const A, B: WideChar): Integer;
+begin
+  if Ord(A) < Ord(B) then
+    Result := -1 else
+    if Ord(A) > Ord(B) then
+      Result := 1
+    else
+      Result := 0;
+end;
+
+function CharCompare(const A, B: Char): Integer;
+begin
+  {$IFDEF CharIsWide}
+  Result := CharCompareW(A, B);
+  {$ELSE}
+  Result := CharCompareA(A, B);
+  {$ENDIF}
+end;
+
+function CharCompareNoAsciiCaseA(const A, B: AnsiChar): Integer;
+var C, D : AnsiChar;
+begin
+  C := AsciiUpCaseA(A);
+  D := AsciiUpCaseA(B);
+  if C < D then
+    Result := -1 else
+    if C > D then
+      Result := 1
+    else
+      Result := 0;
+end;
+
+function CharCompareNoAsciiCaseW(const A, B: WideChar): Integer;
+var C, D : WideChar;
+begin
+  C := AsciiUpCaseW(A);
+  D := AsciiUpCaseW(B);
+  if Ord(C) < Ord(D) then
+    Result := -1 else
+    if Ord(C) > Ord(D) then
+      Result := 1
+    else
+      Result := 0;
+end;
+
+function CharCompareNoAsciiCase(const A, B: Char): Integer;
+var C, D : Char;
+begin
+  C := AsciiUpCase(A);
+  D := AsciiUpCase(B);
+  if Ord(C) < Ord(D) then
+    Result := -1 else
+    if Ord(C) > Ord(D) then
+      Result := 1
+    else
+      Result := 0;
+end;
+
+function CharEqualNoAsciiCaseA(const A, B: AnsiChar): Boolean;
+begin
+  Result := AsciiUpCaseA(A) = AsciiUpCaseA(B);
+end;
+
+function CharEqualNoAsciiCaseW(const A, B: WideChar): Boolean;
+begin
+  Result := AsciiUpCaseW(A) = AsciiUpCaseW(B);
+end;
+
+function CharEqualNoAsciiCase(const A, B: Char): Boolean;
+begin
+  Result := AsciiUpCase(A) = AsciiUpCase(B);
+end;
+
+{$IFDEF CLR}
+function StrPCompareA(const A, B: AnsiString; const Len: Integer): Integer;
+var C, D : Integer;
+    I    : Integer;
+begin
+  for I := 1 to Len do
+    begin
+      C := Ord(A[I]);
+      D := Ord(B[I]);
+      if C <> D then
+        begin
+          if C < D then
+            Result := -1
+          else
+            Result := 1;
+          exit;
+        end;
+    end;
+  Result := 0;
+end;
+
+function StrPCompareNoAsciiCaseA(const A, B: AnsiString; const Len: Integer): Integer;
+var C, D : Integer;
+    I    : Integer;
+begin
+  for I := 1 to Len do
+    begin
+      C := Ord(AsciiLowCaseLookup[A[I]]);
+      D := Ord(AsciiLowCaseLookup[B[I]]);
+      if C <> D then
+        begin
+          if C < D then
+            Result := -1
+          else
+            Result := 1;
+          exit;
+        end;
+    end;
+  Result := 0;
+end;
+{$ELSE}
+function StrPCompareA(const A, B: PAnsiChar; const Len: Integer): Integer;
+var P, Q : PAnsiChar;
+    I    : Integer;
+begin
+  P := A;
+  Q := B;
+  if P <> Q then
+    for I := 1 to Len do
+      if P^ = Q^ then
+        begin
+          Inc(P);
+          Inc(Q);
+        end
+      else
+        begin
+          if Ord(P^) < Ord(Q^) then
+            Result := -1
+          else
+            Result := 1;
+          exit;
+        end;
+  Result := 0;
+end;
+
+function StrPCompareW(const A, B: PWideChar; const Len: Integer): Integer;
+var P, Q : PWideChar;
+    I    : Integer;
+begin
+  P := A;
+  Q := B;
+  if P <> Q then
+    for I := 1 to Len do
+      if Ord(P^) = Ord(Q^) then
+        begin
+          Inc(P);
+          Inc(Q);
+        end
+      else
+        begin
+          if Ord(P^) < Ord(Q^) then
+            Result := -1
+          else
+            Result := 1;
+          exit;
+        end;
+  Result := 0;
+end;
+
+function StrPCompare(const A, B: PChar; const Len: Integer): Integer;
+var P, Q : PChar;
+    I    : Integer;
+begin
+  P := A;
+  Q := B;
+  if P <> Q then
+    for I := 1 to Len do
+      if Ord(P^) = Ord(Q^) then
+        begin
+          Inc(P);
+          Inc(Q);
+        end
+      else
+        begin
+          if Ord(P^) < Ord(Q^) then
+            Result := -1
+          else
+            Result := 1;
+          exit;
+        end;
+  Result := 0;
+end;
+
+function StrPCompareNoAsciiCaseA(const A, B: PAnsiChar; const Len: Integer): Integer;
+var P, Q : PByte;
+    C, D : Byte;
+    I    : Integer;
+begin
+  P := Pointer(A);
+  Q := Pointer(B);
+  if P <> Q then
+    for I := 1 to Len do
+      begin
+        C := AsciiLowCaseLookup[P^];
+        D := AsciiLowCaseLookup[Q^];
+        if C = D then
+          begin
+            Inc(P);
+            Inc(Q);
+          end
+        else
+          begin
+            if C < D then
+              Result := -1
+            else
+              Result := 1;
+            exit;
+          end;
+      end;
+  Result := 0;
+end;
+
+function StrPCompareNoAsciiCaseW(const A, B: PWideChar; const Len: Integer): Integer;
+var P, Q : PWideChar;
+    C, D : Word;
+    I    : Integer;
+begin
+  P := A;
+  Q := B;
+  if P <> Q then
+    for I := 1 to Len do
+      begin
+        C := Ord(P^);
+        D := Ord(Q^);
+        if C <= $7F then
+          C := AsciiLowCaseLookup[Byte(C)];
+        if D <= $7F then
+          D := AsciiLowCaseLookup[Byte(D)];
+        if C = D then
+          begin
+            Inc(P);
+            Inc(Q);
+          end
+        else
+          begin
+            if C < D then
+              Result := -1
+            else
+              Result := 1;
+            exit;
+          end;
+      end;
+  Result := 0;
+end;
+
+function StrPCompareNoAsciiCase(const A, B: PChar; const Len: Integer): Integer;
+var P, Q : PChar;
+    C, D : Integer;
+    I    : Integer;
+begin
+  P := A;
+  Q := B;
+  if P <> Q then
+    for I := 1 to Len do
+      begin
+        C := Ord(P^);
+        D := Ord(Q^);
+        if C <= $7F then
+          C := Integer(AsciiLowCaseLookup[Byte(C)]);
+        if D <= $7F then
+          D := Integer(AsciiLowCaseLookup[Byte(D)]);
+        if C = D then
+          begin
+            Inc(P);
+            Inc(Q);
+          end
+        else
+          begin
+            if C < D then
+              Result := -1
+            else
+              Result := 1;
+            exit;
+          end;
+      end;
+  Result := 0;
+end;
+{$ENDIF}
+
+{$IFDEF CLR}
+function StrCompare(const A, B: AnsiString): Integer;
+var L, M, I: Integer;
+begin
+  L := Length(A);
+  M := Length(B);
+  if L < M then
+    I := L
+  else
+    I := M;
+  Result := StrPCompareA(A, B, I);
+  if Result <> 0 then
+    exit;
+  if L = M then
+    Result := 0 else
+  if L < M then
+    Result := -1
+  else
+    Result := 1;
+end;
+
+function StrCompareNoCase(const A, B: AnsiString): Integer;
+var L, M, I: Integer;
+begin
+  L := Length(A);
+  M := Length(B);
+  if L < M then
+    I := L
+  else
+    I := M;
+  Result := StrPCompareNoAsciiCaseA(A, B, I);
+  if Result <> 0 then
+    exit;
+  if L = M then
+    Result := 0 else
+  if L < M then
+    Result := -1
+  else
+    Result := 1;
+end;
+{$ENDIF}
+
+{$IFNDEF CLR}
+function StrCompareA(const A, B: AnsiString): Integer;
+var L, M, I: Integer;
+begin
+  L := Length(A);
+  M := Length(B);
+  if L < M then
+    I := L
+  else
+    I := M;
+  Result := StrPCompareA(Pointer(A), Pointer(B), I);
+  if Result <> 0 then
+    exit;
+  if L = M then
+    Result := 0 else
+  if L < M then
+    Result := -1
+  else
+    Result := 1;
+end;
+
+function StrCompareB(const A, B: RawByteString): Integer;
+var L, M, I: Integer;
+begin
+  L := Length(A);
+  M := Length(B);
+  if L < M then
+    I := L
+  else
+    I := M;
+  Result := StrPCompareA(Pointer(A), Pointer(B), I);
+  if Result <> 0 then
+    exit;
+  if L = M then
+    Result := 0 else
+  if L < M then
+    Result := -1
+  else
+    Result := 1;
+end;
+
+function StrCompareW(const A, B: WideString): Integer;
+var L, M, I: Integer;
+begin
+  L := Length(A);
+  M := Length(B);
+  if L < M then
+    I := L
+  else
+    I := M;
+  Result := StrPCompareW(Pointer(A), Pointer(B), I);
+  if Result <> 0 then
+    exit;
+  if L = M then
+    Result := 0 else
+  if L < M then
+    Result := -1
+  else
+    Result := 1;
+end;
+
+function StrCompareU(const A, B: UnicodeString): Integer;
+var L, M, I: Integer;
+begin
+  L := Length(A);
+  M := Length(B);
+  if L < M then
+    I := L
+  else
+    I := M;
+  Result := StrPCompareW(Pointer(A), Pointer(B), I);
+  if Result <> 0 then
+    exit;
+  if L = M then
+    Result := 0 else
+  if L < M then
+    Result := -1
+  else
+    Result := 1;
+end;
+
+function StrCompare(const A, B: String): Integer;
+var L, M, I: Integer;
+begin
+  L := Length(A);
+  M := Length(B);
+  if L < M then
+    I := L
+  else
+    I := M;
+  Result := StrPCompare(Pointer(A), Pointer(B), I);
+  if Result <> 0 then
+    exit;
+  if L = M then
+    Result := 0 else
+  if L < M then
+    Result := -1
+  else
+    Result := 1;
+end;
+
+function StrCompareNoAsciiCaseA(const A, B: AnsiString): Integer;
+var L, M, I: Integer;
+begin
+  L := Length(A);
+  M := Length(B);
+  if L < M then
+    I := L
+  else
+    I := M;
+  Result := StrPCompareNoAsciiCaseA(Pointer(A), Pointer(B), I);
+  if Result <> 0 then
+    exit;
+  if L = M then
+    Result := 0 else
+  if L < M then
+    Result := -1
+  else
+    Result := 1;
+end;
+
+function StrCompareNoAsciiCaseB(const A, B: RawByteString): Integer;
+var L, M, I: Integer;
+begin
+  L := Length(A);
+  M := Length(B);
+  if L < M then
+    I := L
+  else
+    I := M;
+  Result := StrPCompareNoAsciiCaseA(Pointer(A), Pointer(B), I);
+  if Result <> 0 then
+    exit;
+  if L = M then
+    Result := 0 else
+  if L < M then
+    Result := -1
+  else
+    Result := 1;
+end;
+
+function StrCompareNoAsciiCaseW(const A, B: WideString): Integer;
+var L, M, I: Integer;
+begin
+  L := Length(A);
+  M := Length(B);
+  if L < M then
+    I := L
+  else
+    I := M;
+  Result := StrPCompareNoAsciiCaseW(Pointer(A), Pointer(B), I);
+  if Result <> 0 then
+    exit;
+  if L = M then
+    Result := 0 else
+  if L < M then
+    Result := -1
+  else
+    Result := 1;
+end;
+
+function StrCompareNoAsciiCaseU(const A, B: UnicodeString): Integer;
+var L, M, I: Integer;
+begin
+  L := Length(A);
+  M := Length(B);
+  if L < M then
+    I := L
+  else
+    I := M;
+  Result := StrPCompareNoAsciiCaseW(Pointer(A), Pointer(B), I);
+  if Result <> 0 then
+    exit;
+  if L = M then
+    Result := 0 else
+  if L < M then
+    Result := -1
+  else
+    Result := 1;
+end;
+
+function StrCompareNoAsciiCase(const A, B: String): Integer;
+var L, M, I: Integer;
+begin
+  L := Length(A);
+  M := Length(B);
+  if L < M then
+    I := L
+  else
+    I := M;
+  Result := StrPCompareNoAsciiCase(Pointer(A), Pointer(B), I);
+  if Result <> 0 then
+    exit;
+  if L = M then
+    Result := 0 else
+  if L < M then
+    Result := -1
+  else
+    Result := 1;
+end;
+{$ENDIF}
 
 
 
@@ -2609,7 +4596,7 @@ end;
 {$ELSE}
 procedure FillCharSet(var C: CharSet);
 begin
-  C := [#0..#255];
+  C := [AnsiChar(0)..AnsiChar(255)];
 end;
 {$ENDIF}
 
@@ -2628,7 +4615,7 @@ end;
 {$ELSE}
 procedure ComplementCharSet(var C: CharSet);
 begin
-  C := [#0..#255] - C;
+  C := [AnsiChar(0)..AnsiChar(255)] - C;
 end;
 {$ENDIF}
 
@@ -2772,7 +4759,7 @@ end;
 procedure XORCharSet(var DestSet: CharSet; const SourceSet: CharSet);
 var Ch: AnsiChar;
 begin
-  for Ch := #0 to #255 do
+  for Ch := AnsiChar(0) to AnsiChar(255) do
     if Ch in DestSet then
       begin
         if Ch in SourceSet then
@@ -2918,7 +4905,7 @@ begin
 end;
 {$ENDIF}
 
-{$IFDEF ASM386_DELPHI}
+{$IFDEF __ASM386_DELPHI}
 function CharCount(const C: CharSet): Integer;
 asm
       PUSH    EBX
@@ -2957,7 +4944,7 @@ function CharCount(const C: CharSet): Integer;
 var I : AnsiChar;
 begin
   Result := 0;
-  for I := #0 to #255 do
+  for I := AnsiChar(0) to AnsiChar(255) do
     if I in C then
       Inc(Result);
 end;
@@ -2977,10 +4964,10 @@ end;
 procedure ConvertCaseInsensitive(var C: CharSet);
 var Ch : AnsiChar;
 begin
-  for Ch := 'A' to 'Z' do
+  for Ch := AnsiChar(Ord('A')) to AnsiChar(Ord('Z')) do
     if Ch in C then
       Include(C, AnsiChar(Ord(Ch) + 32));
-  for Ch := 'a' to 'z' do
+  for Ch := AnsiChar(Ord('a')) to AnsiChar(Ord('z')) do
     if Ch in C then
       Include(C, AnsiChar(Ord(Ch) - 32));
 end;
@@ -3025,10 +5012,10 @@ function CharSetToStr(const C: CharSet): AnsiString;
   procedure CharMatch(const Start: AnsiChar; const Count: Integer);
   var Ch : AnsiChar;
   begin
-    for Ch := Start to #255 do
+    for Ch := Start to AnsiChar(255) do
       if Ch in C then
         begin
-          if Ch = #255 then
+          if Ch = AnsiChar(255) then
             SetLength(Result, Count + 1)
           else
             CharMatch(AnsiChar(Byte(Ch) + 1), Count + 1);
@@ -3038,7 +5025,7 @@ function CharSetToStr(const C: CharSet): AnsiString;
     SetLength(Result, Count);
   end;
 begin
-  CharMatch(#0, 0);
+  CharMatch(AnsiChar(0), 0);
 end;
 {$ENDIF}
 
@@ -3226,24 +5213,6 @@ end;
 {$ELSE}
 procedure Swap(var X, Y: LongWord);
 var F : LongWord;
-begin
-  F := X;
-  X := Y;
-  Y := F;
-end;
-{$ENDIF}
-
-procedure Swap(var X, Y: NativeUInt);
-var F : NativeUInt;
-begin
-  F := X;
-  X := Y;
-  Y := F;
-end;
-
-{$IFNDEF FREEPASCAL}
-procedure Swap(var X, Y: NativeInt);
-var F : NativeInt;
 begin
   F := X;
   X := Y;
@@ -3476,7 +5445,7 @@ end;
 {                                                                              }
 { Compare                                                                      }
 {                                                                              }
-function ReverseCompareResult(const C: TCompareResult): TCompareResult;
+function InverseCompareResult(const C: TCompareResult): TCompareResult;
 begin
   if C = crLess then
     Result := crGreater else
@@ -3528,32 +5497,32 @@ end;
 
 function CompareA(const I1, I2: AnsiString): TCompareResult;
 begin
-  if I1 = I2 then
-    Result := crEqual else
-  if I1 > I2 then
-    Result := crGreater
+  case StrCompareA(I1, I2) of
+    -1 : Result := crLess;
+     1 : Result := crGreater;
   else
-    Result := crLess;
+    Result := crEqual;
+  end;
 end;
 
 function CompareB(const I1, I2: RawByteString): TCompareResult;
 begin
-  if I1 = I2 then
-    Result := crEqual else
-  if I1 > I2 then
-    Result := crGreater
+  case StrCompareB(I1, I2) of
+    -1 : Result := crLess;
+     1 : Result := crGreater;
   else
-    Result := crLess;
+    Result := crEqual;
+  end;
 end;
 
 function CompareW(const I1, I2: WideString): TCompareResult;
 begin
-  if I1 = I2 then
-    Result := crEqual else
-  if I1 > I2 then
-    Result := crGreater
+  case StrCompareW(I1, I2) of
+    -1 : Result := crLess;
+     1 : Result := crGreater;
   else
-    Result := crLess;
+    Result := crEqual;
+  end;
 end;
 
 function CompareU(const I1, I2: UnicodeString): TCompareResult;
@@ -3647,7 +5616,7 @@ const
 {                                                                              }
 function AnsiCharToInt(const A: AnsiChar): Integer;
 begin
-  if A in ['0'..'9'] then
+  if A in [AnsiChar(Ord('0'))..AnsiChar(Ord('9'))] then
     Result := Ord(A) - Ord('0')
   else
     Result := -1;
@@ -3673,7 +5642,7 @@ end;
 function IntToAnsiChar(const A: Integer): AnsiChar;
 begin
   if (A < 0) or (A > 9) then
-    Result := #$00
+    Result := AnsiChar($00)
   else
     Result := AnsiChar(48 + A);
 end;
@@ -3681,7 +5650,7 @@ end;
 function IntToWideChar(const A: Integer): WideChar;
 begin
   if (A < 0) or (A > 9) then
-    Result := #$00
+    Result := WideChar($00)
   else
     Result := WideChar(48 + A);
 end;
@@ -3754,7 +5723,7 @@ end;
 function IntToUpperHexAnsiChar(const A: Integer): AnsiChar;
 begin
   if (A < 0) or (A > 15) then
-    Result := #$00
+    Result := AnsiChar($00)
   else
   if A <= 9 then
     Result := AnsiChar(48 + A)
@@ -3785,7 +5754,7 @@ end;
 function IntToLowerHexAnsiChar(const A: Integer): AnsiChar;
 begin
   if (A < 0) or (A > 15) then
-    Result := #$00
+    Result := AnsiChar($00)
   else
   if A <= 9 then
     Result := AnsiChar(48 + A)
@@ -3820,12 +5789,12 @@ begin
   // special cases
   if A = 0 then
     begin
-      Result := '0';
+      Result := ToAnsiString('0');
       exit;
     end;
   if A = MinInt64 then
     begin
-      Result := '-9223372036854775808';
+      Result := ToAnsiString('-9223372036854775808');
       exit;
     end;
   // calculate string length
@@ -3845,12 +5814,12 @@ begin
   T := A;
   if T < 0 then
     begin
-      Result[1] := '-';
+      Result[StrBaseA] := AnsiChar(Ord('-'));
       T := -T;
     end;
   while T > 0 do
     begin
-      Result[L - I] := IntToAnsiChar(T mod 10);
+      Result[StrBaseA + L - I - 1] := IntToAnsiChar(T mod 10);
       T := T div 10;
       Inc(I);
     end;
@@ -3863,12 +5832,12 @@ begin
   // special cases
   if A = 0 then
     begin
-      Result := '0';
+      Result := ToRawByteString('0');
       exit;
     end;
   if A = MinInt64 then
     begin
-      Result := '-9223372036854775808';
+      Result := ToRawByteString('-9223372036854775808');
       exit;
     end;
   // calculate string length
@@ -3888,12 +5857,12 @@ begin
   T := A;
   if T < 0 then
     begin
-      Result[1] := '-';
+      Result[StrBaseB] := AnsiChar('-');
       T := -T;
     end;
   while T > 0 do
     begin
-      Result[L - I] := IntToAnsiChar(T mod 10);
+      Result[StrBaseB + L - I - 1] := IntToAnsiChar(T mod 10);
       T := T div 10;
       Inc(I);
     end;
@@ -3906,12 +5875,12 @@ begin
   // special cases
   if A = 0 then
     begin
-      Result := '0';
+      Result := ToWideString('0');
       exit;
     end;
   if A = MinInt64 then
     begin
-      Result := '-9223372036854775808';
+      Result := ToWideString('-9223372036854775808');
       exit;
     end;
   // calculate string length
@@ -3931,12 +5900,12 @@ begin
   T := A;
   if T < 0 then
     begin
-      Result[1] := '-';
+      Result[StrBaseW] := '-';
       T := -T;
     end;
   while T > 0 do
     begin
-      Result[L - I] := IntToWideChar(T mod 10);
+      Result[StrBaseW + L - I - 1] := IntToWideChar(T mod 10);
       T := T div 10;
       Inc(I);
     end;
@@ -4044,8 +6013,8 @@ begin
       else
         L := Digits;
       SetLength(Result, L);
-      for V := 1 to L do
-        Result[V] := '0';
+      for V := 0 to L - 1 do
+        Result[StrBaseA + V] := AnsiChar(Ord('0'));
       exit;
     end;
   // determine number of digits in result
@@ -4065,15 +6034,15 @@ begin
     begin
       V := D mod Base + 1;
       if UpperCase then
-        Result[L] := AnsiChar(StrHexDigitsUpper[V])
+        Result[StrBaseA + L - 1] := AnsiChar(StrHexDigitsUpper[V])
       else
-        Result[L] := AnsiChar(StrHexDigitsLower[V]);
+        Result[StrBaseA + L - 1] := AnsiChar(StrHexDigitsLower[V]);
       Dec(L);
       D := D div Base;
     end;
   while L > 0 do
     begin
-      Result[L] := '0';
+      Result[L] := AnsiChar(Ord('0'));
       Dec(L);
     end;
 end;
@@ -4095,8 +6064,8 @@ begin
       else
         L := Digits;
       SetLength(Result, L);
-      for V := 1 to L do
-        Result[V] := '0';
+      for V := 0 to L - 1 do
+        Result[StrBaseB + V] := AnsiChar(Ord('0'));
       exit;
     end;
   // determine number of digits in result
@@ -4116,15 +6085,15 @@ begin
     begin
       V := D mod Base + 1;
       if UpperCase then
-        Result[L] := AnsiChar(StrHexDigitsUpper[V])
+        Result[StrBaseB + L - 1] := AnsiChar(StrHexDigitsUpper[V])
       else
-        Result[L] := AnsiChar(StrHexDigitsLower[V]);
+        Result[StrBaseB + L - 1] := AnsiChar(StrHexDigitsLower[V]);
       Dec(L);
       D := D div Base;
     end;
   while L > 0 do
     begin
-      Result[L] := '0';
+      Result[StrBaseB + L - 1] := AnsiChar(Ord('0'));
       Dec(L);
     end;
 end;
@@ -4428,17 +6397,17 @@ begin
   Len := 0;
   // check sign
   Ch := P^;
-  if Ch in ['+', '-'] then
+  if Ch in [AnsiChar(Ord('+')), AnsiChar(Ord('-'))] then
     begin
       Inc(Len);
       Inc(P);
-      Neg := Ch = '-';
+      Neg := Ch = AnsiChar(Ord('-'));
     end
   else
     Neg := False;
   // skip leading zeros
   HasDig := False;
-  while (Len < BufLen) and (P^ = '0') do
+  while (Len < BufLen) and (P^ = AnsiChar(Ord('0'))) do
     begin
       Inc(Len);
       Inc(P);
@@ -4449,7 +6418,7 @@ begin
   while Len < BufLen do
     begin
       Ch := P^;
-      if Ch in ['0'..'9'] then
+      if Ch in [AnsiChar(Ord('0'))..AnsiChar(Ord('9'))] then
         begin
           HasDig := True;
           if (Res > 922337203685477580) or
@@ -5457,7 +7426,7 @@ end;
 function OctToLongWord(const S: String): LongWord;
 var R : Boolean;
 begin
-  Result := BaseStrToNativeUIntW(S, 3, R);
+  Result := BaseStrToNativeUIntW(ToWideString(S), 3, R);
   if not R then
     RaiseRangeCheckError;
 end;
@@ -5532,9 +7501,13 @@ end;
 {                                                                              }
 { Float-String conversions                                                     }
 {                                                                              }
-function FloatToStringS(const A: Extended): ShortString;
+function FloatToStringS(const A: Extended): String;
 var B : Extended;
+    {$IFNDEF SupportShortString}
+    S : String;
+    {$ELSE}
     S : ShortString;
+    {$ENDIF}
     L, I : Integer;
     E : Integer;
 begin
@@ -5596,7 +7569,11 @@ begin
         S := Copy(S, 1, I) + Copy(S, E, L - E + 1);
     end;
   // return formatted float string
+  {$IFDEF SupportShortString}
+  Result := String(S);
+  {$ELSE}
   Result := S;
+  {$ENDIF}
 end;
 
 function FloatToStringA(const A: Extended): AnsiString;
@@ -5648,17 +7625,17 @@ begin
   Len := 0;
   // check sign
   Ch := P^;
-  if (Ch = '+') or (Ch = '-') then
+  if (Ch = AnsiChar(Ord('+'))) or (Ch = AnsiChar(Ord('-'))) then
     begin
       Inc(Len);
       Inc(P);
-      Neg := Ch = '-';
+      Neg := Ch = AnsiChar(Ord('-'));
     end
   else
     Neg := False;
   // skip leading zeros
   HasDig := False;
-  while (Len < BufLen) and (P^ = '0') do
+  while (Len < BufLen) and (P^ = AnsiChar(Ord('0'))) do
     begin
       Inc(Len);
       Inc(P);
@@ -5669,7 +7646,7 @@ begin
   while Len < BufLen do
     begin
       Ch := P^;
-      if (Ch >= '0') and (Ch <= '9') then
+      if (Ch >= AnsiChar(Ord('0'))) and (Ch <= AnsiChar(Ord('9'))) then
         begin
           HasDig := True;
           // maximum Extended is roughly 1.1e4932, maximum Double is roughly 1.7e308
@@ -5693,7 +7670,7 @@ begin
         break;
     end;
   // convert decimal digits
-  if (Len < BufLen) and (P^ = '.') then
+  if (Len < BufLen) and (P^ = AnsiChar(Ord('.'))) then
     begin
       Inc(Len);
       Inc(P);
@@ -5701,7 +7678,7 @@ begin
       while Len < BufLen do
         begin
           Ch := P^;
-          if (Ch >= '0') and (Ch <= '9') then
+          if (Ch >= AnsiChar(Ord('0'))) and (Ch <= AnsiChar(Ord('9'))) then
             begin
               HasDig := True;
               // minimum Extended is roughly 3.6e-4951, minimum Double is roughly 5e-324
@@ -5739,7 +7716,7 @@ begin
   if Len < BufLen then
     begin
       Ch := P^;
-      if (Ch = 'e') or (Ch = 'E') then
+      if (Ch = AnsiChar(Ord('e'))) or (Ch = AnsiChar(Ord('E'))) then
         begin
           Inc(Len);
           Inc(P);
@@ -6194,14 +8171,14 @@ begin
   {$IFOPT R+}
   if Length(Alphabet) <> 64 then
     begin
-      Result := '';
+      Result := StrEmptyB;
       exit;
     end;
   {$ENDIF}
   L := Length(S);
   if L = 0 then
     begin
-      Result := '';
+      Result := StrEmptyB;
       exit;
     end;
   M := L mod 3;
@@ -6267,14 +8244,14 @@ begin
   {$IFOPT R+}
   if Length(Alphabet) <> 64 then
     begin
-      Result := '';
+      Result := StrEmptyB;
       exit;
     end;
   {$ENDIF}
   L := Length(S);
   if L = 0 then
     begin
-      Result := '';
+      Result := StrEmptyB;
       exit;
     end;
   M := L mod 3;
@@ -6343,7 +8320,7 @@ begin
   {$IFOPT R+}
   if Length(Alphabet) <> 64 then
     begin
-      Result := '';
+      Result := StrEmptyB;
       exit;
     end;
   {$ENDIF}
@@ -6355,7 +8332,7 @@ begin
   M := L - P;
   if M = 0 then
     begin
-      Result := '';
+      Result := StrEmptyB;
       exit;
     end;
   SetLength(Result, (M * 3) div 4);
@@ -6406,7 +8383,7 @@ begin
   {$IFOPT R+}
   if Length(Alphabet) <> 64 then
     begin
-      Result := '';
+      Result := StrEmptyB;
       exit;
     end;
   {$ENDIF}
@@ -6418,7 +8395,7 @@ begin
   M := L - P;
   if M = 0 then
     begin
-      Result := '';
+      Result := StrEmptyB;
       exit;
     end;
   SetLength(Result, (M * 3) div 4);
@@ -6454,29 +8431,29 @@ begin
     end;
   if (OutPos > 0) and (P = 0) then // incomplete encoding, add the partial byte if not 0
     if OutB[OutPos] <> 0 then
-      Result := Result + AnsiChar(OutB[OutPos]);
+      StrAppendChB(Result, AnsiChar(OutB[OutPos]));
 end;
 {$ENDIF}
 
 function MIMEBase64Encode(const S: RawByteString): RawByteString;
 begin
-  Result := EncodeBase64(S, b64_MIMEBase64, True, 4, '=');
+  Result := EncodeBase64(S, ToRawByteString(b64_MIMEBase64), True, 4, AnsiChar(Ord('=')));
 end;
 
 function UUDecode(const S: RawByteString): RawByteString;
 begin
   // Line without size indicator (first byte = length + 32)
-  Result := DecodeBase64(S, b64_UUEncode, ['`']);
+  Result := DecodeBase64(S, ToRawByteString(b64_UUEncode), [AnsiChar(Ord('`'))]);
 end;
 
 function MIMEBase64Decode(const S: RawByteString): RawByteString;
 begin
-  Result := DecodeBase64(S, b64_MIMEBase64, ['=']);
+  Result := DecodeBase64(S, ToRawByteString(b64_MIMEBase64), [AnsiChar(Ord('='))]);
 end;
 
 function XXDecode(const S: RawByteString): RawByteString;
 begin
-  Result := DecodeBase64(S, b64_XXEncode, []);
+  Result := DecodeBase64(S, ToRawByteString(b64_XXEncode), []);
 end;
 
 {$IFDEF ManagedCode}
@@ -6490,7 +8467,7 @@ begin
   L := Length(P);
   if L = 0 then
     begin
-      Result := '';
+      Result := StrEmptyA;
       exit;
     end;
   SetLength(Result, L * 2);
@@ -6527,7 +8504,7 @@ begin
   L := Count;
   if (L <= 0) or not Assigned(Q) then
     begin
-      Result := '';
+      Result := StrEmptyA;
       exit;
     end;
   SetLength(Result, Count * 2);
@@ -6536,15 +8513,15 @@ begin
     begin
       V := Q^ shr 4 + 1;
       if UpperCase then
-        D^ := StrHexDigitsUpper[V]
+        D^ := AnsiChar(StrHexDigitsUpper[V])
       else
-        D^ := StrHexDigitsLower[V];
+        D^ := AnsiChar(StrHexDigitsLower[V]);
       Inc(D);
       V := Q^ and $F + 1;
       if UpperCase then
-        D^ := StrHexDigitsUpper[V]
+        D^ := AnsiChar(StrHexDigitsUpper[V])
       else
-        D^ := StrHexDigitsLower[V];
+        D^ := AnsiChar(StrHexDigitsLower[V]);
       Inc(D);
       Inc(Q);
       Dec(L);
@@ -6702,7 +8679,7 @@ end;
 
 function InterfaceToStrU(const I: IInterface): UnicodeString;
 begin
-  Result := NativeUIntToBaseW(NativeUInt(I), NativeWordSize * 2, 16, True);
+  Result := WideStringToUnicodeString(NativeUIntToBaseW(NativeUInt(I), NativeWordSize * 2, 16, True));
 end;
 
 function InterfaceToStr(const I: IInterface): String;
@@ -7709,6 +9686,7 @@ procedure Test_Misc;
 var A, B : Byte;
     C, D : LongWord;
     P, Q : TObject;
+    W    : WideChar;
 begin
   // Integer types
   {$IFNDEF ManagedCode}
@@ -7717,38 +9695,22 @@ begin
   {$ENDIF}
 
   // Min / Max
-  Assert(MinI(-1, 1) = -1, 'MinI');
-  Assert(MaxI(-1, 1) = 1, 'MaxI');
-  Assert(MinC(1, 2) = 1, 'MinC');
-  Assert(MaxC(1, 2) = 2, 'MaxC');
-  Assert(MaxC($FFFFFFFF, 0) = $FFFFFFFF, 'MaxC');
-  Assert(MinC($FFFFFFFF, 0) = 0, 'MinC');
+  Assert(MinInt(-1, 1) = -1, 'MinI');
+  Assert(MaxInt(-1, 1) = 1, 'MaxI');
+  Assert(MinCrd(1, 2) = 1, 'MinC');
+  Assert(MaxCrd(1, 2) = 2, 'MaxC');
+  Assert(MaxCrd($FFFFFFFF, 0) = $FFFFFFFF, 'MaxC');
+  Assert(MinCrd($FFFFFFFF, 0) = 0, 'MinC');
   Assert(FloatMin(-1.0, 1.0) = -1.0, 'FloatMin');
   Assert(FloatMax(-1.0, 1.0) = 1.0, 'FloatMax');
 
-  // Clip
-  Assert(Clip(10, 5, 12) = 10,                            'Clip');
-  Assert(Clip(3, 5, 12) = 5,                              'Clip');
-  Assert(Clip(15, 5, 12) = 12,                            'Clip');
-  Assert(ClipByte(256) = 255,                             'ClipByte');
-  Assert(ClipWord(-5) = 0,                                'ClipWord');
-  Assert(ClipLongWord($100000000) = $FFFFFFFF,            'ClipWord');
-  Assert(SumClipI(1, 2) = 3,                              'SumClipI');
-  Assert(SumClipI(1, -2) = -1,                            'SumClipI');
-  Assert(SumClipI(MaxInteger - 1, 0) = MaxInteger - 1,    'SumClipI');
-  Assert(SumClipI(MaxInteger - 1, 1) = MaxInteger,        'SumClipI');
-  Assert(SumClipI(MaxInteger - 1, 2) = MaxInteger,        'SumClipI');
-  Assert(SumClipI(MinInteger + 1, 0) = MinInteger + 1,    'SumClipI');
-  Assert(SumClipI(MinInteger + 1, -1) = MinInteger,       'SumClipI');
-  Assert(SumClipI(MinInteger + 1, -2) = MinInteger,       'SumClipI');
-  Assert(SumClipC(1, 2) = 3,                              'SumClipC');
-  Assert(SumClipC(3, -2) = 1,                             'SumClipC');
-  Assert(SumClipC(MaxCardinal - 1, 0) = MaxCardinal - 1,  'SumClipC');
-  Assert(SumClipC(MaxCardinal - 1, 1) = MaxCardinal,      'SumClipC');
-  Assert(SumClipC(MaxCardinal - 1, 2) = MaxCardinal,      'SumClipC');
-  Assert(SumClipC(1, 0) = 1,                              'SumClipC');
-  Assert(SumClipC(1, -1) = 0,                             'SumClipC');
-  Assert(SumClipC(1, -2) = 0,                             'SumClipC');
+  // Bouded
+  Assert(Int32Bounded(10, 5, 12) = 10,                            'Bounded');
+  Assert(Int32Bounded(3, 5, 12) = 5,                              'Bounded');
+  Assert(Int32Bounded(15, 5, 12) = 12,                            'Bounded');
+  Assert(Int32BoundedByte(256) = 255,                             'BoundedByte');
+  Assert(Int32BoundedWord(-5) = 0,                                'BoundedWord');
+  Assert(Int64BoundedLongWord($100000000) = $FFFFFFFF,            'BoundedWord');
 
   // Swap
   A := $11; B := $22;
@@ -7770,8 +9732,8 @@ begin
   Assert(iif(False, -1, -2) = -2,     'iif');
   Assert(iif(True, '1', '2') = '1',   'iif');
   Assert(iif(False, '1', '2') = '2',  'iif');
-  Assert(iifW(True, '1', '2') = '1',  'iif');
-  Assert(iifW(False, '1', '2') = '2', 'iif');
+  Assert(iifW(True, ToWideString('1'), ToWideString('2')) = ToWideString('1'),  'iif');
+  Assert(iifW(False, ToWideString('1'), ToWideString('2')) = ToWideString('2'), 'iif');
   Assert(iifU(True, '1', '2') = '1',  'iif');
   Assert(iifU(False, '1', '2') = '2', 'iif');
   Assert(iif(True, 1.1, 2.2) = 1.1,   'iif');
@@ -7779,8 +9741,8 @@ begin
 
   // CharSet
   Assert(CharCount([]) = 0,           'CharCount');
-  Assert(CharCount(['a'..'z']) = 26,  'CharCount');
-  Assert(CharCount([#0, #255]) = 2,   'CharCount');
+  Assert(CharCount([AnsiChar(Ord('a'))..AnsiChar(Ord('z'))]) = 26,  'CharCount');
+  Assert(CharCount([AnsiChar(0), AnsiChar(255)]) = 2,   'CharCount');
 
   // Compare
   Assert(Compare(1, 1) = crEqual,          'Compare');
@@ -7796,29 +9758,29 @@ begin
   Assert(Compare(False, True) = crLess,    'Compare');
   Assert(Compare(True, False) = crGreater, 'Compare');
 
-  Assert(CompareA('', '') = crEqual,        'Compare');
-  Assert(CompareA('a', 'a') = crEqual,      'Compare');
-  Assert(CompareA('a', 'b') = crLess,       'Compare');
-  Assert(CompareA('b', 'a') = crGreater,    'Compare');
-  Assert(CompareA('', 'a') = crLess,        'Compare');
-  Assert(CompareA('a', '') = crGreater,     'Compare');
-  Assert(CompareA('aa', 'a') = crGreater,   'Compare');
+  Assert(CompareA(ToAnsiString(''), ToAnsiString('')) = crEqual,        'Compare');
+  Assert(CompareA(ToAnsiString('a'), ToAnsiString('a')) = crEqual,      'Compare');
+  Assert(CompareA(ToAnsiString('a'), ToAnsiString('b')) = crLess,       'Compare');
+  Assert(CompareA(ToAnsiString('b'), ToAnsiString('a')) = crGreater,    'Compare');
+  Assert(CompareA(ToAnsiString(''), ToAnsiString('a')) = crLess,        'Compare');
+  Assert(CompareA(ToAnsiString('a'), ToAnsiString('')) = crGreater,     'Compare');
+  Assert(CompareA(ToAnsiString('aa'), ToAnsiString('a')) = crGreater,   'Compare');
 
-  Assert(CompareB('', '') = crEqual,        'Compare');
-  Assert(CompareB('a', 'a') = crEqual,      'Compare');
-  Assert(CompareB('a', 'b') = crLess,       'Compare');
-  Assert(CompareB('b', 'a') = crGreater,    'Compare');
-  Assert(CompareB('', 'a') = crLess,        'Compare');
-  Assert(CompareB('a', '') = crGreater,     'Compare');
-  Assert(CompareB('aa', 'a') = crGreater,   'Compare');
+  Assert(CompareB(ToRawByteString(''), ToRawByteString('')) = crEqual,        'Compare');
+  Assert(CompareB(ToRawByteString('a'), ToRawByteString('a')) = crEqual,      'Compare');
+  Assert(CompareB(ToRawByteString('a'), ToRawByteString('b')) = crLess,       'Compare');
+  Assert(CompareB(ToRawByteString('b'), ToRawByteString('a')) = crGreater,    'Compare');
+  Assert(CompareB(ToRawByteString(''), ToRawByteString('a')) = crLess,        'Compare');
+  Assert(CompareB(ToRawByteString('a'), ToRawByteString('')) = crGreater,     'Compare');
+  Assert(CompareB(ToRawByteString('aa'), ToRawByteString('a')) = crGreater,   'Compare');
 
-  Assert(CompareW('', '') = crEqual,        'Compare');
-  Assert(CompareW('a', 'a') = crEqual,      'Compare');
-  Assert(CompareW('a', 'b') = crLess,       'Compare');
-  Assert(CompareW('b', 'a') = crGreater,    'Compare');
-  Assert(CompareW('', 'a') = crLess,        'Compare');
-  Assert(CompareW('a', '') = crGreater,     'Compare');
-  Assert(CompareW('aa', 'a') = crGreater,   'Compare');
+  Assert(CompareW(ToWideString(''), ToWideString('')) = crEqual,        'Compare');
+  Assert(CompareW(ToWideString('a'), ToWideString('a')) = crEqual,      'Compare');
+  Assert(CompareW(ToWideString('a'), ToWideString('b')) = crLess,       'Compare');
+  Assert(CompareW(ToWideString('b'), ToWideString('a')) = crGreater,    'Compare');
+  Assert(CompareW(ToWideString(''), ToWideString('a')) = crLess,        'Compare');
+  Assert(CompareW(ToWideString('a'), ToWideString('')) = crGreater,     'Compare');
+  Assert(CompareW(ToWideString('aa'), ToWideString('a')) = crGreater,   'Compare');
 
   Assert(Sgn(1) = 1,     'Sign');
   Assert(Sgn(0) = 0,     'Sign');
@@ -7829,69 +9791,43 @@ begin
   Assert(Sgn(1.5) = 1,   'Sign');
   Assert(Sgn(0.0) = 0,   'Sign');
 
-  Assert(ReverseCompareResult(crLess) = crGreater, 'ReverseCompareResult');
-  Assert(ReverseCompareResult(crGreater) = crLess, 'ReverseCompareResult');
+  Assert(InverseCompareResult(crLess) = crGreater, 'ReverseCompareResult');
+  Assert(InverseCompareResult(crGreater) = crLess, 'ReverseCompareResult');
+
+  // ASCII
+  Assert(IsAsciiStringA(ToAnsiString('012XYZabc{}_ ')), 'IsUSASCIIString');
+  Assert(not IsAsciiStringA(ToAnsiString(#$80)), 'IsUSASCIIString');
+  Assert(IsAsciiStringA(ToAnsiString('')), 'IsUSASCIIString');
+  Assert(IsAsciiStringW(ToWideString('012XYZabc{}_ ')), 'IsUSASCIIWideString');
+  W := WideChar(#$0080);
+  Assert(not IsAsciiStringW(ToWideString(W)), 'IsUSASCIIWideString');
+  W := WideChar($2262);
+  Assert(not IsAsciiStringW(W), 'IsUSASCIIWideString');
+  Assert(IsAsciiStringW(StrEmptyW), 'IsUSASCIIWideString');
 end;
 
-procedure Test_BitFunctions;
+{$IFDEF SupportUTF8String}
+procedure Test_UTF8;
+const
+  W1 : array[0..3] of WideChar = (#$0041, #$2262, #$0391, #$002E);
+  W2 : array[0..2] of WideChar = (#$D55C, #$AD6D, #$C5B4);
+  W3 : array[0..2] of WideChar = (#$65E5, #$672C, #$8A9E);
+  S1 = RawByteString(#$41#$E2#$89#$A2#$CE#$91#$2E);
+  S2 = RawByteString(#$ED#$95#$9C#$EA#$B5#$AD#$EC#$96#$B4);
+  S3 = RawByteString(#$E6#$97#$A5#$E6#$9C#$AC#$E8#$AA#$9E);
 begin
-  Assert(SetBit32($100F, 5) = $102F,            'SetBit');
-  Assert(ClearBit32($102F, 5) = $100F,          'ClearBit');
-  Assert(ToggleBit32($102F, 5) = $100F,         'ToggleBit');
-  Assert(ToggleBit32($100F, 5) = $102F,         'ToggleBit');
-  Assert(IsBitSet32($102F, 5),                  'IsBitSet');
-  Assert(not IsBitSet32($100F, 5),              'IsBitSet');
-  Assert(IsHighBitSet32($80000000),             'IsHighBitSet');
-  Assert(not IsHighBitSet32($00000001),         'IsHighBitSet');
-  Assert(not IsHighBitSet32($7FFFFFFF),         'IsHighBitSet');
-
-  Assert(SetBitScanForward32(0) = -1,           'SetBitScanForward');
-  Assert(SetBitScanForward32($1020) = 5,        'SetBitScanForward');
-  Assert(SetBitScanReverse32($1020) = 12,       'SetBitScanForward');
-  Assert(SetBitScanForward32($1020, 6) = 12,    'SetBitScanForward');
-  Assert(SetBitScanReverse32($1020, 11) = 5,    'SetBitScanForward');
-  Assert(ClearBitScanForward32($FFFFFFFF) = -1, 'ClearBitScanForward');
-  Assert(ClearBitScanForward32($1020) = 0,      'ClearBitScanForward');
-  Assert(ClearBitScanReverse32($1020) = 31,     'ClearBitScanForward');
-  Assert(ClearBitScanForward32($1020, 5) = 6,   'ClearBitScanForward');
-  Assert(ClearBitScanReverse32($1020, 12) = 11, 'ClearBitScanForward');
-
-  Assert(ReverseBits32($12345678) = $1E6A2C48,  'ReverseBits');
-  Assert(ReverseBits32($1) = $80000000,         'ReverseBits');
-  Assert(ReverseBits32($80000000) = $1,         'ReverseBits');
-  Assert(SwapEndian32($12345678) = $78563412,   'SwapEndian');
-
-  Assert(BitCount32($12341234) = 10,            'BitCount');
-  Assert(IsPowerOfTwo32(1),                     'IsPowerOfTwo');
-  Assert(IsPowerOfTwo32(2),                     'IsPowerOfTwo');
-  Assert(not IsPowerOfTwo32(3),                 'IsPowerOfTwo');
-
-  Assert(RotateLeftBits32(0, 1) = 0,          'RotateLeftBits32');
-  Assert(RotateLeftBits32(1, 0) = 1,          'RotateLeftBits32');
-  Assert(RotateLeftBits32(1, 1) = 2,          'RotateLeftBits32');
-  Assert(RotateLeftBits32($80000000, 1) = 1,  'RotateLeftBits32');
-  Assert(RotateLeftBits32($80000001, 1) = 3,  'RotateLeftBits32');
-  Assert(RotateLeftBits32(1, 2) = 4,          'RotateLeftBits32');
-  Assert(RotateLeftBits32(1, 31) = $80000000, 'RotateLeftBits32');
-  Assert(RotateLeftBits32(5, 2) = 20,         'RotateLeftBits32');
-  Assert(RotateRightBits32(0, 1) = 0,         'RotateRightBits32');
-  Assert(RotateRightBits32(1, 0) = 1,         'RotateRightBits32');
-  Assert(RotateRightBits32(1, 1) = $80000000, 'RotateRightBits32');
-  Assert(RotateRightBits32(2, 1) = 1,         'RotateRightBits32');
-  Assert(RotateRightBits32(4, 2) = 1,         'RotateRightBits32');
-
-  Assert(LowBitMask32(10) = $3FF,               'LowBitMask');
-  Assert(HighBitMask32(28) = $F0000000,         'HighBitMask');
-  Assert(RangeBitMask32(2, 6) = $7C,            'RangeBitMask');
-
-  Assert(SetBitRange32($101, 2, 6) = $17D,      'SetBitRange');
-  Assert(ClearBitRange32($17D, 2, 6) = $101,    'ClearBitRange');
-  Assert(ToggleBitRange32($17D, 2, 6) = $101,   'ToggleBitRange');
-  Assert(IsBitRangeSet32($17D, 2, 6),           'IsBitRangeSet');
-  Assert(not IsBitRangeSet32($101, 2, 6),       'IsBitRangeSet');
-  Assert(not IsBitRangeClear32($17D, 2, 6),     'IsBitRangeClear');
-  Assert(IsBitRangeClear32($101, 2, 6),         'IsBitRangeClear');
+  // UTF-8 test cases from RFC 2279
+  Assert(WideStringToUTF8String(W1) = #$41#$E2#$89#$A2#$CE#$91#$2E, 'WideStringToUTF8String');
+  Assert(WideStringToUTF8String(W2) = #$ED#$95#$9C#$EA#$B5#$AD#$EC#$96#$B4, 'WideStringToUTF8String');
+  Assert(WideStringToUTF8String(W3) = #$E6#$97#$A5#$E6#$9C#$AC#$E8#$AA#$9E, 'WideStringToUTF8String');
+  Assert(UTF8StringToWideString(S1) = W1, 'UTF8StringToWideString');
+  Assert(UTF8StringToWideString(S2) = W2, 'UTF8StringToWideString');
+  Assert(UTF8StringToWideString(S3) = W3, 'UTF8StringToWideString');
+  Assert(UTF8StringLength(S1) = 4, 'UTF8StringLength');
+  Assert(UTF8StringLength(S2) = 3, 'UTF8StringLength');
+  Assert(UTF8StringLength(S3) = 3, 'UTF8StringLength');
 end;
+{$ENDIF}
 
 procedure Test_Float;
 {$IFNDEF ExtendedIsDouble}
@@ -8042,43 +9978,43 @@ begin
   Assert(HexCharToInt('F') = 15,   'HexCharToInt');
   Assert(HexCharToInt('G') = -1,   'HexCharToInt');
 
-  Assert(IntToStringA(0) = '0',                           'IntToStringA');
-  Assert(IntToStringA(1) = '1',                           'IntToStringA');
-  Assert(IntToStringA(-1) = '-1',                         'IntToStringA');
-  Assert(IntToStringA(10) = '10',                         'IntToStringA');
-  Assert(IntToStringA(-10) = '-10',                       'IntToStringA');
-  Assert(IntToStringA(123) = '123',                       'IntToStringA');
-  Assert(IntToStringA(-123) = '-123',                     'IntToStringA');
-  Assert(IntToStringA(MinLongInt) = '-2147483648',        'IntToStringA');
+  Assert(IntToStringA(0) = ToAnsiString('0'),                           'IntToStringA');
+  Assert(IntToStringA(1) = ToAnsiString('1'),                           'IntToStringA');
+  Assert(IntToStringA(-1) = ToAnsiString('-1'),                         'IntToStringA');
+  Assert(IntToStringA(10) = ToAnsiString('10'),                         'IntToStringA');
+  Assert(IntToStringA(-10) = ToAnsiString('-10'),                       'IntToStringA');
+  Assert(IntToStringA(123) = ToAnsiString('123'),                       'IntToStringA');
+  Assert(IntToStringA(-123) = ToAnsiString('-123'),                     'IntToStringA');
+  Assert(IntToStringA(MinLongInt) = ToAnsiString('-2147483648'),        'IntToStringA');
   {$IFNDEF DELPHI7_DOWN}
-  Assert(IntToStringA(-2147483649) = '-2147483649',       'IntToStringA');
+  Assert(IntToStringA(-2147483649) = ToAnsiString('-2147483649'),       'IntToStringA');
   {$ENDIF}
-  Assert(IntToStringA(MaxLongInt) = '2147483647',         'IntToStringA');
-  Assert(IntToStringA(2147483648) = '2147483648',         'IntToStringA');
-  Assert(IntToStringA(MinInt64) = '-9223372036854775808', 'IntToStringA');
-  Assert(IntToStringA(MaxInt64) = '9223372036854775807',  'IntToStringA');
+  Assert(IntToStringA(MaxLongInt) = ToAnsiString('2147483647'),         'IntToStringA');
+  Assert(IntToStringA(2147483648) = ToAnsiString('2147483648'),         'IntToStringA');
+  Assert(IntToStringA(MinInt64) = ToAnsiString('-9223372036854775808'), 'IntToStringA');
+  Assert(IntToStringA(MaxInt64) = ToAnsiString('9223372036854775807'),  'IntToStringA');
 
-  Assert(IntToStringB(0) = '0',                           'IntToStringB');
-  Assert(IntToStringB(1) = '1',                           'IntToStringB');
-  Assert(IntToStringB(-1) = '-1',                         'IntToStringB');
-  Assert(IntToStringB(10) = '10',                         'IntToStringB');
-  Assert(IntToStringB(-10) = '-10',                       'IntToStringB');
-  Assert(IntToStringB(123) = '123',                       'IntToStringB');
-  Assert(IntToStringB(-123) = '-123',                     'IntToStringB');
-  Assert(IntToStringB(MinLongInt) = '-2147483648',        'IntToStringB');
+  Assert(IntToStringB(0) = ToRawByteString('0'),                           'IntToStringB');
+  Assert(IntToStringB(1) = ToRawByteString('1'),                           'IntToStringB');
+  Assert(IntToStringB(-1) = ToRawByteString('-1'),                         'IntToStringB');
+  Assert(IntToStringB(10) = ToRawByteString('10'),                         'IntToStringB');
+  Assert(IntToStringB(-10) = ToRawByteString('-10'),                       'IntToStringB');
+  Assert(IntToStringB(123) = ToRawByteString('123'),                       'IntToStringB');
+  Assert(IntToStringB(-123) = ToRawByteString('-123'),                     'IntToStringB');
+  Assert(IntToStringB(MinLongInt) = ToRawByteString('-2147483648'),        'IntToStringB');
   {$IFNDEF DELPHI7_DOWN}
-  Assert(IntToStringB(-2147483649) = '-2147483649',       'IntToStringB');
+  Assert(IntToStringB(-2147483649) = ToRawByteString('-2147483649'),       'IntToStringB');
   {$ENDIF}
-  Assert(IntToStringB(MaxLongInt) = '2147483647',         'IntToStringB');
-  Assert(IntToStringB(2147483648) = '2147483648',         'IntToStringB');
-  Assert(IntToStringB(MinInt64) = '-9223372036854775808', 'IntToStringB');
-  Assert(IntToStringB(MaxInt64) = '9223372036854775807',  'IntToStringB');
+  Assert(IntToStringB(MaxLongInt) = ToRawByteString('2147483647'),         'IntToStringB');
+  Assert(IntToStringB(2147483648) = ToRawByteString('2147483648'),         'IntToStringB');
+  Assert(IntToStringB(MinInt64) = ToRawByteString('-9223372036854775808'), 'IntToStringB');
+  Assert(IntToStringB(MaxInt64) = ToRawByteString('9223372036854775807'),  'IntToStringB');
 
-  Assert(IntToStringW(0) = '0',                     'IntToWideString');
-  Assert(IntToStringW(1) = '1',                     'IntToWideString');
-  Assert(IntToStringW(-1) = '-1',                   'IntToWideString');
-  Assert(IntToStringW(1234567890) = '1234567890',   'IntToWideString');
-  Assert(IntToStringW(-1234567890) = '-1234567890', 'IntToWideString');
+  Assert(IntToStringW(0) = ToWideString('0'),                     'IntToWideString');
+  Assert(IntToStringW(1) = ToWideString('1'),                     'IntToWideString');
+  Assert(IntToStringW(-1) = ToWideString('-1'),                   'IntToWideString');
+  Assert(IntToStringW(1234567890) = ToWideString('1234567890'),   'IntToWideString');
+  Assert(IntToStringW(-1234567890) = ToWideString('-1234567890'), 'IntToWideString');
 
   Assert(IntToStringU(0) = '0',                     'IntToString');
   Assert(IntToStringU(1) = '1',                     'IntToString');
@@ -8092,21 +10028,21 @@ begin
   Assert(IntToString(1234567890) = '1234567890',   'IntToString');
   Assert(IntToString(-1234567890) = '-1234567890', 'IntToString');
 
-  Assert(UIntToStringA(0) = '0',                  'UIntToString');
-  Assert(UIntToStringA($FFFFFFFF) = '4294967295', 'UIntToString');
-  Assert(UIntToStringW(0) = '0',                  'UIntToString');
-  Assert(UIntToStringW($FFFFFFFF) = '4294967295', 'UIntToString');
+  Assert(UIntToStringA(0) = ToAnsiString('0'),                  'UIntToString');
+  Assert(UIntToStringA($FFFFFFFF) = ToAnsiString('4294967295'), 'UIntToString');
+  Assert(UIntToStringW(0) = ToWideString('0'),                  'UIntToString');
+  Assert(UIntToStringW($FFFFFFFF) = ToWideString('4294967295'), 'UIntToString');
   Assert(UIntToStringU(0) = '0',                  'UIntToString');
   Assert(UIntToStringU($FFFFFFFF) = '4294967295', 'UIntToString');
   Assert(UIntToString(0) = '0',                   'UIntToString');
   Assert(UIntToString($FFFFFFFF) = '4294967295',  'UIntToString');
 
-  Assert(LongWordToStrA(0, 8) = '00000000',           'LongWordToStr');
-  Assert(LongWordToStrA($FFFFFFFF, 0) = '4294967295', 'LongWordToStr');
-  Assert(LongWordToStrB(0, 8) = '00000000',           'LongWordToStr');
-  Assert(LongWordToStrB($FFFFFFFF, 0) = '4294967295', 'LongWordToStr');
-  Assert(LongWordToStrW(0, 8) = '00000000',           'LongWordToStr');
-  Assert(LongWordToStrW($FFFFFFFF, 0) = '4294967295', 'LongWordToStr');
+  Assert(LongWordToStrA(0, 8) = ToAnsiString('00000000'),           'LongWordToStr');
+  Assert(LongWordToStrA($FFFFFFFF, 0) = ToAnsiString('4294967295'), 'LongWordToStr');
+  Assert(LongWordToStrB(0, 8) = ToRawByteString('00000000'),           'LongWordToStr');
+  Assert(LongWordToStrB($FFFFFFFF, 0) = ToRawByteString('4294967295'), 'LongWordToStr');
+  Assert(LongWordToStrW(0, 8) = ToWideString('00000000'),           'LongWordToStr');
+  Assert(LongWordToStrW($FFFFFFFF, 0) = ToWideString('4294967295'), 'LongWordToStr');
   Assert(LongWordToStrU(0, 8) = '00000000',           'LongWordToStr');
   Assert(LongWordToStrU($FFFFFFFF, 0) = '4294967295', 'LongWordToStr');
   Assert(LongWordToStr(0, 8) = '00000000',            'LongWordToStr');
@@ -8118,20 +10054,20 @@ begin
   Assert(LongWordToStr(1, 3) = '001',                 'LongWordToStr');
   Assert(LongWordToStr(1234, 3) = '1234',             'LongWordToStr');
 
-  Assert(LongWordToHexA(0, 8) = '00000000',         'LongWordToHex');
-  Assert(LongWordToHexA($FFFFFFFF, 0) = 'FFFFFFFF', 'LongWordToHex');
-  Assert(LongWordToHexA($10000) = '10000',          'LongWordToHex');
-  Assert(LongWordToHexA($12345678) = '12345678',    'LongWordToHex');
-  Assert(LongWordToHexA($AB, 4) = '00AB',           'LongWordToHex');
-  Assert(LongWordToHexA($ABCD, 8) = '0000ABCD',     'LongWordToHex');
-  Assert(LongWordToHexA($CDEF, 2) = 'CDEF',         'LongWordToHex');
-  Assert(LongWordToHexA($ABC3, 0, False) = 'abc3',  'LongWordToHex');
+  Assert(LongWordToHexA(0, 8) = ToAnsiString('00000000'),         'LongWordToHex');
+  Assert(LongWordToHexA($FFFFFFFF, 0) = ToAnsiString('FFFFFFFF'), 'LongWordToHex');
+  Assert(LongWordToHexA($10000) = ToAnsiString('10000'),          'LongWordToHex');
+  Assert(LongWordToHexA($12345678) = ToAnsiString('12345678'),    'LongWordToHex');
+  Assert(LongWordToHexA($AB, 4) = ToAnsiString('00AB'),           'LongWordToHex');
+  Assert(LongWordToHexA($ABCD, 8) = ToAnsiString('0000ABCD'),     'LongWordToHex');
+  Assert(LongWordToHexA($CDEF, 2) = ToAnsiString('CDEF'),         'LongWordToHex');
+  Assert(LongWordToHexA($ABC3, 0, False) = ToAnsiString('abc3'),  'LongWordToHex');
 
-  Assert(LongWordToHexW(0, 8) = '00000000',         'LongWordToHex');
-  Assert(LongWordToHexW(0) = '0',                   'LongWordToHex');
-  Assert(LongWordToHexW($FFFFFFFF, 0) = 'FFFFFFFF', 'LongWordToHex');
-  Assert(LongWordToHexW($AB, 4) = '00AB',           'LongWordToHex');
-  Assert(LongWordToHexW($ABC3, 0, False) = 'abc3',  'LongWordToHex');
+  Assert(LongWordToHexW(0, 8) = ToWideString('00000000'),         'LongWordToHex');
+  Assert(LongWordToHexW(0) = ToWideString('0'),                   'LongWordToHex');
+  Assert(LongWordToHexW($FFFFFFFF, 0) = ToWideString('FFFFFFFF'), 'LongWordToHex');
+  Assert(LongWordToHexW($AB, 4) = ToWideString('00AB'),           'LongWordToHex');
+  Assert(LongWordToHexW($ABC3, 0, False) = ToWideString('abc3'),  'LongWordToHex');
 
   Assert(LongWordToHexU(0, 8) = '00000000',         'LongWordToHex');
   Assert(LongWordToHexU(0) = '0',                   'LongWordToHex');
@@ -8145,83 +10081,83 @@ begin
   Assert(LongWordToHex($ABCD, 8) = '0000ABCD',      'LongWordToHex');
   Assert(LongWordToHex($ABC3, 0, False) = 'abc3',   'LongWordToHex');
 
-  Assert(StringToIntA('0') = 0,       'StringToInt');
-  Assert(StringToIntA('1') = 1,       'StringToInt');
-  Assert(StringToIntA('-1') = -1,     'StringToInt');
-  Assert(StringToIntA('10') = 10,     'StringToInt');
-  Assert(StringToIntA('01') = 1,      'StringToInt');
-  Assert(StringToIntA('-10') = -10,   'StringToInt');
-  Assert(StringToIntA('-01') = -1,    'StringToInt');
-  Assert(StringToIntA('123') = 123,   'StringToInt');
-  Assert(StringToIntA('-123') = -123, 'StringToInt');
+  Assert(StringToIntA(ToAnsiString('0')) = 0,       'StringToInt');
+  Assert(StringToIntA(ToAnsiString('1')) = 1,       'StringToInt');
+  Assert(StringToIntA(ToAnsiString('-1')) = -1,     'StringToInt');
+  Assert(StringToIntA(ToAnsiString('10')) = 10,     'StringToInt');
+  Assert(StringToIntA(ToAnsiString('01')) = 1,      'StringToInt');
+  Assert(StringToIntA(ToAnsiString('-10')) = -10,   'StringToInt');
+  Assert(StringToIntA(ToAnsiString('-01')) = -1,    'StringToInt');
+  Assert(StringToIntA(ToAnsiString('123')) = 123,   'StringToInt');
+  Assert(StringToIntA(ToAnsiString('-123')) = -123, 'StringToInt');
 
-  Assert(StringToIntB('321') = 321,   'StringToInt');
-  Assert(StringToIntB('-321') = -321, 'StringToInt');
+  Assert(StringToIntB(ToRawByteString('321')) = 321,   'StringToInt');
+  Assert(StringToIntB(ToRawByteString('-321')) = -321, 'StringToInt');
 
-  Assert(StringToIntW('321') = 321,   'StringToInt');
-  Assert(StringToIntW('-321') = -321, 'StringToInt');
+  Assert(StringToIntW(ToWideString('321')) = 321,   'StringToInt');
+  Assert(StringToIntW(ToWideString('-321')) = -321, 'StringToInt');
 
   Assert(StringToIntU('321') = 321,   'StringToInt');
   Assert(StringToIntU('-321') = -321, 'StringToInt');
 
-  A := '-012A';
+  A := ToAnsiString('-012A');
   Assert(TryStringToInt64PA(PAnsiChar(A), Length(A), I, L) = convertOK,          'StringToInt');
   Assert((I = -12) and (L = 4),                                                  'StringToInt');
-  A := '-A012';
+  A := ToAnsiString('-A012');
   Assert(TryStringToInt64PA(PAnsiChar(A), Length(A), I, L) = convertFormatError, 'StringToInt');
   Assert((I = 0) and (L = 1),                                                    'StringToInt');
 
-  Assert(TryStringToInt64A('0', I),                        'StringToInt');
+  Assert(TryStringToInt64A(ToAnsiString('0'), I),                        'StringToInt');
   Assert(I = 0,                                            'StringToInt');
-  Assert(TryStringToInt64A('-0', I),                       'StringToInt');
+  Assert(TryStringToInt64A(ToAnsiString('-0'), I),                       'StringToInt');
   Assert(I = 0,                                            'StringToInt');
-  Assert(TryStringToInt64A('+0', I),                       'StringToInt');
+  Assert(TryStringToInt64A(ToAnsiString('+0'), I),                       'StringToInt');
   Assert(I = 0,                                            'StringToInt');
-  Assert(TryStringToInt64A('1234', I),                     'StringToInt');
+  Assert(TryStringToInt64A(ToAnsiString('1234'), I),                     'StringToInt');
   Assert(I = 1234,                                         'StringToInt');
-  Assert(TryStringToInt64A('-1234', I),                    'StringToInt');
+  Assert(TryStringToInt64A(ToAnsiString('-1234'), I),                    'StringToInt');
   Assert(I = -1234,                                        'StringToInt');
-  Assert(TryStringToInt64A('000099999', I),                'StringToInt');
+  Assert(TryStringToInt64A(ToAnsiString('000099999'), I),                'StringToInt');
   Assert(I = 99999,                                        'StringToInt');
-  Assert(TryStringToInt64A('999999999999999999', I),       'StringToInt');
+  Assert(TryStringToInt64A(ToAnsiString('999999999999999999'), I),       'StringToInt');
   Assert(I = 999999999999999999,                           'StringToInt');
-  Assert(TryStringToInt64A('-999999999999999999', I),      'StringToInt');
+  Assert(TryStringToInt64A(ToAnsiString('-999999999999999999'), I),      'StringToInt');
   Assert(I = -999999999999999999,                          'StringToInt');
-  Assert(TryStringToInt64A('4294967295', I),               'StringToInt');
+  Assert(TryStringToInt64A(ToAnsiString('4294967295'), I),               'StringToInt');
   Assert(I = $FFFFFFFF,                                    'StringToInt');
-  Assert(TryStringToInt64A('4294967296', I),               'StringToInt');
+  Assert(TryStringToInt64A(ToAnsiString('4294967296'), I),               'StringToInt');
   Assert(I = $100000000,                                   'StringToInt');
-  Assert(TryStringToInt64A('9223372036854775807', I),      'StringToInt');
+  Assert(TryStringToInt64A(ToAnsiString('9223372036854775807'), I),      'StringToInt');
   Assert(I = 9223372036854775807,                          'StringToInt');
   {$IFNDEF DELPHI7_DOWN}
-  Assert(TryStringToInt64A('-9223372036854775808', I),     'StringToInt');
+  Assert(TryStringToInt64A(ToAnsiString('-9223372036854775808'), I),     'StringToInt');
   Assert(I = -9223372036854775808,                         'StringToInt');
   {$ENDIF}
-  Assert(not TryStringToInt64A('', I),                     'StringToInt');
-  Assert(not TryStringToInt64A('-', I),                    'StringToInt');
-  Assert(not TryStringToInt64A('+', I),                    'StringToInt');
-  Assert(not TryStringToInt64A('+-0', I),                  'StringToInt');
-  Assert(not TryStringToInt64A('0A', I),                   'StringToInt');
-  Assert(not TryStringToInt64A('1A', I),                   'StringToInt');
-  Assert(not TryStringToInt64A(' 0', I),                   'StringToInt');
-  Assert(not TryStringToInt64A('0 ', I),                   'StringToInt');
-  Assert(not TryStringToInt64A('9223372036854775808', I),  'StringToInt');
+  Assert(not TryStringToInt64A(ToAnsiString(''), I),                     'StringToInt');
+  Assert(not TryStringToInt64A(ToAnsiString('-'), I),                    'StringToInt');
+  Assert(not TryStringToInt64A(ToAnsiString('+'), I),                    'StringToInt');
+  Assert(not TryStringToInt64A(ToAnsiString('+-0'), I),                  'StringToInt');
+  Assert(not TryStringToInt64A(ToAnsiString('0A'), I),                   'StringToInt');
+  Assert(not TryStringToInt64A(ToAnsiString('1A'), I),                   'StringToInt');
+  Assert(not TryStringToInt64A(ToAnsiString(' 0'), I),                   'StringToInt');
+  Assert(not TryStringToInt64A(ToAnsiString('0 '), I),                   'StringToInt');
+  Assert(not TryStringToInt64A(ToAnsiString('9223372036854775808'), I),  'StringToInt');
   {$IFNDEF DELPHI7_DOWN}
-  Assert(not TryStringToInt64A('-9223372036854775809', I), 'StringToInt');
+  Assert(not TryStringToInt64A(ToAnsiString('-9223372036854775809'), I), 'StringToInt');
   {$ENDIF}
 
-  Assert(TryStringToInt64W('9223372036854775807', I),      'StringToInt');
+  Assert(TryStringToInt64W(ToWideString('9223372036854775807'), I),      'StringToInt');
   Assert(I = 9223372036854775807,                          'StringToInt');
   {$IFNDEF DELPHI7_DOWN}
-  Assert(TryStringToInt64W('-9223372036854775808', I),     'StringToInt');
+  Assert(TryStringToInt64W(ToWideString('-9223372036854775808'), I),     'StringToInt');
   Assert(I = -9223372036854775808,                         'StringToInt');
   {$ENDIF}
-  Assert(not TryStringToInt64W('', I),                     'StringToInt');
-  Assert(not TryStringToInt64W('-', I),                    'StringToInt');
-  Assert(not TryStringToInt64W('0A', I),                   'StringToInt');
-  Assert(not TryStringToInt64W('9223372036854775808', I),  'StringToInt');
+  Assert(not TryStringToInt64W(ToWideString(''), I),                     'StringToInt');
+  Assert(not TryStringToInt64W(ToWideString('-'), I),                    'StringToInt');
+  Assert(not TryStringToInt64W(ToWideString('0A'), I),                   'StringToInt');
+  Assert(not TryStringToInt64W(ToWideString('9223372036854775808'), I),  'StringToInt');
   {$IFNDEF DELPHI7_DOWN}
-  Assert(not TryStringToInt64W('-9223372036854775809', I), 'StringToInt');
+  Assert(not TryStringToInt64W(ToWideString('-9223372036854775809'), I), 'StringToInt');
   {$ENDIF}
 
   Assert(TryStringToInt64U('9223372036854775807', I),      'StringToInt');
@@ -8251,18 +10187,18 @@ begin
   Assert(not TryStringToInt64('-9223372036854775809', I),  'StringToInt');
   {$ENDIF}
 
-  Assert(StringToInt64A('0') = 0,                                       'StringToInt64');
-  Assert(StringToInt64A('1') = 1,                                       'StringToInt64');
-  Assert(StringToInt64A('-123') = -123,                                 'StringToInt64');
-  Assert(StringToInt64A('-0001') = -1,                                  'StringToInt64');
-  Assert(StringToInt64A('-9223372036854775807') = -9223372036854775807, 'StringToInt64');
+  Assert(StringToInt64A(ToAnsiString('0')) = 0,                                       'StringToInt64');
+  Assert(StringToInt64A(ToAnsiString('1')) = 1,                                       'StringToInt64');
+  Assert(StringToInt64A(ToAnsiString('-123')) = -123,                                 'StringToInt64');
+  Assert(StringToInt64A(ToAnsiString('-0001')) = -1,                                  'StringToInt64');
+  Assert(StringToInt64A(ToAnsiString('-9223372036854775807')) = -9223372036854775807, 'StringToInt64');
   {$IFNDEF DELPHI7_DOWN}
-  Assert(StringToInt64A('-9223372036854775808') = -9223372036854775808, 'StringToInt64');
+  Assert(StringToInt64A(ToAnsiString('-9223372036854775808')) = -9223372036854775808, 'StringToInt64');
   {$ENDIF}
-  Assert(StringToInt64A('9223372036854775807') = 9223372036854775807,   'StringToInt64');
+  Assert(StringToInt64A(ToAnsiString('9223372036854775807')) = 9223372036854775807,   'StringToInt64');
 
-  Assert(HexToUIntA('FFFFFFFF') = $FFFFFFFF, 'HexStringToUInt');
-  Assert(HexToUIntA('FFFFFFFF') = $FFFFFFFF, 'HexStringToUInt');
+  Assert(HexToUIntA(ToAnsiString('FFFFFFFF')) = $FFFFFFFF, 'HexStringToUInt');
+  Assert(HexToUIntA(ToAnsiString('FFFFFFFF')) = $FFFFFFFF, 'HexStringToUInt');
   Assert(HexToUInt('FFFFFFFF') = $FFFFFFFF,  'HexStringToUInt');
 
   Assert(HexToLongWord('FFFFFFFF') = $FFFFFFFF,  'HexToLongWord');
@@ -8273,27 +10209,27 @@ begin
   Assert(not TryHexToLongWord('', W),            'HexToLongWord');
   Assert(not TryHexToLongWord('x', W),           'HexToLongWord');
 
-  Assert(HexToLongWordA('FFFFFFFF') = $FFFFFFFF, 'HexToLongWord');
-  Assert(HexToLongWordA('0') = 0,                'HexToLongWord');
-  Assert(HexToLongWordA('ABC') = $ABC,           'HexToLongWord');
-  Assert(HexToLongWordA('abc') = $ABC,           'HexToLongWord');
-  Assert(not TryHexToLongWordA('', W),           'HexToLongWord');
-  Assert(not TryHexToLongWordA('x', W),          'HexToLongWord');
+  Assert(HexToLongWordA(ToAnsiString('FFFFFFFF')) = $FFFFFFFF, 'HexToLongWord');
+  Assert(HexToLongWordA(ToAnsiString('0')) = 0,                'HexToLongWord');
+  Assert(HexToLongWordA(ToAnsiString('ABC')) = $ABC,           'HexToLongWord');
+  Assert(HexToLongWordA(ToAnsiString('abc')) = $ABC,           'HexToLongWord');
+  Assert(not TryHexToLongWordA(ToAnsiString(''), W),           'HexToLongWord');
+  Assert(not TryHexToLongWordA(ToAnsiString('x'), W),          'HexToLongWord');
 
-  Assert(HexToLongWordB('FFFFFFFF') = $FFFFFFFF, 'HexToLongWord');
-  Assert(HexToLongWordB('0') = 0,                'HexToLongWord');
-  Assert(HexToLongWordB('ABC') = $ABC,           'HexToLongWord');
-  Assert(HexToLongWordB('abc') = $ABC,           'HexToLongWord');
-  Assert(not TryHexToLongWordB('', W),           'HexToLongWord');
-  Assert(not TryHexToLongWordB('x', W),          'HexToLongWord');
+  Assert(HexToLongWordB(ToRawByteString('FFFFFFFF')) = $FFFFFFFF, 'HexToLongWord');
+  Assert(HexToLongWordB(ToRawByteString('0')) = 0,                'HexToLongWord');
+  Assert(HexToLongWordB(ToRawByteString('ABC')) = $ABC,           'HexToLongWord');
+  Assert(HexToLongWordB(ToRawByteString('abc')) = $ABC,           'HexToLongWord');
+  Assert(not TryHexToLongWordB(ToRawByteString(''), W),           'HexToLongWord');
+  Assert(not TryHexToLongWordB(ToRawByteString('x'), W),          'HexToLongWord');
 
-  Assert(HexToLongWordW('FFFFFFFF') = $FFFFFFFF, 'HexToLongWord');
-  Assert(HexToLongWordW('0') = 0,                'HexToLongWord');
-  Assert(HexToLongWordW('123456') = $123456,     'HexToLongWord');
-  Assert(HexToLongWordW('ABC') = $ABC,           'HexToLongWord');
-  Assert(HexToLongWordW('abc') = $ABC,           'HexToLongWord');
-  Assert(not TryHexToLongWordW('', W),           'HexToLongWord');
-  Assert(not TryHexToLongWordW('x', W),          'HexToLongWord');
+  Assert(HexToLongWordW(ToWideString('FFFFFFFF')) = $FFFFFFFF, 'HexToLongWord');
+  Assert(HexToLongWordW(ToWideString('0')) = 0,                'HexToLongWord');
+  Assert(HexToLongWordW(ToWideString('123456')) = $123456,     'HexToLongWord');
+  Assert(HexToLongWordW(ToWideString('ABC')) = $ABC,           'HexToLongWord');
+  Assert(HexToLongWordW(ToWideString('abc')) = $ABC,           'HexToLongWord');
+  Assert(not TryHexToLongWordW(ToWideString(''), W),           'HexToLongWord');
+  Assert(not TryHexToLongWordW(ToWideString('x'), W),          'HexToLongWord');
 
   Assert(HexToLongWordU('FFFFFFFF') = $FFFFFFFF, 'HexToLongWord');
   Assert(HexToLongWordU('0') = 0,                'HexToLongWord');
@@ -8303,16 +10239,16 @@ begin
   Assert(not TryHexToLongWordU('', W),           'HexToLongWord');
   Assert(not TryHexToLongWordU('x', W),          'HexToLongWord');
 
-  Assert(not TryStringToLongWordA('', W),             'StringToLongWord');
-  Assert(StringToLongWordA('123') = 123,              'StringToLongWord');
-  Assert(StringToLongWordA('4294967295') = $FFFFFFFF, 'StringToLongWord');
-  Assert(StringToLongWordA('999999999') = 999999999,  'StringToLongWord');
+  Assert(not TryStringToLongWordA(ToAnsiString(''), W),             'StringToLongWord');
+  Assert(StringToLongWordA(ToAnsiString('123')) = 123,              'StringToLongWord');
+  Assert(StringToLongWordA(ToAnsiString('4294967295')) = $FFFFFFFF, 'StringToLongWord');
+  Assert(StringToLongWordA(ToAnsiString('999999999')) = 999999999,  'StringToLongWord');
 
-  Assert(StringToLongWordB('0') = 0,                  'StringToLongWord');
-  Assert(StringToLongWordB('4294967295') = $FFFFFFFF, 'StringToLongWord');
+  Assert(StringToLongWordB(ToRawByteString('0')) = 0,                  'StringToLongWord');
+  Assert(StringToLongWordB(ToRawByteString('4294967295')) = $FFFFFFFF, 'StringToLongWord');
 
-  Assert(StringToLongWordW('0') = 0,                  'StringToLongWord');
-  Assert(StringToLongWordW('4294967295') = $FFFFFFFF, 'StringToLongWord');
+  Assert(StringToLongWordW(ToWideString('0')) = 0,                  'StringToLongWord');
+  Assert(StringToLongWordW(ToWideString('4294967295')) = $FFFFFFFF, 'StringToLongWord');
 
   Assert(StringToLongWordU('0') = 0,                  'StringToLongWord');
   Assert(StringToLongWordU('4294967295') = $FFFFFFFF, 'StringToLongWord');
@@ -8328,56 +10264,56 @@ var A : AnsiString;
 begin
   // FloatToStr
   {$IFNDEF FREEPASCAL}
-  Assert(FloatToStringA(0.0) = '0');
-  Assert(FloatToStringA(-1.5) = '-1.5');
-  Assert(FloatToStringA(1.5) = '1.5');
-  Assert(FloatToStringA(1.1) = '1.1');
-  Assert(FloatToStringA(123) = '123');
-  Assert(FloatToStringA(0.00000000000001) = '0.00000000000001');
-  Assert(FloatToStringA(0.000000000000001) = '0.000000000000001');
-  Assert(FloatToStringA(0.0000000000000001) = '1E-0016');
-  Assert(FloatToStringA(0.0000000000000012345) = '0.000000000000001');
-  Assert(FloatToStringA(0.00000000000000012345) = '1.2345E-0016');
+  Assert(FloatToStringA(0.0) = ToAnsiString('0'));
+  Assert(FloatToStringA(-1.5) = ToAnsiString('-1.5'));
+  Assert(FloatToStringA(1.5) = ToAnsiString('1.5'));
+  Assert(FloatToStringA(1.1) = ToAnsiString('1.1'));
+  Assert(FloatToStringA(123) = ToAnsiString('123'));
+  Assert(FloatToStringA(0.00000000000001) = ToAnsiString('0.00000000000001'));
+  Assert(FloatToStringA(0.000000000000001) = ToAnsiString('0.000000000000001'));
+  Assert(FloatToStringA(0.0000000000000001) = ToAnsiString('1E-0016'));
+  Assert(FloatToStringA(0.0000000000000012345) = ToAnsiString('0.000000000000001'));
+  Assert(FloatToStringA(0.00000000000000012345) = ToAnsiString('1.2345E-0016'));
   {$IFNDEF ExtendedIsDouble}
-  Assert(FloatToStringA(123456789.123456789) = '123456789.123456789');
+  Assert(FloatToStringA(123456789.123456789) = ToAnsiString('123456789.123456789'));
   {$IFDEF DELPHIXE2_UP}
-  Assert(FloatToStringA(123456789012345.1234567890123456789) = '123456789012345.123');
+  Assert(FloatToStringA(123456789012345.1234567890123456789) = ToAnsiString('123456789012345.123'));
   {$ELSE}
-  Assert(FloatToStringA(123456789012345.1234567890123456789) = '123456789012345.1234');
+  Assert(FloatToStringA(123456789012345.1234567890123456789) = ToAnsiString('123456789012345.1234'));
   {$ENDIF}
-  Assert(FloatToStringA(1234567890123456.1234567890123456789) = '1.23456789012346E+0015');
+  Assert(FloatToStringA(1234567890123456.1234567890123456789) = ToAnsiString('1.23456789012346E+0015'));
   {$ENDIF}
-  Assert(FloatToStringA(0.12345) = '0.12345');
-  Assert(FloatToStringA(1e100) = '1E+0100');
-  Assert(FloatToStringA(1.234e+100) = '1.234E+0100');
-  Assert(FloatToStringA(-1.5e-100) = '-1.5E-0100');
+  Assert(FloatToStringA(0.12345) = ToAnsiString('0.12345'));
+  Assert(FloatToStringA(1e100) = ToAnsiString('1E+0100'));
+  Assert(FloatToStringA(1.234e+100) = ToAnsiString('1.234E+0100'));
+  Assert(FloatToStringA(-1.5e-100) = ToAnsiString('-1.5E-0100'));
   {$IFNDEF ExtendedIsDouble}
-  Assert(FloatToStringA(1.234e+1000) = '1.234E+1000');
-  Assert(FloatToStringA(-1e-4000) = '0');
+  Assert(FloatToStringA(1.234e+1000) = ToAnsiString('1.234E+1000'));
+  Assert(FloatToStringA(-1e-4000) = ToAnsiString('0'));
   {$ENDIF}
 
-  Assert(FloatToStringB(0.0) = '0');
-  Assert(FloatToStringB(-1.5) = '-1.5');
-  Assert(FloatToStringB(1.5) = '1.5');
-  Assert(FloatToStringB(1.1) = '1.1');
+  Assert(FloatToStringB(0.0) = ToRawByteString('0'));
+  Assert(FloatToStringB(-1.5) = ToRawByteString('-1.5'));
+  Assert(FloatToStringB(1.5) = ToRawByteString('1.5'));
+  Assert(FloatToStringB(1.1) = ToRawByteString('1.1'));
 
-  Assert(FloatToStringW(0.0) = '0');
-  Assert(FloatToStringW(-1.5) = '-1.5');
-  Assert(FloatToStringW(1.5) = '1.5');
-  Assert(FloatToStringW(1.1) = '1.1');
+  Assert(FloatToStringW(0.0) = ToWideString('0'));
+  Assert(FloatToStringW(-1.5) = ToWideString('-1.5'));
+  Assert(FloatToStringW(1.5) = ToWideString('1.5'));
+  Assert(FloatToStringW(1.1) = ToWideString('1.1'));
   {$IFNDEF ExtendedIsDouble}
-  Assert(FloatToStringW(123456789.123456789) = '123456789.123456789');
+  Assert(FloatToStringW(123456789.123456789) = ToWideString('123456789.123456789'));
   {$IFDEF DELPHIXE2_UP}
-  Assert(FloatToStringW(123456789012345.1234567890123456789) = '123456789012345.123');
+  Assert(FloatToStringW(123456789012345.1234567890123456789) = ToWideString('123456789012345.123'));
   {$ELSE}
-  Assert(FloatToStringW(123456789012345.1234567890123456789) = '123456789012345.1234');
+  Assert(FloatToStringW(123456789012345.1234567890123456789) = ToWideString('123456789012345.1234'));
   {$ENDIF}
-  Assert(FloatToStringW(1234567890123456.1234567890123456789) = '1.23456789012346E+0015');
+  Assert(FloatToStringW(1234567890123456.1234567890123456789) = ToWideString('1.23456789012346E+0015'));
   {$ENDIF}
-  Assert(FloatToStringW(0.12345) = '0.12345');
-  Assert(FloatToStringW(1e100) = '1E+0100');
-  Assert(FloatToStringW(1.234e+100) = '1.234E+0100');
-  Assert(FloatToStringW(1.5e-100) = '1.5E-0100');
+  Assert(FloatToStringW(0.12345) = ToWideString('0.12345'));
+  Assert(FloatToStringW(1e100) = ToWideString('1E+0100'));
+  Assert(FloatToStringW(1.234e+100) = ToWideString('1.234E+0100'));
+  Assert(FloatToStringW(1.5e-100) = ToWideString('1.5E-0100'));
 
   Assert(FloatToStringU(0.0) = '0');
   Assert(FloatToStringU(-1.5) = '-1.5');
@@ -8417,21 +10353,21 @@ begin
   {$ENDIF}
 
   // StrToFloat
-  A := '123.456';
+  A := ToAnsiString('123.456');
   Assert(TryStringToFloatPA(PAnsiChar(A), Length(A), E, L) = convertOK);
   Assert((E = 123.456) and (L = 7));
-  A := '-000.500A';
+  A := ToAnsiString('-000.500A');
   Assert(TryStringToFloatPA(PAnsiChar(A), Length(A), E, L) = convertOK);
   Assert((E = -0.5) and (L = 8));
-  A := '1.234e+002X';
+  A := ToAnsiString('1.234e+002X');
   Assert(TryStringToFloatPA(PAnsiChar(A), Length(A), E, L) = convertOK);
   Assert((E = 123.4) and (L = 10));
-  A := '1.2e300x';
+  A := ToAnsiString('1.2e300x');
   Assert(TryStringToFloatPA(PAnsiChar(A), Length(A), E, L) = convertOK);
   {$IFNDEF ExtendedIsDouble}
   Assert(ExtendedApproxEqual(E, 1.2e300, 1e-2) and (L = 7));
   {$ENDIF}
-  A := '1.2e-300e';
+  A := ToAnsiString('1.2e-300e');
   Assert(TryStringToFloatPA(PAnsiChar(A), Length(A), E, L) = convertOK);
   {$IFNDEF ExtendedIsDouble}
   Assert(ExtendedApproxEqual(E, 1.2e-300, 1e-2) and (L = 8));
@@ -8448,7 +10384,7 @@ begin
 
   // 1200..0000
   {$IFNDEF ExtendedIsDouble}
-  A := '12';
+  A := ToAnsiString('12');
   for L := 1 to 100 do
     A := A + '0';
   Assert(TryStringToFloatPA(PAnsiChar(A), Length(A), E, L) = convertOK);
@@ -8485,55 +10421,55 @@ begin
   Assert(ExtendedApproxEqual(E, 1.2e+201, 1e-1) and (L = 106));
   {$ENDIF}
 
-  Assert(StringToFloatA('0') = 0.0);
-  Assert(StringToFloatA('1') = 1.0);
-  Assert(StringToFloatA('1.5') = 1.5);
-  Assert(StringToFloatA('+1.5') = 1.5);
-  Assert(StringToFloatA('-1.5') = -1.5);
-  Assert(StringToFloatA('1.1') = 1.1);
-  Assert(StringToFloatA('-00.00') = 0.0);
-  Assert(StringToFloatA('+00.00') = 0.0);
-  Assert(StringToFloatA('0000000000000000000000001.1000000000000000000000000') = 1.1);
-  Assert(StringToFloatA('.5') = 0.5);
-  Assert(StringToFloatA('-.5') = -0.5);
+  Assert(StringToFloatA(ToAnsiString('0')) = 0.0);
+  Assert(StringToFloatA(ToAnsiString('1')) = 1.0);
+  Assert(StringToFloatA(ToAnsiString('1.5')) = 1.5);
+  Assert(StringToFloatA(ToAnsiString('+1.5')) = 1.5);
+  Assert(StringToFloatA(ToAnsiString('-1.5')) = -1.5);
+  Assert(StringToFloatA(ToAnsiString('1.1')) = 1.1);
+  Assert(StringToFloatA(ToAnsiString('-00.00')) = 0.0);
+  Assert(StringToFloatA(ToAnsiString('+00.00')) = 0.0);
+  Assert(StringToFloatA(ToAnsiString('0000000000000000000000001.1000000000000000000000000')) = 1.1);
+  Assert(StringToFloatA(ToAnsiString('.5')) = 0.5);
+  Assert(StringToFloatA(ToAnsiString('-.5')) = -0.5);
   {$IFNDEF ExtendedIsDouble}
-  Assert(ExtendedApproxEqual(StringToFloatA('1.123456789'), 1.123456789, 1e-10));
-  Assert(ExtendedApproxEqual(StringToFloatA('123456789.123456789'), 123456789.123456789, 1e-10));
-  Assert(ExtendedApproxEqual(StringToFloatA('1.5e500'), 1.5e500, 1e-2));
-  Assert(ExtendedApproxEqual(StringToFloatA('+1.5e+500'), 1.5e500, 1e-2));
-  Assert(ExtendedApproxEqual(StringToFloatA('1.2E-500'), 1.2e-500, 1e-2));
-  Assert(ExtendedApproxEqual(StringToFloatA('-1.2E-500'), -1.2e-500, 1e-2));
-  Assert(ExtendedApproxEqual(StringToFloatA('-1.23456789E-500'), -1.23456789e-500, 1e-9));
+  Assert(ExtendedApproxEqual(StringToFloatA(ToAnsiString('1.123456789')), 1.123456789, 1e-10));
+  Assert(ExtendedApproxEqual(StringToFloatA(ToAnsiString('123456789.123456789')), 123456789.123456789, 1e-10));
+  Assert(ExtendedApproxEqual(StringToFloatA(ToAnsiString('1.5e500')), 1.5e500, 1e-2));
+  Assert(ExtendedApproxEqual(StringToFloatA(ToAnsiString('+1.5e+500')), 1.5e500, 1e-2));
+  Assert(ExtendedApproxEqual(StringToFloatA(ToAnsiString('1.2E-500')), 1.2e-500, 1e-2));
+  Assert(ExtendedApproxEqual(StringToFloatA(ToAnsiString('-1.2E-500')), -1.2e-500, 1e-2));
+  Assert(ExtendedApproxEqual(StringToFloatA(ToAnsiString('-1.23456789E-500')), -1.23456789e-500, 1e-9));
   {$ENDIF}
 
-  Assert(not TryStringToFloatA('', E));
-  Assert(not TryStringToFloatA('+', E));
-  Assert(not TryStringToFloatA('-', E));
-  Assert(not TryStringToFloatA('.', E));
-  Assert(not TryStringToFloatA(' ', E));
-  Assert(not TryStringToFloatA(' 0', E));
-  Assert(not TryStringToFloatA('0 ', E));
-  Assert(not TryStringToFloatA('--0', E));
-  Assert(not TryStringToFloatA('0X', E));
+  Assert(not TryStringToFloatA(ToAnsiString(''), E));
+  Assert(not TryStringToFloatA(ToAnsiString('+'), E));
+  Assert(not TryStringToFloatA(ToAnsiString('-'), E));
+  Assert(not TryStringToFloatA(ToAnsiString('.'), E));
+  Assert(not TryStringToFloatA(ToAnsiString(' '), E));
+  Assert(not TryStringToFloatA(ToAnsiString(' 0'), E));
+  Assert(not TryStringToFloatA(ToAnsiString('0 '), E));
+  Assert(not TryStringToFloatA(ToAnsiString('--0'), E));
+  Assert(not TryStringToFloatA(ToAnsiString('0X'), E));
 end;
 
 procedure Test_Hash;
 begin
   // HashStr
-  Assert(HashStrA('Fundamentals') = $3FB7796E, 'HashStr');
-  Assert(HashStrA('0') = $B2420DE,             'HashStr');
-  Assert(HashStrA('Fundamentals', 1, -1, False) = HashStrA('FUNdamentals', 1, -1, False), 'HashStr');
-  Assert(HashStrA('Fundamentals', 1, -1, True) <> HashStrA('FUNdamentals', 1, -1, True),  'HashStr');
+  Assert(HashStrA(ToAnsiString('Fundamentals')) = $3FB7796E, 'HashStr');
+  Assert(HashStrA(ToAnsiString('0')) = $B2420DE,             'HashStr');
+  Assert(HashStrA(ToAnsiString('Fundamentals'), 1, -1, False) = HashStrA(ToAnsiString('FUNdamentals'), 1, -1, False), 'HashStr');
+  Assert(HashStrA(ToAnsiString('Fundamentals'), 1, -1, True) <> HashStrA(ToAnsiString('FUNdamentals'), 1, -1, True),  'HashStr');
 
-  Assert(HashStrB('Fundamentals') = $3FB7796E, 'HashStr');
-  Assert(HashStrB('0') = $B2420DE,             'HashStr');
-  Assert(HashStrB('Fundamentals', 1, -1, False) = HashStrB('FUNdamentals', 1, -1, False), 'HashStr');
-  Assert(HashStrB('Fundamentals', 1, -1, True) <> HashStrB('FUNdamentals', 1, -1, True),  'HashStr');
+  Assert(HashStrB(ToRawByteString('Fundamentals')) = $3FB7796E, 'HashStr');
+  Assert(HashStrB(ToRawByteString('0')) = $B2420DE,             'HashStr');
+  Assert(HashStrB(ToRawByteString('Fundamentals'), 1, -1, False) = HashStrB(ToRawByteString('FUNdamentals'), 1, -1, False), 'HashStr');
+  Assert(HashStrB(ToRawByteString('Fundamentals'), 1, -1, True) <> HashStrB(ToRawByteString('FUNdamentals'), 1, -1, True),  'HashStr');
 
-  Assert(HashStrW('Fundamentals') = $FD6ED837, 'HashStr');
-  Assert(HashStrW('0') = $6160DBF3,            'HashStr');
-  Assert(HashStrW('Fundamentals', 1, -1, False) = HashStrW('FUNdamentals', 1, -1, False), 'HashStr');
-  Assert(HashStrW('Fundamentals', 1, -1, True) <> HashStrW('FUNdamentals', 1, -1, True),  'HashStr');
+  Assert(HashStrW(ToWideString('Fundamentals')) = $FD6ED837, 'HashStr');
+  Assert(HashStrW(ToWideString('0')) = $6160DBF3,            'HashStr');
+  Assert(HashStrW(ToWideString('Fundamentals'), 1, -1, False) = HashStrW(ToWideString('FUNdamentals'), 1, -1, False), 'HashStr');
+  Assert(HashStrW(ToWideString('Fundamentals'), 1, -1, True) <> HashStrW(ToWideString('FUNdamentals'), 1, -1, True),  'HashStr');
 
   {$IFDEF StringIsUnicode}
   Assert(HashStr('Fundamentals') = $FD6ED837, 'HashStr');
@@ -8553,15 +10489,15 @@ var I, J : Integer;
 begin
   for I := -1 to 33 do
     begin
-      A := '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-      B := '                                    ';
+      A := ToAnsiString('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+      B := ToAnsiString('                                    ');
       MoveMem(A[1], B[1], I);
-      for J := 1 to MinI(I, 10) do
+      for J := 1 to MinInt(I, 10) do
         Assert(B[J] = AnsiChar(48 + J - 1),     'MoveMem');
-      for J := 11 to MinI(I, 36) do
+      for J := 11 to MinInt(I, 36) do
         Assert(B[J] = AnsiChar(65 + J - 11),    'MoveMem');
-      for J := MaxI(I + 1, 1) to 36 do
-        Assert(B[J] = ' ',                  'MoveMem');
+      for J := MaxInt(I + 1, 1) to 36 do
+        Assert(B[J] = AnsiChar(Ord(' ')),                  'MoveMem');
       Assert(CompareMem(A[1], B[1], I),     'CompareMem');
     end;
 
@@ -8569,51 +10505,51 @@ begin
     begin
       SetLength(A, 4096);
       for I := 1 to 4096 do
-        A[I] := 'A';
+        A[I] := AnsiChar(Ord('A'));
       SetLength(B, 4096);
       for I := 1 to 4096 do
-        B[I] := 'B';
+        B[I] := AnsiChar(Ord('B'));
       MoveMem(A[1], B[1], J);
       for I := 1 to J do
-        Assert(B[I] = 'A', 'MoveMem');
+        Assert(B[I] = AnsiChar(Ord('A')), 'MoveMem');
       for I := J + 1 to 4096 do
-        Assert(B[I] = 'B', 'MoveMem');
+        Assert(B[I] = AnsiChar(Ord('B')), 'MoveMem');
       Assert(CompareMem(A[1], B[1], J),     'CompareMem');
     end;
 
-  B := '1234567890';
+  B := ToAnsiString('1234567890');
   MoveMem(B[1], B[3], 4);
-  Assert(B = '1212347890', 'MoveMem');
+  Assert(B = ToAnsiString('1212347890'), 'MoveMem');
   MoveMem(B[3], B[2], 4);
-  Assert(B = '1123447890', 'MoveMem');
+  Assert(B = ToAnsiString('1123447890'), 'MoveMem');
   MoveMem(B[1], B[3], 2);
-  Assert(B = '1111447890', 'MoveMem');
+  Assert(B = ToAnsiString('1111447890'), 'MoveMem');
   MoveMem(B[5], B[7], 3);
-  Assert(B = '1111444470', 'MoveMem');
+  Assert(B = ToAnsiString('1111444470'), 'MoveMem');
   MoveMem(B[9], B[10], 1);
-  Assert(B = '1111444477', 'MoveMem');
+  Assert(B = ToAnsiString('1111444477'), 'MoveMem');
 
   for I := -1 to 33 do
     begin
-      A := '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      A := ToAnsiString('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ');
       ZeroMem(A[1], I);
       for J := 1 to I do
-        Assert(A[J] = #0,                       'ZeroMem');
-      for J := MaxI(I + 1, 1) to 10 do
+        Assert(A[J] = AnsiChar(0),                       'ZeroMem');
+      for J := MaxInt(I + 1, 1) to 10 do
         Assert(A[J] = AnsiChar(48 + J - 1),     'ZeroMem');
-      for J := MaxI(I + 1, 11) to 36 do
+      for J := MaxInt(I + 1, 11) to 36 do
         Assert(A[J] = AnsiChar(65 + J - 11),    'ZeroMem');
     end;
 
   for I := -1 to 33 do
     begin
-      A := '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      A := ToAnsiString('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ');
       FillMem(A[1], I, Ord('!'));
       for J := 1 to I do
-        Assert(A[J] = '!',                      'FillMem');
-      for J := MaxI(I + 1, 1) to 10 do
+        Assert(A[J] = AnsiChar(Ord('!')),                      'FillMem');
+      for J := MaxInt(I + 1, 1) to 10 do
         Assert(A[J] = AnsiChar(48 + J - 1),     'FillMem');
-      for J := MaxI(I + 1, 11) to 36 do
+      for J := MaxInt(I + 1, 11) to 36 do
         Assert(A[J] = AnsiChar(65 + J - 11),    'FillMem');
     end;
 end;
@@ -8625,7 +10561,9 @@ begin
   Set8087CW(Default8087CW);
   {$ENDIF}
   Test_Misc;
-  Test_BitFunctions;
+  {$IFDEF SupportUTF8String}
+  Test_UTF8;
+  {$ENDIF}
   Test_Float;
   Test_IntStr;
   Test_FloatStr;

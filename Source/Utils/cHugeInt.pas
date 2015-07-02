@@ -1,7 +1,7 @@
 {******************************************************************************}
 {                                                                              }
 {   File name:        cHugeInt.pas                                             }
-{   File version:     4.22                                                     }
+{   File version:     4.23                                                     }
 {   Description:      HugeInt functions                                        }
 {                                                                              }
 {   Copyright:        Copyright (c) 2001-2015, David J Butler                  }
@@ -57,6 +57,7 @@
 {   2015/03/29  4.20  Minor optimisations.                                     }
 {   2015/04/01  4.21  Compilable with FreePascal 2.6.2.                        }
 {   2015/04/20  4.22  Float-type conversion functions.                         }
+{   2015/06/10  4.23  Fix in HugeWordIsPrime_MillerRabin.                      }
 {                                                                              }
 { Supported compilers:                                                         }
 {   Delphi XE7 Win32                    4.20  2015/03/29                       }
@@ -547,6 +548,30 @@ const
   MinInt64 = Int64(Low(Int64));     // -$8000000000000000
                                     // Bug in Delphi5/7: using literal -$8000000000000000 is out of range
 
+const
+  BitMaskTable32: array[0..31] of LongWord =
+    ($00000001, $00000002, $00000004, $00000008,
+     $00000010, $00000020, $00000040, $00000080,
+     $00000100, $00000200, $00000400, $00000800,
+     $00001000, $00002000, $00004000, $00008000,
+     $00010000, $00020000, $00040000, $00080000,
+     $00100000, $00200000, $00400000, $00800000,
+     $01000000, $02000000, $04000000, $08000000,
+     $10000000, $20000000, $40000000, $80000000);
+
+{$IFDEF SupportUInt64}
+{$IFDEF CPU_64}
+  {$DEFINE Pas64}
+{$ENDIF}
+{$ENDIF}
+
+{$IFDEF Pas64}
+{$IFDEF FREEPASCAL}
+type
+  PUInt64 = ^UInt64;
+{$ENDIF}
+{$ENDIF}
+
 
 
 {                                                                              }
@@ -683,6 +708,42 @@ end;
 function HugeWordGetSizeInBits(const A: HugeWord): Integer;
 begin
   Result := A.Used * HugeWordElementBits;
+end;
+
+{ HugeWord SetSize NoZeroMem                                                   }
+{   Post: Expanded data is not set to zero.                                    }
+procedure HugeWordSetSize_NoZeroMem(var A: HugeWord; const Size: Integer);
+var OldUsed, OldAlloc, NewAlloc : Integer;
+begin
+  Assert(Size >= 0);
+
+  OldUsed := A.Used;
+  if Size = OldUsed then // unchanged
+    exit;
+  if Size < OldUsed then
+    begin
+      // shrink: keep allocated memory
+      A.Used := Size;
+      exit;
+    end;
+  OldAlloc := A.Alloc;
+  if OldAlloc = 0 then
+    begin
+      // first allocation: allocate and set all to zero
+      HugeWordAllocZero(A, Size);
+      A.Used := Size;
+      exit;
+    end;
+  if Size > OldAlloc then
+    begin
+      // growing block: allocate more memory than requested, this reduces
+      // the number of future Realloc calls
+      NewAlloc := OldAlloc * 2;
+      if NewAlloc < Size then
+        NewAlloc := Size;
+      HugeWordRealloc(A, NewAlloc);
+    end;
+  A.Used := Size;
 end;
 
 { HugeWord SetSize                                                             }
@@ -876,7 +937,7 @@ begin
     HugeWordAssignZero(A)
   else
     begin
-      HugeWordSetSize(A, 1);
+      HugeWordSetSize_NoZeroMem(A, 1);
       PLongWord(A.Data)^ := B;
     end;
 end;
@@ -891,7 +952,7 @@ begin
     HugeWordAssignZero(A)
   else
     begin
-      HugeWordSetSize(A, 1);
+      HugeWordSetSize_NoZeroMem(A, 1);
       PLongWord(A.Data)^ := LongWord(B);
     end;
 end;
@@ -909,7 +970,7 @@ begin
     HugeWordAssignWord32(A, Int64Rec(B).Lo)
   else
     begin
-      HugeWordSetSize(A, 2);
+      HugeWordSetSize_NoZeroMem(A, 2);
       P := A.Data;
       P^ := Int64Rec(B).Lo;
       Inc(P);
@@ -955,7 +1016,7 @@ procedure HugeWordAssign(var A: HugeWord; const B: HugeWord);
 var L : Integer;
 begin
   L := B.Used;
-  HugeWordSetSize(A, L);
+  HugeWordSetSize_NoZeroMem(A, L);
   if L = 0 then
     exit;
   Move(B.Data^, A.Data^, L * HugeWordElementSize);
@@ -980,9 +1041,9 @@ begin
   else
     begin
       L := (BufSize + HugeWordElementSize - 1) div HugeWordElementSize;
-      HugeWordSetSize(A, L);
+      HugeWordSetSize_NoZeroMem(A, L);
       P := @Buf;
-      Q := A.Data; 
+      Q := A.Data;
       if ReverseByteOrder then
         Inc(P, BufSize - 1);
       for I := 0 to BufSize - 1 do
@@ -1481,6 +1542,67 @@ end;
 { HugeWord Compare                                                             }
 {   Pre:   A and B normalised                                                  }
 {   Post:  Result is -1 if A < B, 1 if A > B or 0 if A = B                     }
+{$IFDEF Pas64}
+function HugeWordCompare(const A, B: HugeWord): Integer;
+var I, L, M : Integer;
+    F, G    : LongWord;
+    P, Q    : PLongWord;
+    T, U    : PUInt64;
+    X, Y    : UInt64;
+begin
+  L := A.Used;
+  M := B.Used;
+  if L > M then
+    Result := 1 else
+  if L < M then
+    Result := -1
+  else
+    begin
+      P := A.Data;
+      Q := B.Data;
+      if P = Q then
+        begin
+          Result := 0;
+          exit;
+        end;
+      Inc(P, L);
+      Inc(Q, L);
+      T := Pointer(P);
+      U := Pointer(Q);
+      for I := (L div 2) - 1 downto 0 do
+        begin
+          Dec(T);
+          Dec(U);
+          X := T^;
+          Y := U^;
+          if X <> Y then
+            begin
+              if X < Y then
+                Result := -1
+              else
+                Result := 1;
+              exit;
+            end;
+        end;
+      if L mod 2 = 1 then
+        begin
+          P := A.Data;
+          Q := B.Data;
+          F := P^;
+          G := Q^;
+          if F <> G then
+            begin
+              if F < G then
+                Result := -1
+              else
+                Result := 1;
+              exit;
+            end;
+        end;
+      Result := 0;
+    end;
+end;
+{$ELSE}
 function HugeWordCompare(const A, B: HugeWord): Integer;
 var I, L, M : Integer;
     F, G    : LongWord;
@@ -1521,6 +1643,7 @@ begin
       Result := 0;
     end;
 end;
+{$ENDIF}
 
 { HugeWord Min/Max                                                             }
 {   Post:  A is minimum/maximum of A and B.                                    }
@@ -1626,57 +1749,79 @@ end;
 { HugeWord Bit Scan                                                            }
 {   Post:  Returns index of bit in A, or -1 if none found                      }
 function HugeWordSetBitScanForward(const A: HugeWord): Integer;
-var B : Integer;
-    P : PLongWord;
+var P : PLongWord;
+    V : LongWord;
+    I : Integer;
+    J : Byte;
 begin
-  for B := 0 to A.Used * HugeWordElementBits - 1 do
+  P := A.Data;
+  for I := 0 to A.Used - 1 do
     begin
-      P := A.Data;
-      Inc(P, B shr 5); // P = A[B shr 5]
-      if P^ and (1 shl (B and $1F)) <> 0 then
+      V := P^;
+      if V <> 0 then
         begin
-          Result := B;
-          exit;
+          for J := 0 to HugeWordElementBits - 1 do
+            if V and BitMaskTable32[J] <> 0 then
+              begin
+                Result := I * HugeWordElementBits + J;
+                exit;
+              end;
         end;
+      Inc(P);
     end;
   Result := -1;
 end;
 
 function HugeWordSetBitScanReverse(const A: HugeWord): Integer;
-var B : Integer;
-    P : PLongWord;
+var P : PLongWord;
+    V : LongWord;
+    I : Integer;
+    J : Byte;
 begin
-  for B := A.Used * HugeWordElementBits - 1 downto 0 do
+  P := A.Data;
+  Inc(P, A.Used - 1);
+  for I := A.Used - 1 downto 0 do
     begin
-      P := A.Data;
-      Inc(P, B shr 5); // P = A[B shr 5]
-      if P^ and (1 shl (B and $1F)) <> 0 then
+      V := P^;
+      if V <> 0 then
         begin
-          Result := B;
-          exit;
+          for J := HugeWordElementBits - 1 downto 0 do
+            if V and BitMaskTable32[J] <> 0 then
+              begin
+                Result := I * HugeWordElementBits + J;
+                exit;
+              end;
         end;
+      Dec(P);
     end;
   Result := -1;
 end;
 
 function HugeWordClearBitScanForward(const A: HugeWord): Integer;
-var B : Integer;
-    P : PLongWord;
+var P : PLongWord;
+    V : LongWord;
+    I : Integer;
+    J : Byte;
 begin
   if A.Used = 0 then
     begin
       Result := 0;
       exit;
     end;
-  for B := 0 to A.Used * HugeWordElementBits - 1 do
+  P := A.Data;
+  for I := 0 to A.Used - 1 do
     begin
-      P := A.Data;
-      Inc(P, B shr 5); // P = A[B shr 5]
-      if P^ and (1 shl (B and $1F)) = 0 then
+      V := P^;
+      if V <> $FFFFFFFF then
         begin
-          Result := B;
-          exit;
+          for J := 0 to HugeWordElementBits - 1 do
+            if V and BitMaskTable32[J] = 0 then
+              begin
+                Result := I * HugeWordElementBits + J;
+                exit;
+              end;
         end;
+      Inc(P);
     end;
   Result := A.Used * HugeWordElementBits;
 end;
@@ -2633,7 +2778,7 @@ begin
       C := 0;
       P := ADat;
       F := RDat;
-      Inc(F, I);
+      Inc(F, LongWord(I));
       for J := 0 to L - 1 do
         begin
           R := C;
@@ -3495,14 +3640,8 @@ const
 { HugeWord IsPrime Quick Trial                                                 }
 {   Quick check for primality using trial division of the first few prime      }
 {   numbers.                                                                   }
-const
-  PrimeTableQuickSmallCount  = 50;
-  PrimeTableQuickLargeCount1 = 6;
-  PrimeTableQuickLargeCount2 = 12;
-  PrimeTableQuickLargeCount3 = 24;
-
 function HugeWordIsPrime_QuickTrial(const A: HugeWord): TPrimality;
-var L, I, N : Integer;
+var L, I    : Integer;
     F, G, H : LongWord;
     C, Q, R : HugeWord;
 begin
@@ -3521,7 +3660,7 @@ begin
       else
         begin
           G := Trunc(Sqrt(F)) + 1;
-          for I := 1 to PrimeTableQuickSmallCount do
+          for I := 1 to PrimeTableCount - 1 do
             begin
               H := PrimeTable[I];
               if H > G then
@@ -3542,35 +3681,29 @@ begin
     if not HugeWordIsOdd(A) then
       Result := pNotPrime
     else
-    begin
-      HugeWordInit(C);
-      HugeWordInit(Q);
-      HugeWordInit(R);
-      try
-        if L >= 128 then // >= 4096 bits
-          N := PrimeTableQuickLargeCount1 else
-        if L >= 32 then  // >= 1024 bits
-          N := PrimeTableQuickLargeCount2
-        else             //  < 1024 bits
-          N := PrimeTableQuickLargeCount3;
-        for I := 1 to N do
-          begin
-            H := PrimeTable[I];
-            HugeWordAssignWord32(C, H);
-            HugeWordDivide(A, C, Q, R);
-            if HugeWordIsZero(R) then
-              begin
-                Result := pNotPrime;
-                exit;
-              end;
-          end;
-        Result := pPotentialPrime;
-      finally
-        HugeWordFinalise(R);
-        HugeWordFinalise(Q);
-        HugeWordFinalise(C);
+      begin
+        HugeWordInit(C);
+        HugeWordInit(Q);
+        HugeWordInit(R);
+        try
+          for I := 1 to PrimeTableCount - 1 do
+            begin
+              H := PrimeTable[I];
+              HugeWordAssignWord32(C, H);
+              HugeWordDivide(A, C, Q, R);
+              if HugeWordIsZero(R) then
+                begin
+                  Result := pNotPrime;
+                  exit;
+                end;
+            end;
+          Result := pPotentialPrime;
+        finally
+          HugeWordFinalise(R);
+          HugeWordFinalise(Q);
+          HugeWordFinalise(C);
+        end;
       end;
-    end;
 end;
 
 { HugeWord IsPrime MillerRabin                                                 }
@@ -3663,7 +3796,7 @@ begin
         HugeWordAssignWord32(B, PrimeTable[I]);
         // X = B^E mod A
         HugeWordPowerAndMod(X, B, E, A);
-        if HugeWordIsOne(X) or HugeWordEquals(X,C) then
+        if HugeWordIsOne(X) or HugeWordEquals(X, C) then
           continue;
         for J := 1 to P - 1 do
           begin
@@ -3674,9 +3807,13 @@ begin
                 Result := pNotPrime;
                 exit;
               end;
-            if HugeWordEquals(X, C) then
-              break; // X = A - 1
+            if HugeWordEquals(X, C) then // if X = A - 1
+              break;
           end;
+         if HugeWordEquals(X, C) then // if X = A - 1
+           continue;
+         Result := pNotPrime;
+         exit;
       end;
   finally
     HugeWordFinalise(D);
@@ -5691,7 +5828,7 @@ begin
   Assert(HugeWordIsPrime(A) <> pNotPrime);
   StrToHugeWordA('1363005552434666078217421284621279933627102780881053358473', A); // Padovan prime
   HugeWordNextPotentialPrime(A);
-  Assert(HugeWordToStrA(A) = '1363005552434666078217421284621279933627102780881053358483');
+  Assert(HugeWordToStrA(A) = '1363005552434666078217421284621279933627102780881053358551');
   HugeWordAssignWord32(A, 340561);                                                 // Carmichael number 340561 = 13 * 17 * 23 * 67
   Assert(HugeWordIsPrime(A) = pNotPrime);
   HugeWordAssignWord32(A, 82929001);                                               // Carmichael number 82929001 = 281 * 421 * 701
@@ -5901,8 +6038,10 @@ begin
   Assert(HugeIntToInt64(A) = -$7FFFFFFFFFFFFFFF);
   Assert(HugeIntToStrA(A) = '-9223372036854775807');
   Assert(HugeIntToHexA(A) = '-7FFFFFFFFFFFFFFF');
+  {$IFNDEF FREEPASCAL}
   {$IFNDEF CPU_32}
   Assert(HugeIntToDouble(A) = -9223372036854775807.0);
+  {$ENDIF}
   {$ENDIF}
   Assert(HugeIntEqualsInt64(A, -$7FFFFFFFFFFFFFFF));
   Assert(not HugeIntEqualsInt64(A, MinInt64 { -$8000000000000000 }));
@@ -5926,8 +6065,10 @@ begin
   HugeIntSubtractInt32(A, 1);
   Assert(HugeIntToStrA(A) = '-9223372036854775809');
   Assert(HugeIntToHexA(A) = '-8000000000000001');
+  {$IFNDEF FREEPASCAL}
   {$IFNDEF CPU_32}
   Assert(HugeIntToDouble(A) = -9223372036854775809.0);
+  {$ENDIF}
   {$ENDIF}
   Assert(not HugeIntEqualsInt64(A, MinInt64 { -$8000000000000000 }));
   Assert(HugeIntCompareInt64(A, MinInt64 { -$8000000000000000 }) = -1);

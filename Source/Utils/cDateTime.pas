@@ -980,7 +980,7 @@ begin
         Dec(Ye);
       end;
   Mo := Word(IMo);
-  Da := Word(MinI(Da, DaysInMonth(Ye, Mo)));
+  Da := Word(MinInt(Da, DaysInMonth(Ye, Mo)));
   Result := EncodeDate(Ye, Mo, Da);
   T := TimePart(D);
   if DatePart(Result) >= 0 then
@@ -995,7 +995,7 @@ var Ye, Mo, Da : Word;
 begin
   DecodeDate(D, Ye, Mo, Da);
   Inc(Ye, N);
-  Da := Word(MinI(Da, DaysInMonth(Ye, Mo)));
+  Da := Word(MinInt(Da, DaysInMonth(Ye, Mo)));
   Result := EncodeDate(Ye, Mo, Da);
   T := TimePart(D);
   if DatePart(Result) >= 0 then
@@ -1916,10 +1916,10 @@ begin
   if (C = '+') or (C = '-') then // +hhmm format
     begin
       S := StrTrimB(Zone, RFC_SPACE);
-      Result := MaxI(-23, MinI(23, StringToIntDefB(Copy(S, 2, 2), 0))) * 60;
+      Result := MaxInt(-23, MinInt(23, StringToIntDefB(Copy(S, 2, 2), 0))) * 60;
       S := CopyFromB(S, 4);
       if S <> '' then
-        Result := Result + MinI(59, MaxI(0, StringToIntDefB(S, 0)));
+        Result := Result + MinInt(59, MaxInt(0, StringToIntDefB(S, 0)));
       if Zone[1] = '-' then
         Result := -Result;
     end
@@ -1975,9 +1975,9 @@ begin
   else
     exit;
 
-  Hours := MaxI(0, MinI(23, HH));
-  Minutes := MaxI(0, MinI(59, MM));
-  Seconds := MaxI(0, MinI(59, SS));
+  Hours := MaxInt(0, MinInt(23, HH));
+  Minutes := MaxInt(0, MinInt(59, MM));
+  Seconds := MaxInt(0, MinInt(59, SS));
   Inc(Hours, Bias div 60);
   Inc(Minutes, Bias mod 60);
 end;

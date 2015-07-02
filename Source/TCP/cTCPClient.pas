@@ -522,7 +522,7 @@ type
 { Component                                                                    }
 {                                                                              }
 type
-  TFnd4TCPClient = class(TF4TCPClient)
+  TfclTCPClient = class(TF4TCPClient)
   published
     property  Active;
     property  AddressFamily;

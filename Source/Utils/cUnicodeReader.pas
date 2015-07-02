@@ -836,7 +836,7 @@ begin
       SetLength(Result, L);
       P := Pointer(FBuffer);
       Inc(P, FBufPos);
-      Result := WideToLongString(P, L);
+      Result := WideBufToRawByteString(P, L);
       Inc(FBufPos, L);
     end;
 end;

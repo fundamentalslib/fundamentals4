@@ -96,6 +96,8 @@ function  RandomSeed32: LongWord;
 {   RandomAlphaStr returns a string of random letters (A-Z).                   }
 {   RandomPseudoWord returns a random word-like string.                        }
 {                                                                              }
+procedure SetRandomSeed(const Seed: LongWord);
+
 function  RandomUniform32: LongWord;
 function  RandomUniform(const N: Integer): Integer;
 function  RandomUniform16: Word;
@@ -563,7 +565,7 @@ begin
   { OS Computer Name }
   S := Int64(S + StrHashB(GetOSComputerName));
   { PPID }
-  S := Int64(S + StrHashB(GetEnvironmentVariable('PPID'));
+  S := Int64(S + StrHashB(GetEnvironmentVariable('PPID')));
   {$ENDIF}
   { System Timing }
   S := Int64(S + RandomState);
@@ -862,6 +864,11 @@ end;
 {                                                                              }
 { Uniform Random                                                               }
 {                                                                              }
+procedure SetRandomSeed(const Seed: LongWord);
+begin
+  moaInitSeed(Seed);
+end;
+
 function RandomUniform32: LongWord;
 begin
   Result := moaRandom32;

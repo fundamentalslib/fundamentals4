@@ -2,7 +2,7 @@
 {                                                                              }
 {   Library:          Fundamentals 4.00                                        }
 {   File name:        cUnicodeCodecs.pas                                       }
-{   File version:     4.20                                                     }
+{   File version:     4.21                                                     }
 {   Description:      Unicode codecs                                           }
 {                                                                              }
 {   Copyright:        Copyright (c) 2002-2015                                  }
@@ -85,6 +85,7 @@
 {   2012/05/23  4.18  Fixed bug in TUCS2Codec.Decode reported by brianjford.   }
 {   2012/08/25  4.19  UnicodeString functions.                                 }
 {   2015/03/14  4.20  Use RawByteString to avoid auto string conversions.      }
+{   2015/05/06  4.21  Move UTF functions to unit cUtils.                       }
 {                                                                              }
 { Supported compilers:                                                         }
 {                                                                              }
@@ -114,159 +115,9 @@ interface
 
 uses
   { System }
-  SysUtils;
-
-
-
-{                                                                              }
-{ RawByteString                                                                }
-{                                                                              }
-{$IFNDEF SupportRawByteString}
-type
-  RawByteString = AnsiString;
-{$ENDIF}
-
-
-
-{                                                                              }
-{ UnicodeString                                                                }
-{                                                                              }
-{$IFNDEF SupportUnicodeString}
-type
-  UnicodeString = WideString;
-{$ENDIF}
-
-
-
-{                                                                              }
-{ UCS-4 definitions                                                            }
-{                                                                              }
-{$IFDEF DELPHI5}
-type
-  UCS4Char = LongWord;
-  PUCS4Char = ^UCS4Char;
-{$ENDIF}
-{$IFDEF DELPHI8}
-type
-  UCS4Char = LongWord;
-{$ENDIF}
-
-const
-  UCS4_STRING_TERMINATOR = $9C;
-  UCS4_LF                = $0A;
-  UCS4_CR                = $0D;
-
-
-
-{                                                                              }
-{ US-ASCII string functions                                                    }
-{                                                                              }
-function  IsUSASCIIBuf(const S: PAnsiChar; const Len: Integer): Boolean;
-function  IsUSASCIIAnsiString(const S: AnsiString): Boolean;
-function  IsUSASCIIRawByteString(const S: RawByteString): Boolean;
-function  IsUSASCIIWideBuf(const Buf: PWideChar; const Len: Integer): Boolean;
-function  IsUSASCIIWideString(const S: WideString): Boolean;
-function  IsUSASCIIUnicodeString(const S: UnicodeString): Boolean;
-
-
-
-{                                                                              }
-{ Long string raw conversion functions                                         }
-{                                                                              }
-procedure LongToWide(const Buf: Pointer; const BufSize: Integer; const DestBuf: Pointer);
-function  LongToWideString(const S: PAnsiChar; const Len: Integer): WideString;
-function  LongToUnicodeString(const S: PAnsiChar; const Len: Integer): UnicodeString;
-
-function  LongStringToWideString(const S: RawByteString): WideString;
-function  LongStringToUnicodeString(const S: RawByteString): UnicodeString;
-
-procedure WideToLong(const Buf: Pointer; const Len: Integer; const DestBuf: Pointer);
-function  WideToLongString(const P: PWideChar; const Len: Integer): RawByteString;
-
-function  WideStringToLongString(const S: WideString): RawByteString;
-function  UnicodeStringToLongString(const S: UnicodeString): RawByteString;
-
-
-
-{                                                                              }
-{ UTF-8 character conversion functions                                         }
-{                                                                              }
-type
-  TUTF8Error = (
-      UTF8ErrorNone,
-      UTF8ErrorInvalidEncoding,
-      UTF8ErrorIncompleteEncoding,
-      UTF8ErrorInvalidBuffer,
-      UTF8ErrorOutOfRange );
-
-function  UTF8ToUCS4Char(const P: PAnsiChar; const Size: Integer;
-          out SeqSize: Integer; out Ch: UCS4Char): TUTF8Error;
-function  UTF8ToWideChar(const P: PAnsiChar; const Size: Integer;
-          out SeqSize: Integer; out Ch: WideChar): TUTF8Error;
-
-procedure UCS4CharToUTF8(const Ch: UCS4Char; const Dest: Pointer;
-          const DestSize: Integer; out SeqSize: Integer);
-procedure WideCharToUTF8(const Ch: WideChar; const Dest: Pointer;
-          const DestSize: Integer; out SeqSize: Integer);
-
-
-
-{                                                                              }
-{ UTF-16 character conversion functions                                        }
-{                                                                              }
-procedure UCS4CharToUTF16BE(const Ch: UCS4Char; const Dest: Pointer;
-          const DestSize: Integer; out SeqSize: Integer);
-procedure UCS4CharToUTF16LE(const Ch: UCS4Char; const Dest: Pointer;
-          const DestSize: Integer; out SeqSize: Integer);
-
-
-
-{                                                                              }
-{ UTF-8 string functions                                                       }
-{                                                                              }
-const
-  UTF8BOMSize = 3;
-
-function  DetectUTF8BOM(const P: PAnsiChar; const Size: Integer): Boolean;
-
-function  UTF8CharSize(const P: PAnsiChar; const Size: Integer): Integer;
-function  UTF8BufLength(const P: PAnsiChar; const Size: Integer): Integer;
-function  UTF8StringLength(const S: RawByteString): Integer;
-function  UTF8StringToWideString(const S: RawByteString): WideString;
-function  UTF8StringToUnicodeString(const S: RawByteString): UnicodeString;
-function  UTF8StringToUnicodeStringP(const S: PAnsiChar; const Size: Integer): UnicodeString;
-function  UTF8StringToLongString(const S: RawByteString): RawByteString;
-function  UTF8StringToString(const S: RawByteString): String;
-
-function  UCS4CharToUTF8CharSize(const Ch: UCS4Char): Integer;
-function  WideBufToUTF8Size(const Buf: PWideChar; const Len: Integer): Integer;
-function  WideStringToUTF8Size(const S: WideString): Integer;
-function  UnicodeStringToUTF8Size(const S: UnicodeString): Integer;
-function  WideBufToUTF8String(const Buf: PWideChar; const Len: Integer): RawByteString;
-function  WideStringToUTF8String(const S: WideString): RawByteString;
-function  WideStringToUnicodeString(const S: WideString): UnicodeString;
-function  UnicodeStringToUTF8String(const S: UnicodeString): RawByteString;
-function  UnicodeStringToWideString(const S: UnicodeString): WideString;
-function  LongBufToUTF8Size(const Buf: PAnsiChar; const Len: Integer): Integer;
-function  LongStringToUTF8Size(const S: RawByteString): Integer;
-function  LongStringToUTF8String(const S: RawByteString): RawByteString;
-function  UCS4CharToUTF8String(const Ch: UCS4Char): RawByteString;
-function  ISO8859_1StringToUTF8String(const S: RawByteString): RawByteString;
-function  StringToUTF8String(const S: String): RawByteString;
-
-
-
-{                                                                              }
-{ UTF-16 functions                                                             }
-{                                                                              }
-const
-  UTF16BOMSize = 2;
-
-function  DetectUTF16BEBOM(const P: PAnsiChar; const Size: Integer): Boolean;
-function  DetectUTF16LEBOM(const P: PAnsiChar; const Size: Integer): Boolean;
-function  DetectUTF16BOM(const P: PAnsiChar; const Size: Integer;
-          out SwapEndian: Boolean): Boolean;
-function  SwapUTF16Endian(const P: WideChar): WideChar;
+  SysUtils,
+  { Fundamentals }
+  cUtils;
 
 
 
@@ -1488,982 +1339,6 @@ resourcestring
 
 
 {                                                                              }
-{ Type definitions                                                             }
-{                                                                              }
-{$IFNDEF DELPHI6_UP}{$IFNDEF FREEPASCAL}
-type
-  PByte     = ^Byte;
-  PWord     = ^Word;
-  PLongWord = ^LongWord;
-{$ENDIF}{$ENDIF}
-
-
-
-{                                                                              }
-{ US-ASCII String functions                                                    }
-{                                                                              }
-function IsUSASCIIBuf(const S: PAnsiChar; const Len: Integer): Boolean;
-var I : Integer;
-    P : PAnsiChar;
-begin
-  P := S;
-  for I := 1 to Len do
-    if Ord(P^) >= $80 then
-      begin
-        Result := False;
-        exit;
-      end
-    else
-      Inc(P);
-  Result := True;
-end;
-
-function IsUSASCIIAnsiString(const S: AnsiString): Boolean;
-begin
-  Result := IsUSASCIIBuf(Pointer(S), Length(S));
-end;
-
-function IsUSASCIIRawByteString(const S: RawByteString): Boolean;
-begin
-  Result := IsUSASCIIBuf(Pointer(S), Length(S));
-end;
-
-function IsUSASCIIWideBuf(const Buf: PWideChar; const Len: Integer): Boolean;
-var I : Integer;
-    P : PWideChar;
-begin
-  P := Buf;
-  for I := 1 to Len do
-    if Ord(P^) >= $80 then
-      begin
-        Result := False;
-        exit;
-      end
-    else
-      Inc(P);
-  Result := True;
-end;
-
-function IsUSASCIIWideString(const S: WideString): Boolean;
-begin
-  Result := IsUSASCIIWideBuf(Pointer(S), Length(S));
-end;
-
-function IsUSASCIIUnicodeString(const S: UnicodeString): Boolean;
-begin
-  Result := IsUSASCIIWideBuf(Pointer(S), Length(S));
-end;
-
-
-
-{                                                                              }
-{ Long string functions                                                        }
-{                                                                              }
-procedure LongToWide(const Buf: Pointer; const BufSize: Integer;
-    const DestBuf: Pointer);
-var I : Integer;
-    P : Pointer;
-    Q : Pointer;
-    V : LongWord;
-begin
-  if BufSize <= 0 then
-    exit;
-  P := Buf;
-  Q := DestBuf;
-  for I := 1 to BufSize div 4 do
-    begin
-      // convert 4 characters per iteration
-      V := PLongWord(P)^;
-      Inc(PLongWord(P));
-      PLongWord(Q)^ := (V and $FF) or ((V and $FF00) shl 8);
-      Inc(PLongWord(Q));
-      V := V shr 16;
-      PLongWord(Q)^ := (V and $FF) or ((V and $FF00) shl 8);
-      Inc(PLongWord(Q));
-    end;
-  // convert remaining (<4)
-  for I := 1 to BufSize mod 4 do
-    begin
-      PWord(Q)^ := PByte(P)^;
-      Inc(PByte(P));
-      Inc(PWord(Q));
-    end;
-end;
-
-function LongToWideString(const S: PAnsiChar; const Len: Integer): WideString;
-begin
-  if Len <= 0 then
-    Result := ''
-  else
-    begin
-      SetLength(Result, Len);
-      LongToWide(S, Len, Pointer(Result));
-    end;
-end;
-
-function LongToUnicodeString(const S: PAnsiChar; const Len: Integer): UnicodeString;
-begin
-  if Len <= 0 then
-    Result := ''
-  else
-    begin
-      SetLength(Result, Len);
-      LongToWide(S, Len, Pointer(Result));
-    end;
-end;
-
-function LongStringToWideString(const S: RawByteString): WideString;
-var L : Integer;
-begin
-  L := Length(S);
-  SetLength(Result, L);
-  if L > 0 then
-    LongToWide(Pointer(S), L, Pointer(Result));
-end;
-
-function LongStringToUnicodeString(const S: RawByteString): UnicodeString;
-var L : Integer;
-begin
-  L := Length(S);
-  SetLength(Result, L);
-  if L > 0 then
-    LongToWide(Pointer(S), L, Pointer(Result));
-end;
-
-procedure WideToLong(const Buf: Pointer; const Len: Integer;
-    const DestBuf: Pointer);
-var I : Integer;
-    S : PWideChar;
-    Q : PAnsiChar;
-    V : LongWord;
-    W : Word;
-begin
-  if Len <= 0 then
-    exit;
-  S := Buf;
-  Q := DestBuf;
-  for I := 1 to Len div 2 do
-    begin
-      // convert 2 characters per iteration
-      V := PLongWord(S)^;
-      if V and $FF00FF00 <> 0 then
-        raise EConvertError.Create(SLongStringConvertError);
-      Q^ := AnsiChar(V);
-      Inc(Q);
-      Q^ := AnsiChar(V shr 16);
-      Inc(Q);
-      Inc(S, 2);
-    end;
-  // convert remaining character
-  if Len mod 2 = 1 then
-    begin
-      W := Ord(S^);
-      if W > $FF then
-        raise EConvertError.Create(SLongStringConvertError);
-      Q^ := AnsiChar(W);
-    end;
-end;
-
-function WideToLongString(const P: PWideChar; const Len: Integer): RawByteString;
-var I : Integer;
-    S : PWideChar;
-    Q : PAnsiChar;
-    V : WideChar;
-begin
-  if Len <= 0 then
-    begin
-      Result := '';
-      exit;
-    end;
-  SetLength(Result, Len);
-  S := P;
-  Q := Pointer(Result);
-  for I := 1 to Len do
-    begin
-      V := S^;
-      if Ord(V) > $FF then
-        raise EConvertError.Create(SLongStringConvertError);
-      Q^ := AnsiChar(Byte(V));
-      Inc(S);
-      Inc(Q);
-    end;
-end;
-
-function WideStringToLongString(const S: WideString): RawByteString;
-begin
-  Result := WideToLongString(Pointer(S), Length(S));
-end;
-
-function UnicodeStringToLongString(const S: UnicodeString): RawByteString;
-begin
-  Result := WideToLongString(Pointer(S), Length(S));
-end;
-
-
-
-{                                                                              }
-{ UTF-8 character conversion functions                                         }
-{                                                                              }
-
-{ UTF8ToUCS4Char returns UTF8ErrorNone if a valid UTF-8 sequence was decoded   }
-{ (and Ch contains the decoded UCS4 character and SeqSize contains the size    }
-{ of the UTF-8 sequence). If an incomplete UTF-8 sequence is encountered, the  }
-{ function returns UTF8ErrorIncompleteEncoding and SeqSize > Size. If an       }
-{ invalid UTF-8 sequence is encountered, the function returns                  }
-{ UTF8ErrorInvalidEncoding and SeqSize (<= Size) is the size of the            }
-{ invalid sequence, and Ch may be the intended character.                      }
-function UTF8ToUCS4Char(const P: PAnsiChar; const Size: Integer;
-    out SeqSize: Integer; out Ch: UCS4Char): TUTF8Error;
-var C, D : Byte;
-    V    : LongWord;
-    I    : Integer;
-begin
-  if not Assigned(P) or (Size <= 0) then
-    begin
-      SeqSize := 0;
-      Ch := 0;
-      Result := UTF8ErrorInvalidBuffer;
-      exit;
-    end;
-  C := Ord(P^);
-  if C < $80 then
-    begin
-      SeqSize := 1;
-      Ch := C;
-      Result := UTF8ErrorNone;
-      exit;
-    end;
-  // multi-byte characters always start with 11xxxxxx ($C0)
-  // following bytes always start with 10xxxxxx ($80)
-  if C and $C0 = $80 then
-    begin
-      SeqSize := 1;
-      Ch := C;
-      Result := UTF8ErrorInvalidEncoding;
-      exit;
-    end;
-  if C and $20 = 0 then // 2-byte sequence
-    begin
-      SeqSize := 2;
-      V := C and $1F;
-    end else
-  if C and $10 = 0 then // 3-byte sequence
-    begin
-      SeqSize := 3;
-      V := C and $0F;
-    end else
-  if C and $08 = 0 then // 4-byte sequence (max needed for Unicode $0-$1FFFFF)
-    begin
-      SeqSize := 4;
-      V := C and $07;
-    end else
-    begin
-      SeqSize := 1;
-      Ch := C;
-      Result := UTF8ErrorInvalidEncoding;
-      exit;
-    end;
-  if Size < SeqSize then // incomplete
-    begin
-      Ch := C;
-      Result := UTF8ErrorIncompleteEncoding;
-      exit;
-    end;
-  for I := 1 to SeqSize - 1 do
-    begin
-      D := Ord(P[I]);
-      if D and $C0 <> $80 then // following byte must start with 10xxxxxx
-        begin
-          SeqSize := 1;
-          Ch := C;
-          Result := UTF8ErrorInvalidEncoding;
-          exit;
-        end;
-      V := (V shl 6) or (D and $3F); // decode 6 bits
-    end;
-  Ch := V;
-  Result := UTF8ErrorNone;
-end;
-
-function UTF8ToWideChar(const P: PAnsiChar; const Size: Integer;
-    out SeqSize: Integer; out Ch: WideChar): TUTF8Error;
-var Ch4 : UCS4Char;
-begin
-  Result := UTF8ToUCS4Char(P, Size, SeqSize, Ch4);
-  if Ch4 > $FFFF then
-    begin
-      Result := UTF8ErrorOutOfRange;
-      Ch := #$0000;
-    end else
-    Ch := WideChar(Ch4);
-end;
-
-{ UCS4CharToUTF8 transforms the UCS4 char Ch to UTF-8 encoding. SeqSize        }
-{ returns the number of bytes needed to transform Ch. Up to DestSize           }
-{ bytes of the UTF-8 encoding will be placed in Dest.                          }
-procedure UCS4CharToUTF8(const Ch: UCS4Char; const Dest: Pointer;
-    const DestSize: Integer; out SeqSize: Integer);
-var P : PByte;
-begin
-  P := Dest;
-  if Ch < $80 then // US-ASCII (1-byte sequence)
-    begin
-      SeqSize := 1;
-      if not Assigned(P) or (DestSize <= 0) then
-        exit;
-      P^ := Byte(Ch);
-    end else
-  if Ch < $800 then // 2-byte sequence
-    begin
-      SeqSize := 2;
-      if not Assigned(P) or (DestSize <= 0) then
-        exit;
-      P^ := $C0 or Byte(Ch shr 6);
-      if DestSize = 1 then
-        exit;
-      Inc(P);
-      P^ := $80 or (Ch and $3F);
-    end else
-  if Ch < $10000 then // 3-byte sequence
-    begin
-      SeqSize := 3;
-      if not Assigned(P) or (DestSize <= 0) then
-        exit;
-      P^ := $E0 or Byte(Ch shr 12);
-      if DestSize = 1 then
-        exit;
-      Inc(P);
-      P^ := $80 or ((Ch shr 6) and $3F);
-      if DestSize = 2 then
-        exit;
-      Inc(P);
-      P^ := $80 or (Ch and $3F);
-    end else
-  if Ch < $200000 then // 4-byte sequence
-    begin
-      SeqSize := 4;
-      if not Assigned(P) or (DestSize <= 0) then
-        exit;
-      P^ := $F0 or Byte(Ch shr 18);
-      if DestSize = 1 then
-        exit;
-      Inc(P);
-      P^ := $80 or ((Ch shr 12) and $3F);
-      if DestSize = 2 then
-        exit;
-      Inc(P);
-      P^ := $80 or ((Ch shr 6) and $3F);
-      if DestSize = 3 then
-        exit;
-      Inc(P);
-      P^ := $80 or (Ch and $3F);
-    end
-  else
-    raise EConvertError.CreateFmt(SInvalidCodePoint, [Ord(Ch), 'Unicode']);
-end;
-
-procedure WideCharToUTF8(const Ch: WideChar; const Dest: Pointer;
-    const DestSize: Integer; out SeqSize: Integer);
-begin
-  UCS4CharToUTF8(Ord(Ch), Dest, DestSize, SeqSize);
-end;
-
-
-
-{                                                                              }
-{ UTF-16 character conversion functions                                        }
-{                                                                              }
-
-{ UCS4CharToUTF16BE transforms the UCS4 char Ch to UTF-16BE encoding. SeqSize  }
-{ returns the number of bytes needed to transform Ch. Up to DestSize           }
-{ bytes of the UTF-16BE encoding will be placed in Dest.                       }
-procedure UCS4CharToUTF16BE(const Ch: UCS4Char; const Dest: Pointer;
-  const DestSize: Integer; out SeqSize: Integer);
-var P : PByte;
-    HighSurrogate, LowSurrogate : Word;
-begin
-  P := Dest;
-  case Ch of
-  $00000000..$0000D7FF, $0000E000..$0000FFFF :
-    begin
-      SeqSize := 2;
-      if not Assigned(P) or (DestSize <= 0) then
-        exit;
-      {$IFDEF FREEPASCAL}
-      P^ := Byte((Ch and $FF00) shr 8);
-      {$ELSE}
-      P^ := Hi(Ch);
-      {$ENDIF}
-      if DestSize <= 1 then
-        exit;
-      Inc(P);
-      {$IFDEF FREEPASCAL}
-      P^ := Byte(Ch and $FF);
-      {$ELSE}
-      P^ := Lo(Ch);
-      {$ENDIF}
-    end;
-  $0000D800..$0000DFFF :
-    raise EConvertError.CreateFmt(SInvalidCodePoint, [Ch, 'UCS-4']);
-  $00010000..$0010FFFF :
-    begin
-      SeqSize := 4;
-      if not Assigned(P) or (DestSize <= 0) then
-        exit;
-      HighSurrogate := $D7C0 + (Ch shr 10);
-      P^ := Hi(HighSurrogate);
-      if DestSize <= 1 then
-        exit;
-      Inc(P);
-      P^ := Lo(HighSurrogate);
-      if DestSize <= 2 then
-        exit;
-      LowSurrogate := $DC00 xor (Ch and $3FF);
-      Inc(P);
-      P^ := Hi(LowSurrogate);
-      if DestSize <= 3 then
-        exit;
-      Inc(P);
-      P^ := Lo(LowSurrogate);
-    end;
-  else // out of UTF-16 range
-    raise EConvertError.CreateFmt(SCannotConvertUCS4, [Ch, 'UTF-16BE']);
-  end;
-end;
-
-{ UCS4CharToUTF16LE transforms the UCS4 char Ch to UTF-16LE encoding. SeqSize  }
-{ returns the number of bytes needed to transform Ch. Up to DestSize           }
-{ bytes of the UTF-16LE encoding will be placed in Dest.                       }
-procedure UCS4CharToUTF16LE(const Ch: UCS4Char; const Dest: Pointer;
-  const DestSize: Integer; out SeqSize: Integer);
-var P : PByte;
-    HighSurrogate, LowSurrogate : Word;
-begin
-  P := Dest;
-  case Ch of
-  $00000000..$0000D7FF, $0000E000..$0000FFFF :
-    begin
-      SeqSize := 2;
-      if not Assigned(P) or (DestSize <= 0) then
-        exit;
-      {$IFDEF FREEPASCAL}
-      P^ := Byte(Ch and $FF);
-      {$ELSE}
-      P^ := Lo(Ch);
-      {$ENDIF}
-      if DestSize <= 1 then
-        exit;
-      Inc(P);
-      {$IFDEF FREEPASCAL}
-      P^ := Byte((Ch and $FF00) shr 8);
-      {$ELSE}
-      P^ := Hi(Ch);
-      {$ENDIF}
-    end;
-  $0000D800..$0000DFFF :
-    raise EConvertError.CreateFmt(SInvalidCodePoint, [Ch, 'UCS-4']);
-  $00010000..$0010FFFF:
-    begin
-      SeqSize := 4;
-      if not Assigned(P) or (DestSize <= 0) then
-        exit;
-      HighSurrogate := $D7C0 + (Ch shr 10);
-      P^ := Lo(HighSurrogate);
-      if DestSize <= 1 then
-        exit;
-      Inc(P);
-      P^ := Hi(HighSurrogate);
-      if DestSize <= 2 then
-        exit;
-      LowSurrogate := $DC00 xor (Ch and $3FF);
-      Inc(P);
-      P^ := Lo(LowSurrogate);
-      if DestSize <= 3 then
-        exit;
-      Inc(P);
-      P^ := Hi(LowSurrogate);
-    end;
-  else // out of UTF-16 range
-    raise EConvertError.CreateFmt(SCannotConvertUCS4, [Ch, 'UTF-16LE']);
-  end;
-end;
-
-
-
-{                                                                              }
-{ UTF-8 string functions                                                       }
-{                                                                              }
-function DetectUTF8BOM(const P: PAnsiChar; const Size: Integer): Boolean;
-var Q : PAnsiChar;
-begin
-  Result := False;
-  if Assigned(P) and (Size >= 3) and (P^ = #$EF) then
-    begin
-      Q := P;
-      Inc(Q);
-      if Q^ = #$BB then
-        begin
-          Inc(Q);
-          if Q^ = #$BF then
-            Result := True;
-        end;
-    end;
-end;
-
-function UTF8CharSize(const P: PAnsiChar; const Size: Integer): Integer;
-var C : Byte;
-    I : Integer;
-    Q : PAnsiChar;
-begin
-  if not Assigned(P) or (Size <= 0) then
-    begin
-      Result := 0;
-      exit;
-    end;
-  C := Ord(P^);
-  if C < $80 then // 1-byte (US-ASCII value)
-    Result := 1 else
-  if C and $C0 = $80 then // invalid encoding
-    Result := 1 else
-    begin
-      // multi-byte character
-      if C and $20 = 0 then
-        Result := 2 else
-      if C and $10 = 0 then
-        Result := 3 else
-      if C and $08 = 0 then
-        Result := 4 else
-        begin
-          Result := 1; // invalid encoding
-          exit;
-        end;
-      if Size < Result then // incomplete encoding
-        exit;
-      Q := P;
-      Inc(Q);
-      for I := 1 to Result - 1 do
-        if Ord(Q^) and $C0 <> $80 then
-          begin
-            Result := 1; // invalid encoding
-            exit;
-          end else
-          Inc(Q);
-    end;
-end;
-
-function UTF8BufLength(const P: PAnsiChar; const Size: Integer): Integer;
-var Q    : PAnsiChar;
-    L, C : Integer;
-begin
-  Q := P;
-  L := Size;
-  Result := 0;
-  while L > 0 do
-    begin
-      C := UTF8CharSize(Q, L);
-      Dec(L, C);
-      Inc(Q, C);
-      Inc(Result);
-    end;
-end;
-
-function UTF8StringLength(const S: RawByteString): Integer;
-begin
-  Result := UTF8BufLength(Pointer(S), Length(S));
-end;
-
-function UCS4CharToUTF8CharSize(const Ch: UCS4Char): Integer;
-begin
-  if Ch < $80 then
-    Result := 1 else
-  if Ch < $800 then
-    Result := 2 else
-  if Ch < $10000 then
-    Result := 3 else
-  if Ch < $200000 then
-    Result := 4
-  else
-    raise EConvertError.CreateFmt(SInvalidCodePoint, [Ord(Ch), 'Unicode']);
-end;
-
-function WideBufToUTF8Size(const Buf: PWideChar; const Len: Integer): Integer;
-var P : PWideChar;
-    I : Integer;
-    C : UCS4Char;
-begin
-  P := Buf;
-  Result := 0;
-  for I := 1 to Len do
-    begin
-      C := UCS4Char(P^);
-      Inc(Result);
-      if C >= $80 then
-        if C >= $800 then
-          Inc(Result, 2) else
-          Inc(Result);
-      Inc(P);
-    end;
-end;
-
-function LongBufToUTF8Size(const Buf: PAnsiChar; const Len: Integer): Integer;
-var P : PAnsiChar;
-    I : Integer;
-begin
-  P := Buf;
-  Result := 0;
-  for I := 1 to Len do
-    begin
-      Inc(Result);
-      if Ord(P^) >= $80 then
-        Inc(Result);
-      Inc(P);
-    end;
-end;
-
-function WideStringToUTF8Size(const S: WideString): Integer;
-begin
-  Result := WideBufToUTF8Size(Pointer(S), Length(S));
-end;
-
-function UnicodeStringToUTF8Size(const S: UnicodeString): Integer;
-begin
-  Result := WideBufToUTF8Size(Pointer(S), Length(S));
-end;
-
-function LongStringToUTF8Size(const S: RawByteString): Integer;
-begin
-  Result := LongBufToUTF8Size(Pointer(S), Length(S));
-end;
-
-function UTF8StringToWideString(const S: RawByteString): WideString;
-var P       : PAnsiChar;
-    Q       : PWideChar;
-    L, M, I : Integer;
-    C       : WideChar;
-begin
-  L := Length(S);
-  if L = 0 then
-    begin
-      Result := '';
-      exit;
-    end;
-  if IsUSASCIIAnsiString(S) then // optimize for US-ASCII strings
-    begin
-      Result := LongStringToWideString(S);
-      exit;
-    end;
-  // Decode UTF-8
-  P := Pointer(S);
-  SetLength(Result, L); // maximum size
-  Q := Pointer(Result);
-  M := 0;
-  repeat
-    UTF8ToWideChar(P, L, I, C);
-    Assert(I > 0, 'I > 0');
-    Q^ := C;
-    Inc(Q);
-    Inc(M);
-    Inc(P, I);
-    Dec(L, I);
-  until L <= 0;
-  SetLength(Result, M); // actual size
-end;
-
-function UTF8StringToUnicodeStringP(const S: PAnsiChar; const Size: Integer): UnicodeString;
-var P       : PAnsiChar;
-    Q       : PWideChar;
-    L, M, I : Integer;
-    C       : WideChar;
-begin
-  if Size = 0 then
-    begin
-      Result := '';
-      exit;
-    end;
-  if IsUSASCIIBuf(S, Size) then // optimize for US-ASCII strings
-    begin
-      Result := LongToUnicodeString(S, Size);
-      exit;
-    end;
-  // Decode UTF-8
-  L := Size;
-  P := S;
-  SetLength(Result, L); // maximum size
-  Q := Pointer(Result);
-  M := 0;
-  repeat
-    UTF8ToWideChar(P, Size, I, C);
-    Assert(I > 0);
-    Q^ := C;
-    Inc(Q);
-    Inc(M);
-    Inc(P, I);
-    Dec(L, I);
-  until L <= 0;
-  SetLength(Result, M); // actual size
-end;
-
-function UTF8StringToUnicodeString(const S: RawByteString): UnicodeString;
-begin
-  Result := UTF8StringToUnicodeStringP(Pointer(S), Length(S));
-end;
-
-function UTF8StringToLongString(const S: RawByteString): RawByteString;
-var P       : PAnsiChar;
-    Q       : PAnsiChar;
-    L, M, I : Integer;
-    C       : WideChar;
-begin
-  L := Length(S);
-  if L = 0 then
-    begin
-      Result := '';
-      exit;
-    end;
-  if IsUSASCIIAnsiString(S) then // optimize for US-ASCII strings
-    begin
-      Result := S;
-      exit;
-    end;
-  // Decode UTF-8
-  P := Pointer(S);
-  SetLength(Result, L); // maximum size
-  Q := Pointer(Result);
-  M := 0;
-  repeat
-    UTF8ToWideChar(P, L, I, C);
-    Assert(I > 0, 'I > 0');
-    if Ord(C) > $FF then
-      raise EConvertError.Create(SLongStringConvertError);
-    Q^ := AnsiChar(Ord(C));
-    Inc(Q);
-    Inc(M);
-    Inc(P, I);
-    Dec(L, I);
-  until L <= 0;
-  SetLength(Result, M); // actual size
-end;
-
-function UTF8StringToString(const S: RawByteString): String;
-begin
-  {$IFDEF StringIsUnicode}
-  Result := UTF8StringToUnicodeString(S);
-  {$ELSE}
-  Result := S;
-  {$ENDIF}
-end;
-
-function WideBufToUTF8String(const Buf: PWideChar; const Len: Integer): RawByteString;
-var P     : PWideChar;
-    Q     : PAnsiChar;
-    I, M,
-    N, J  : Integer;
-begin
-  if Len = 0 then
-    begin
-      Result := '';
-      exit;
-    end;
-  N := WideBufToUTF8Size(Buf, Len);
-  if N = Len then // optimize for US-ASCII strings
-    begin
-      Result := WideToLongString(Buf, Len);
-      exit;
-    end;
-  SetLength(Result, N);
-  P := Buf;
-  Q := Pointer(Result);
-  M := 0;
-  for I := 1 to Len do
-    begin
-      UCS4CharToUTF8(UCS4Char(P^), Q, N, J);
-      Inc(P);
-      Inc(Q, J);
-      Dec(N, J);
-      Inc(M, J);
-    end;
-  SetLength(Result, M); // actual size
-end;
-
-function LongStringToUTF8String(const S: RawByteString): RawByteString;
-var P       : PAnsiChar;
-    Q       : PAnsiChar;
-    I, M, N : Integer;
-    J, L    : Integer;
-begin
-  P := Pointer(S);
-  L := Length(S);
-  if L = 0 then
-    begin
-      Result := '';
-      exit;
-    end;
-  N := LongBufToUTF8Size(P, L);
-  if N = L then // optimize for US-ASCII strings
-    begin
-      Result := S;
-      exit;
-    end;
-  SetLength(Result, N);
-  Q := Pointer(Result);
-  M := 0;
-  for I := 1 to L do
-    begin
-      UCS4CharToUTF8(UCS4Char(Ord(P^)), Q, N, J);
-      Inc(P);
-      Inc(Q, J);
-      Dec(N, J);
-      Inc(M, J);
-    end;
-  SetLength(Result, M); // actual size
-end;
-
-function WideStringToUTF8String(const S: WideString): RawByteString;
-begin
-  Result := WideBufToUTF8String(Pointer(S), Length(S));
-end;
-
-function WideStringToUnicodeString(const S: WideString): UnicodeString;
-begin
-  Result := S;
-end;
-
-function UnicodeStringToUTF8String(const S: UnicodeString): RawByteString;
-begin
-  Result := WideBufToUTF8String(Pointer(S), Length(S));
-end;
-
-function UnicodeStringToWideString(const S: UnicodeString): WideString;
-begin
-  Result := S;
-end;
-
-const
-  MaxUTF8SequenceSize = 4;
-
-function UCS4CharToUTF8String(const Ch: UCS4Char): RawByteString;
-var Buf     : array[0..MaxUTF8SequenceSize - 1] of Byte;
-    Size, I : Integer;
-    P, Q    : PAnsiChar;
-begin
-  Size := 0;
-  UCS4CharToUTF8(Ch, @Buf, Sizeof(Buf), Size);
-  SetLength(Result, Size);
-  if Size > 0 then
-    begin
-      P := Pointer(Result);
-      Q := @Buf;
-      for I := 0 to Size - 1 do
-        begin
-          P^ := Q^;
-          Inc(P);
-          Inc(Q);
-        end;
-    end;
-end;
-
-function ISO8859_1StringToUTF8String(const S: RawByteString): RawByteString;
-var P, Q  : PAnsiChar;
-    L, I,
-    M, J  : Integer;
-begin
-  L := Length(S);
-  if L = 0 then
-    begin
-      Result := '';
-      exit;
-    end;
-  // Calculate size
-  M := L;
-  P := Pointer(S);
-  for I := 1 to L do
-    begin
-      if Ord(P^) >= $80 then
-        Inc(M); // 2 bytes required for #$80-#$FF
-      Inc(P);
-    end;
-  // Check if conversion is required
-  if M = L then
-    begin
-      // All characters are US-ASCII, return reference to same string
-      Result := S;
-      exit;
-    end;
-  // Convert
-  SetLength(Result, M);
-  Q := Pointer(Result);
-  P := Pointer(S);
-  for I := 1 to L do
-    begin
-      WideCharToUTF8(WideChar(P^), Q, M, J);
-      Inc(P);
-      Inc(Q, J);
-      Dec(M, J);
-    end;
-end;
-
-function StringToUTF8String(const S: String): RawByteString;
-begin
-  {$IFDEF StringIsUnicode}
-  Result := UnicodeStringToUTF8String(S);
-  {$ELSE}
-  Result := S;
-  {$ENDIF}
-end;
-
-
-
-{                                                                              }
-{ UTF-16 functions                                                             }
-{                                                                              }
-function DetectUTF16BEBOM(const P: PAnsiChar; const Size: Integer): Boolean;
-begin
-  Result := Assigned(P) and (Size >= Sizeof(WideChar)) and
-            (PWideChar(P)^ = WideChar($FEFF));
-end;
-
-function DetectUTF16LEBOM(const P: PAnsiChar; const Size: Integer): Boolean;
-begin
-  Result := Assigned(P) and (Size >= Sizeof(WideChar)) and
-            (PWideChar(P)^ = WideChar($FFFE));
-end;
-
-{ DetectUTF16Encoding returns True if the encoding was confirmed to be UTF-16. }
-{ SwapEndian is True if it was detected that the UTF-16 data is in reverse     }
-{ endian from that used by the cpu.                                            }
-function DetectUTF16BOM(const P: PAnsiChar; const Size: Integer;
-    out SwapEndian: Boolean): Boolean;
-begin
-  if not Assigned(P) or (Size < Sizeof(WideChar)) then
-    begin
-      SwapEndian := False;
-      Result := False;
-    end else
-  if PWideChar(P)^ = WideChar($FEFF) then
-    begin
-      SwapEndian := False;
-      Result := True;
-    end else
-  if PWideChar(P)^ = WideChar($FFFE) then
-    begin
-      SwapEndian := True;
-      Result := True;
-    end
-  else
-    begin
-      SwapEndian := False;
-      Result := False;
-    end;
-end;
-
-function SwapUTF16Endian(const P: WideChar): WideChar;
-begin
-  Result := WideChar(((Ord(P) and $FF) shl 8) or (Ord(P) shr 8));
-end;
-
-
-
-{                                                                              }
 { Helper Functions                                                             }
 {                                                                              }
 type
@@ -3448,7 +2323,7 @@ begin
       ByteCount := 0;
       Exit;
     end;
-  C := Swap(C);  // UCS4Chars are stored in Little Endian mode; so we need to swap the bytes.
+  C := System.Swap(C);  // UCS4Chars are stored in Little Endian mode; so we need to swap the bytes.
   case C of
     $D800..$DBFF: // High surrogate of Unicode character [$10000..$10FFFF]
       begin
@@ -4622,7 +3497,7 @@ begin
       ByteCount := 0;
       exit;
     end;
-  C := Swap(C);  // UCS4Chars are stored in Little Endian mode; so we need to swap the bytes.
+  C := System.Swap(C);  // UCS4Chars are stored in Little Endian mode; so we need to swap the bytes.
   ByteCount := 2;
   case C of
     $D800..$DFFF: // Do not accept surrogates
@@ -4726,7 +3601,7 @@ begin
     L := 0;
   ProcessedBytes := L;
   DestLength := L;
-  LongToWide(Buf, L, DestBuf);
+  RawByteBufToWideBuf(Buf, L, DestBuf);
 end;
 
 
@@ -5727,7 +4602,7 @@ end;
 {                                                                              }
 const
   IBM278Map : AnsiCharMap = (
-      #$0000, #$0001, #$0002, #$0003, #$009C, #$0009, #$0086, #$007F, 
+      #$0000, #$0001, #$0002, #$0003, #$009C, #$0009, #$0086, #$007F,
       #$0097, #$008D, #$008E, #$000B, #$000C, #$000D, #$000E, #$000F,
       #$0010, #$0011, #$0012, #$0013, #$009D, #$0085, #$0008, #$0087,
       #$0018, #$0019, #$0092, #$008F, #$001C, #$001D, #$001E, #$001F,
@@ -5789,7 +4664,7 @@ const
       #$005C, #$00F1, #$00B0, #$002E, #$003C, #$0028, #$002B, #$0021,
       #$0026, #$005D, #$00EA, #$00EB, #$007D, #$00ED, #$00EE, #$00EF, 
       #$007E, #$00DF, #$00E9, #$0024, #$002A, #$0029, #$003B, #$005E,
-      #$002D, #$002F, #$00C2, #$00C4, #$00C0, #$00C1, #$00C3, #$00C5, 
+      #$002D, #$002F, #$00C2, #$00C4, #$00C0, #$00C1, #$00C3, #$00C5,
       #$00C7, #$00D1, #$00F2, #$002C, #$0025, #$005F, #$003E, #$003F,
       #$00F8, #$00C9, #$00CA, #$00CB, #$00C8, #$00CD, #$00CE, #$00CF,
       #$00CC, #$00F9, #$003A, #$00A3, #$00A7, #$0027, #$003D, #$0022, 
@@ -5975,7 +4850,7 @@ const
       #$30A3, #$30A5, #$00A3, #$002E, #$003C, #$0028, #$002B, #$007C,
       #$0026, #$30A7, #$30A9, #$30E3, #$30E5, #$30E7, #$30C3, #$FFFF, 
       #$30FC, #$FFFF, #$0021, #$00A5, #$002A, #$0029, #$003B, #$00AC,
-      #$002D, #$002F, #$FFFF, #$FFFF, #$FFFF, #$FFFF, #$FFFF, #$FFFF, 
+      #$002D, #$002F, #$FFFF, #$FFFF, #$FFFF, #$FFFF, #$FFFF, #$FFFF,
       #$FFFF, #$FFFF, #$00A6, #$002C, #$0025, #$005F, #$003E, #$003F, 
       #$FFFF, #$FFFF, #$FFFF, #$FFFF, #$FFFF, #$FFFF, #$FFFF, #$FFFF, 
       #$FFFF, #$0060, #$003A, #$0023, #$0040, #$0027, #$003D, #$0022, 
@@ -6130,7 +5005,7 @@ const
       #$FFFF, #$0386, #$0388, #$0389, #$FFFF, #$038A, #$038C, #$038E, 
       #$038F, #$0060, #$003A, #$00A3, #$00A7, #$0027, #$003D, #$0022,
       #$00C4, #$0061, #$0062, #$0063, #$0064, #$0065, #$0066, #$0067,
-      #$0068, #$0069, #$03B1, #$03B2, #$03B3, #$03B4, #$03B5, #$03B6, 
+      #$0068, #$0069, #$03B1, #$03B2, #$03B3, #$03B4, #$03B5, #$03B6,
       #$00D6, #$006A, #$006B, #$006C, #$006D, #$006E, #$006F, #$0070, 
       #$0071, #$0072, #$03B7, #$03B8, #$03B9, #$03BA, #$03BB, #$03BC,
       #$00DC, #$00A8, #$0073, #$0074, #$0075, #$0076, #$0077, #$0078,
@@ -7618,7 +6493,7 @@ const
       #$03A1, #$03A3, #$005D, #$0024, #$002A, #$0029, #$003B, #$005E, 
       #$002D, #$002F, #$03A4, #$03A5, #$03A6, #$03A7, #$03A8, #$03A9,
       #$03AA, #$03AB, #$FFFF, #$002C, #$0025, #$005F, #$003E, #$003F, 
-      #$00A8, #$0386, #$0388, #$0389, #$2207, #$038A, #$038C, #$038E, 
+      #$00A8, #$0386, #$0388, #$0389, #$2207, #$038A, #$038C, #$038E,
       #$038F, #$0060, #$003A, #$0023, #$0040, #$0027, #$003D, #$0022, 
       #$0385, #$0061, #$0062, #$0063, #$0064, #$0065, #$0066, #$0067,
       #$0068, #$0069, #$03B1, #$03B2, #$03B3, #$03B4, #$03B5, #$03B6,
@@ -7680,7 +6555,7 @@ const
       #$042E, #$0410, #$0411, #$0426, #$0414, #$0415, #$0424, #$0413, 
       #$FFFF, #$0041, #$0042, #$0043, #$0044, #$0045, #$0046, #$0047,
       #$0048, #$0049, #$0425, #$0418, #$0419, #$041A, #$041B, #$041C, 
-      #$FFFF, #$004A, #$004B, #$004C, #$004D, #$004E, #$004F, #$0050, 
+      #$FFFF, #$004A, #$004B, #$004C, #$004D, #$004E, #$004F, #$0050,
       #$0051, #$0052, #$041D, #$041E, #$041F, #$042F, #$0420, #$0421,
       #$005C, #$00A4, #$0053, #$0054, #$0055, #$0056, #$0057, #$0058,
       #$0059, #$005A, #$0422, #$0423, #$0416, #$0412, #$042C, #$042B, 
@@ -7742,7 +6617,7 @@ const
       #$0090, #$0091, #$0016, #$0093, #$0094, #$0095, #$0096, #$0004, 
       #$0098, #$0099, #$009A, #$009B, #$0014, #$0015, #$009E, #$001A, 
       #$0020, #$FFFF, #$00E2, #$00E4, #$00E0, #$00E1, #$FFFF, #$010B,
-      #$007B, #$00F1, #$00C7, #$002E, #$003C, #$0028, #$002B, #$0021, 
+      #$007B, #$00F1, #$00C7, #$002E, #$003C, #$0028, #$002B, #$0021,
       #$0026, #$00E9, #$00EA, #$00EB, #$00E8, #$00ED, #$00EE, #$00EF,
       #$00EC, #$00DF, #$011E, #$0130, #$002A, #$0029, #$003B, #$005E,
       #$002D, #$002F, #$00C2, #$00C4, #$00C0, #$00C1, #$FFFF, #$010A, 
@@ -8176,7 +7051,7 @@ const
       #$0048, #$0049, #$00AD, #$00F4, #$00F6, #$00F2, #$00F3, #$00F5,
       #$00E5, #$004A, #$004B, #$004C, #$004D, #$004E, #$004F, #$0050, 
       #$0051, #$0052, #$00B9, #$00FB, #$007E, #$00F9, #$00FA, #$00FF,
-      #$005C, #$00F7, #$0053, #$0054, #$0055, #$0056, #$0057, #$0058, 
+      #$005C, #$00F7, #$0053, #$0054, #$0055, #$0056, #$0057, #$0058,
       #$0059, #$005A, #$00B2, #$00D4, #$00D6, #$00D2, #$00D3, #$00D5, 
       #$0030, #$0031, #$0032, #$0033, #$0034, #$0035, #$0036, #$0037,
       #$0038, #$0039, #$00B3, #$00DB, #$00DC, #$00D9, #$00DA, #$009F);
@@ -8331,7 +7206,7 @@ const
       #$0051, #$0052, #$00B9, #$00FB, #$00FC, #$00F9, #$00FA, #$00FF,
       #$005C, #$00F7, #$0053, #$0054, #$0055, #$0056, #$0057, #$0058,
       #$0059, #$005A, #$00B2, #$00D4, #$00D6, #$00D2, #$00D3, #$00D5, 
-      #$0030, #$0031, #$0032, #$0033, #$0034, #$0035, #$0036, #$0037, 
+      #$0030, #$0031, #$0032, #$0033, #$0034, #$0035, #$0036, #$0037,
       #$0038, #$0039, #$00B3, #$00DB, #$00DC, #$00D9, #$00DA, #$009F);
 
 function TWindows1145Codec.DecodeChar(const P: AnsiChar): WideChar;
@@ -8362,7 +7237,7 @@ const
       #$0098, #$0099, #$009A, #$009B, #$0014, #$0015, #$009E, #$001A, 
       #$0020, #$00A0, #$00E2, #$00E4, #$00E0, #$00E1, #$00E3, #$00E5, 
       #$00E7, #$00F1, #$0024, #$002E, #$003C, #$0028, #$002B, #$007C, 
-      #$0026, #$00E9, #$00EA, #$00EB, #$00E8, #$00ED, #$00EE, #$00EF, 
+      #$0026, #$00E9, #$00EA, #$00EB, #$00E8, #$00ED, #$00EE, #$00EF,
       #$00EC, #$00DF, #$0021, #$00A3, #$002A, #$0029, #$003B, #$00AC,
       #$002D, #$002F, #$00C2, #$00C4, #$00C0, #$00C1, #$00C3, #$00C5,
       #$00C7, #$00D1, #$00A6, #$002C, #$0025, #$005F, #$003E, #$003F,
@@ -8517,7 +7392,7 @@ const
       #$00E7, #$00F1, #$00DE, #$002E, #$003C, #$0028, #$002B, #$0021,
       #$0026, #$00E9, #$00EA, #$00EB, #$00E8, #$00ED, #$00EE, #$00EF,
       #$00EC, #$00DF, #$00C6, #$0024, #$002A, #$0029, #$003B, #$00D6,
-      #$002D, #$002F, #$00C2, #$00C4, #$00C0, #$00C1, #$00C3, #$00C5, 
+      #$002D, #$002F, #$00C2, #$00C4, #$00C0, #$00C1, #$00C3, #$00C5,
       #$00C7, #$00D1, #$00A6, #$002C, #$0025, #$005F, #$003E, #$003F,
       #$00F8, #$00C9, #$00CA, #$00CB, #$00C8, #$00CD, #$00CE, #$00CF,
       #$00CC, #$00F0, #$003A, #$0023, #$00D0, #$0027, #$003D, #$0022,
@@ -8796,7 +7671,7 @@ const
       #$00B8, #$00B9, #$00F7, #$00BB, #$00BC, #$00BD, #$00BE, #$00BF,
       #$05B0, #$05B1, #$05B2, #$05B3, #$05B4, #$05B5, #$05B6, #$05B7,
       #$05B8, #$05B9, #$05BA, #$05BB, #$05BC, #$05BD, #$05BE, #$05BF, 
-      #$05C0, #$05C1, #$05C2, #$05C3, #$05F0, #$05F1, #$05F2, #$05F3, 
+      #$05C0, #$05C1, #$05C2, #$05C3, #$05F0, #$05F1, #$05F2, #$05F3,
       #$05F4, #$F88D, #$F88E, #$F88F, #$F890, #$F891, #$F892, #$F893,
       #$05D0, #$05D1, #$05D2, #$05D3, #$05D4, #$05D5, #$05D6, #$05D7, 
       #$05D8, #$05D9, #$05DA, #$05DB, #$05DC, #$05DD, #$05DE, #$05DF,
@@ -9721,34 +8596,7 @@ end;
 {$IFDEF UNICODECODECS_SELFTEST}
 {$ASSERTIONS ON}
 procedure SelfTest;
-const
-  W1 : array[0..3] of WideChar = (#$0041, #$2262, #$0391, #$002E);
-  W2 : array[0..2] of WideChar = (#$D55C, #$AD6D, #$C5B4);
-  W3 : array[0..2] of WideChar = (#$65E5, #$672C, #$8A9E);
-  S1 = RawByteString(#$41#$E2#$89#$A2#$CE#$91#$2E);
-  S2 = RawByteString(#$ED#$95#$9C#$EA#$B5#$AD#$EC#$96#$B4);
-  S3 = RawByteString(#$E6#$97#$A5#$E6#$9C#$AC#$E8#$AA#$9E);
 begin
-  // UTF-8 test cases from RFC 2279
-  Assert(WideStringToUTF8String(W1) = #$41#$E2#$89#$A2#$CE#$91#$2E, 'WideStringToUTF8String');
-  Assert(WideStringToUTF8String(W2) = #$ED#$95#$9C#$EA#$B5#$AD#$EC#$96#$B4, 'WideStringToUTF8String');
-  Assert(WideStringToUTF8String(W3) = #$E6#$97#$A5#$E6#$9C#$AC#$E8#$AA#$9E, 'WideStringToUTF8String');
-  Assert(UTF8StringToWideString(S1) = W1, 'UTF8StringToWideString');
-  Assert(UTF8StringToWideString(S2) = W2, 'UTF8StringToWideString');
-  Assert(UTF8StringToWideString(S3) = W3, 'UTF8StringToWideString');
-  Assert(UTF8StringLength(S1) = 4, 'UTF8StringLength');
-  Assert(UTF8StringLength(S2) = 3, 'UTF8StringLength');
-  Assert(UTF8StringLength(S3) = 3, 'UTF8StringLength');
-
-  // ASCII
-  Assert(IsUSASCIIAnsiString('012XYZabc{}_ '), 'IsUSASCIIString');
-  Assert(not IsUSASCIIAnsiString(#$80), 'IsUSASCIIString');
-  Assert(IsUSASCIIAnsiString(''), 'IsUSASCIIString');
-  Assert(IsUSASCIIWideString('012XYZabc{}_ '), 'IsUSASCIIWideString');
-  Assert(not IsUSASCIIWideString(WideChar(#$0080)), 'IsUSASCIIWideString');
-  Assert(not IsUSASCIIWideString(#$2262), 'IsUSASCIIWideString');
-  Assert(IsUSASCIIWideString(''), 'IsUSASCIIWideString');
-
   // Codecs
   Assert(not Assigned(GetCodecClassByAlias('')), 'GetCodecClassByAlias');
   Assert(GetCodecClassByAlias('ascii') = TUSASCIICodec, 'GetCodecClassByAlias');

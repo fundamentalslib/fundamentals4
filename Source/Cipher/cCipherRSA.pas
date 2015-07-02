@@ -2,7 +2,7 @@
 {                                                                              }
 {   Library:          Fundamentals 4.00                                        }
 {   File name:        cCipherRSA.pas                                           }
-{   File version:     4.07                                                     }
+{   File version:     4.08                                                     }
 {   Description:      RSA cipher routines                                      }
 {                                                                              }
 {   Copyright:        Copyright (c) 2008-2015, David J Butler                  }
@@ -45,6 +45,7 @@
 {   2010/08/10  4.05  Test cases                                               }
 {   2010/12/01  4.06  RSAPublicKeyAssignBuf                                    }
 {   2015/03/31  4.07  Use RawByteString                                        }
+{   2015/06/08  4.08  RSASignMessage and RSACheckSignature                     }
 {                                                                              }
 {******************************************************************************}
 
@@ -183,6 +184,15 @@ function  RSADecryptStr(
           const EncryptionType: TRSAEncryptionType;
           const PrivateKey: TRSAPrivateKey;
           const Cipher: RawByteString): RawByteString;
+
+function  RSASignMessage(
+          const PrivateKey: TRSAPrivateKey;
+          const MessageHashBuf; const MessageHashBufSize: Integer;
+          var SignatureBuf; const SignatureBufSize: Integer): Integer;
+function  RSACheckSignature(
+          const PublicKey: TRSAPublicKey;
+          const MessageHashBuf; const MessageHashBufSize: Integer;
+          const SignatureBuf; const SignatureBufSize: Integer): Boolean;
 
 
 
@@ -1199,6 +1209,116 @@ begin
   SetLength(Result, N);
 end;
 
+{ RSA Sign Message                                                             }
+procedure RSASignBufToMsg(const KeySize: Integer; var Msg: HugeWord; const Buf; const BufSize: Integer);
+var
+  L, I : Integer;
+  P, Q : PByte;
+begin
+  L := KeySize div 8;
+  if BufSize > L then
+    raise ERSA.Create(SRSAInvalidBufferSize);
+  HugeWordSetSize(Msg, L div HugeWordElementSize);
+  P := Msg.Data;
+  FillChar(P^, L, 0);
+  Inc(P, L - 1);
+  Q := @Buf;
+  for I := 0 to BufSize - 1 do
+    begin
+      P^ := Q^;
+      Dec(P);
+      Inc(Q);
+    end;
+end;
+
+function RSAMsgToSignBuf(const KeySize: Integer; var Buf; const BufSize: Integer; const Msg: HugeWord): Integer;
+var
+  L, N, I, C : Integer;
+  P, Q : PByte;
+begin
+  L := KeySize div 8;
+  if BufSize < L then
+    raise ERSA.Create(SRSAInvalidBufferSize);
+  N := Msg.Used * HugeWordElementSize;
+  P := Msg.Data;
+  Inc(P, N - 1);
+  Q := @Buf;
+  C := MinInt(N, L);
+  for I := 0 to C - 1 do
+    begin
+      Q^ := P^;
+      Dec(P);
+      Inc(Q);
+    end;
+  Result := C;
+end;
+
+function RSASignMessage(
+         const PrivateKey: TRSAPrivateKey;
+         const MessageHashBuf; const MessageHashBufSize: Integer;
+         var SignatureBuf; const SignatureBufSize: Integer): Integer;
+var
+  CipherMsg, EncodedMsg : HugeWord;
+  L : Integer;
+begin
+  // validate
+  if (PrivateKey.KeySize <= 0) or
+     (PrivateKey.KeySize mod HugeWordElementBits <> 0) then
+    raise ERSA.Create(SRSAInvalidKeySize);
+  L := PrivateKey.KeySize div 8;
+  if SignatureBufSize < L then
+    raise ERSA.Create(SRSAInvalidBufferSize);
+  // sign
+  HugeWordInit(CipherMsg);
+  HugeWordInit(EncodedMsg);
+  try
+    RSASignBufToMsg(PrivateKey.KeySize, CipherMsg, MessageHashBuf, MessageHashBufSize);
+    HugeWordPowerAndMod(EncodedMsg, CipherMsg, PrivateKey.Exponent, PrivateKey.Modulus);
+    RSAMsgToSignBuf(PrivateKey.KeySize, SignatureBuf, SignatureBufSize, EncodedMsg);
+  finally
+    SecureHugeWordFinalise(EncodedMsg);
+    SecureHugeWordFinalise(CipherMsg);
+  end;
+  Result := L;
+end;
+
+function RSACheckSignature(
+         const PublicKey: TRSAPublicKey;
+         const MessageHashBuf; const MessageHashBufSize: Integer;
+         const SignatureBuf; const SignatureBufSize: Integer): Boolean;
+var
+  L, C : Integer;
+  HashBuf : Pointer;
+  HashBufSize : Integer;
+  EncodedMsg, CipherMsg : HugeWord;
+begin
+  // validate
+  if (PublicKey.KeySize <= 0) or
+     (PublicKey.KeySize mod HugeWordElementBits <> 0) then
+    raise ERSA.Create(SRSAInvalidKeySize);
+  L := PublicKey.KeySize div 8;
+  if SignatureBufSize < L then
+    raise ERSA.Create(SRSAInvalidBufferSize);
+  // check signature
+  HashBufSize := L;
+  GetMem(HashBuf, HashBufSize);
+  try
+    HugeWordInit(EncodedMsg);
+    HugeWordInit(CipherMsg);
+    try
+      RSASignBufToMsg(PublicKey.KeySize, CipherMsg, SignatureBuf, SignatureBufSize);
+      HugeWordPowerAndMod(EncodedMsg, CipherMsg, PublicKey.Exponent, PublicKey.Modulus);
+      C := RSAMsgToSignBuf(PublicKey.KeySize, HashBuf^, HashBufSize, EncodedMsg);
+    finally
+      SecureHugeWordFinalise(CipherMsg);
+      SecureHugeWordFinalise(EncodedMsg);
+    end;
+    Result := CompareMem(HashBuf^, MessageHashBuf, MinInt(C, MessageHashBufSize));
+  finally
+    FreeMem(HashBuf);
+  end;
+end;
+
 
 
 {                                                                              }
@@ -1349,6 +1469,38 @@ var Pri : TRSAPrivateKey;
     TestStr(rsaetOAEP, '12345678901234567890123456789012345678901234567890');
   end;
 
+  procedure TestSign;
+  var Msg : RawByteString;
+      Hash : T256BitDigest;
+      Sign : RawByteString;
+      L : Integer;
+  begin
+    RSAPrivateKeyAssignHex(Pri,
+        1024,
+        'FED6F2848D95AFACE2354A771792D30E57B0C964D33BD700A53B92FCE0EFC7ADE2DEBC947FE762BD' +
+        '07F5C803ACB2CC603796E2D12684C1F827B0544575D1EE7E93500F2011A853EBBFECA78781D29D6D' +
+        '46B347FE76F209C0F4B9F1D457843B432CEA8060369748D858222F773758BAB16301345B02AEC17B' +
+        '2C09E7CE9D37F4C5',
+        '89DCC2AA0EE65179578EB8D020829F86FCCD78C600B838A1F2C17DCD2BEACBBD382483245AE55437' +
+        '2B1D3DAD2F3A32F242607027F18C945AA92DED08FEAA293860221F0838132036F833B2203EDA26C1' +
+        '5C90664A5627E3C6B1B4EF621FE34D239AD144F28C4891BF0354FE1D5C2FBA62B3F9A4793B835B5B' +
+        '6A1A3EE0AF995E69');
+    RSAPublicKeyAssignHex(Pub,
+        1024,
+        'FED6F2848D95AFACE2354A771792D30E57B0C964D33BD700A53B92FCE0EFC7ADE2DEBC947FE762BD' +
+        '07F5C803ACB2CC603796E2D12684C1F827B0544575D1EE7E93500F2011A853EBBFECA78781D29D6D' +
+        '46B347FE76F209C0F4B9F1D457843B432CEA8060369748D858222F773758BAB16301345B02AEC17B' +
+        '2C09E7CE9D37F4C5',
+        '00010001');
+
+    Msg := 'Test message 123';
+    Hash := CalcSHA256(Msg);
+    SetLength(Sign, 128);
+    L := RSASignMessage(Pri, Hash, SizeOf(Hash), Sign[1], Length(Sign));
+    Assert(L = 128);
+    Assert(RSACheckSignature(Pub, Hash, SizeOf(Hash), Sign[1], L));
+  end;
+
 begin
   RSAPrivateKeyInit(Pri);
   RSAPublicKeyInit(Pub);
@@ -1357,6 +1509,7 @@ begin
   TestEncrypt;
   TestCase1;
   TestCase2;
+  TestSign;
 
   RSAPublicKeyFinalise(Pub);
   RSAPrivateKeyFinalise(Pri);
@@ -1366,12 +1519,14 @@ end;
 {$IFDEF OS_WIN}
 {$IFDEF CIPHER_PROFILE}
 procedure Profile;
-const KeySize = 256;
+const KeySize = 1024 + 128;
 var T : LongWord;
     Pri : TRSAPrivateKey;
     Pub : TRSAPublicKey;
     Pln, Enc, Dec : RawByteString;
 begin
+  SetRandomSeed($12345679);
+
   RSAPrivateKeyInit(Pri);
   RSAPublicKeyInit(Pub);
 
@@ -1395,6 +1550,7 @@ begin
   T := GetTickCount - T;
   Writeln('EncryptStr: ', T / 1000.0:0:3, 'ms');
 
+  // FAILS, keys generated no good!??
   T := GetTickCount;
   Dec := RSADecryptStr(rsaetPKCS1, Pri, Enc);
   Assert(Dec = Pln);

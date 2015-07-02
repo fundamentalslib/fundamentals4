@@ -476,7 +476,7 @@ type
 { Components                                                                   }
 {                                                                              }
 type
-  TFnd4TCPServer = class(TF4TCPServer)
+  TfclTCPServer = class(TF4TCPServer)
   published
     property  Active;
     property  AddressFamily;

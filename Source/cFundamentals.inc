@@ -111,13 +111,12 @@
 {   SupportRawByteString       - Compiler supports RawByteString type.         }
 {   SupportEnumValue           - Compiler supports enumeration values.         }
 {                                                                              }
-{   CharIsAnsi        - Default Char type is AnsiChar (1 byte).                }
-{   CharIsWide        - Default Char type is WideChar (2 bytes).               }
-{   StringIsAnsi      - Default String type is AnsiString.                     }
-{   StringIsUnicode   - Default String type is UnicodeString.                  }
-{   ExtendedIsDouble  - Extended type is Double.                               }
-{   StringIsZeroBased - String types are zero based.                           }
-{   TBytesDeclared    - System defines TBytes type.                            }
+{   CharIsAnsi          - Default Char type is AnsiChar (1 byte).              }
+{   CharIsWide          - Default Char type is WideChar (2 bytes).             }
+{   StringIsAnsi        - Default String type is AnsiString.                   }
+{   StringIsUnicode     - Default String type is UnicodeString.                }
+{   ExtendedIsDouble    - Extended type is Double.                             }
+{   TBytesDeclared      - System defines TBytes type.                          }
 {                                                                              }
 {   UseInline         - SupportInline and not PurePascal.                      }
 {                                                                              }
@@ -886,7 +885,7 @@
 
 {$IFDEF DELPHIXE4_UP}
   {$IFDEF IOS}
-    {$DEFINE StringIsZeroBased}
+    {$ZEROBASEDSTRINGS OFF}
   {$ENDIF}
   {$IFDEF ANDROID}
     {$UNDEF SupportAnsiChar}

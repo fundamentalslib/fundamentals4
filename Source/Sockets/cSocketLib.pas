@@ -468,7 +468,9 @@ function  IsIP4AddressA(const Address: RawByteString; out NetAddress: TIP4Addr):
 function  IsIP6AddressA(const Address: RawByteString; out NetAddress: TIP6Addr): Boolean;
 
 function  IsIP4AddressU(const Address: UnicodeString; out NetAddress: TIP4Addr): Boolean;
+{$IFDEF SOCKETLIB_WIN}
 function  IsIP6AddressU(const Address: UnicodeString; out NetAddress: TIP6Addr): Boolean;
+{$ENDIF}
 
 function  IsIP4Address(const Address: String; out NetAddress: TIP4Addr): Boolean;
 function  IsIP6Address(const Address: String; out NetAddress: TIP6Addr): Boolean;
@@ -1727,6 +1729,7 @@ begin
   Result := IsIP4AddressA(UTF8Encode(Address), NetAddress);
 end;
 
+{$IFDEF SOCKETLIB_WIN}
 function IsIP6AddressU(const Address: UnicodeString; out NetAddress: TIP6Addr): Boolean;
 var Hints    : TAddrInfoW;
     AddrInfo : PAddrInfoW;
@@ -1788,6 +1791,7 @@ begin
       Result := False;
     end;
 end;
+{$ENDIF}
 
 function IsIP4Address(const Address: String; out NetAddress: TIP4Addr): Boolean;
 begin
@@ -2216,7 +2220,7 @@ begin
   {$IFDEF StringIsUnicode}
   Result := String(GuessInternetIP4StrA);
   {$ELSE}
-  Result := GuessInternetIPStrA;
+  Result := GuessInternetIP4StrA;
   {$ENDIF}
 end;
 

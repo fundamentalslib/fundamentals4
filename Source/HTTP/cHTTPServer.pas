@@ -434,7 +434,7 @@ type
 { Component                                                                    }
 {                                                                              }
 type
-  TFnd4HTTPServer = class(TF4HTTPServer)
+  TfclHTTPServer = class(TF4HTTPServer)
   published
     property  OnLog;
 
@@ -1647,4 +1647,5 @@ end;
 
 
 end.
+
 

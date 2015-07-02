@@ -1359,8 +1359,8 @@ begin
       Result := 0;
       exit;
     end;
-  I := MaxI(Idx, 0);
-  J := MinI(Count, L - I);
+  I := MaxInt(Idx, 0);
+  J := MinInt(Count, L - I);
   M := L - J - I;
   {$IFDEF CLR}
   for F := 0 to M - 1 do
@@ -1382,8 +1382,8 @@ begin
       Result := 0;
       exit;
     end;
-  I := MaxI(Idx, 0);
-  J := MinI(Count, L - I);
+  I := MaxInt(Idx, 0);
+  J := MinInt(Count, L - I);
   M := L - J - I;
   {$IFDEF CLR}
   for F := 0 to M - 1 do
@@ -1405,8 +1405,8 @@ begin
       Result := 0;
       exit;
     end;
-  I := MaxI(Idx, 0);
-  J := MinI(Count, L - I);
+  I := MaxInt(Idx, 0);
+  J := MinInt(Count, L - I);
   M := L - J - I;
   {$IFDEF CLR}
   for F := 0 to M - 1 do
@@ -1428,8 +1428,8 @@ begin
       Result := 0;
       exit;
     end;
-  I := MaxI(Idx, 0);
-  J := MinI(Count, L - I);
+  I := MaxInt(Idx, 0);
+  J := MinInt(Count, L - I);
   M := L - J - I;
   {$IFDEF CLR}
   for F := 0 to M - 1 do
@@ -1451,8 +1451,8 @@ begin
       Result := 0;
       exit;
     end;
-  I := MaxI(Idx, 0);
-  J := MinI(Count, L - I);
+  I := MaxInt(Idx, 0);
+  J := MinInt(Count, L - I);
   M := L - J - I;
   {$IFDEF CLR}
   for F := 0 to M - 1 do
@@ -1474,8 +1474,8 @@ begin
       Result := 0;
       exit;
     end;
-  I := MaxI(Idx, 0);
-  J := MinI(Count, L - I);
+  I := MaxInt(Idx, 0);
+  J := MinInt(Count, L - I);
   M := L - J - I;
   {$IFDEF CLR}
   for F := 0 to M - 1 do
@@ -1497,8 +1497,8 @@ begin
       Result := 0;
       exit;
     end;
-  I := MaxI(Idx, 0);
-  J := MinI(Count, L - I);
+  I := MaxInt(Idx, 0);
+  J := MinInt(Count, L - I);
   M := L - J - I;
   {$IFDEF CLR}
   for F := 0 to M - 1 do
@@ -1520,8 +1520,8 @@ begin
       Result := 0;
       exit;
     end;
-  I := MaxI(Idx, 0);
-  J := MinI(Count, L - I);
+  I := MaxInt(Idx, 0);
+  J := MinInt(Count, L - I);
   M := L - J - I;
   {$IFDEF CLR}
   for F := 0 to M - 1 do
@@ -1543,8 +1543,8 @@ begin
       Result := 0;
       exit;
     end;
-  I := MaxI(Idx, 0);
-  J := MinI(Count, L - I);
+  I := MaxInt(Idx, 0);
+  J := MinInt(Count, L - I);
   M := L - J - I;
   {$IFDEF CLR}
   for F := 0 to M - 1 do
@@ -1566,8 +1566,8 @@ begin
       Result := 0;
       exit;
     end;
-  I := MaxI(Idx, 0);
-  J := MinI(Count, L - I);
+  I := MaxInt(Idx, 0);
+  J := MinInt(Count, L - I);
   M := L - J - I;
   {$IFDEF CLR}
   for F := 0 to M - 1 do
@@ -1589,8 +1589,8 @@ begin
       Result := 0;
       exit;
     end;
-  I := MaxI(Idx, 0);
-  J := MinI(Count, L - I);
+  I := MaxInt(Idx, 0);
+  J := MinInt(Count, L - I);
   M := L - J - I;
   {$IFDEF CLR}
   for F := 0 to M - 1 do
@@ -1612,8 +1612,8 @@ begin
       Result := 0;
       exit;
     end;
-  I := MaxI(Idx, 0);
-  J := MinI(Count, L - I);
+  I := MaxInt(Idx, 0);
+  J := MinInt(Count, L - I);
   M := L - J - I;
   {$IFDEF CLR}
   for F := 0 to M - 1 do
@@ -1636,8 +1636,8 @@ begin
       Result := 0;
       exit;
     end;
-  I := MaxI(Idx, 0);
-  J := MinI(Count, L - I);
+  I := MaxInt(Idx, 0);
+  J := MinInt(Count, L - I);
   M := L - J - I;
   {$IFDEF CLR}
   for F := 0 to M - 1 do
@@ -1659,8 +1659,8 @@ begin
       Result := 0;
       exit;
     end;
-  I := MaxI(Idx, 0);
-  J := MinI(Count, L - I);
+  I := MaxInt(Idx, 0);
+  J := MinInt(Count, L - I);
   M := L - J - I;
   {$IFDEF CLR}
   for F := 0 to M - 1 do
@@ -1685,8 +1685,8 @@ begin
       Result := 0;
       exit;
     end;
-  I := MaxI(Idx, 0);
-  J := MinI(Count, L - I);
+  I := MaxInt(Idx, 0);
+  J := MinInt(Count, L - I);
   if FreeObjects then
     for K := I to I + J - 1 do
       FreeAndNil(V[K]);
@@ -1706,8 +1706,8 @@ begin
       Result := 0;
       exit;
     end;
-  I := MaxI(Idx, 0);
-  J := MinI(Count, L - I);
+  I := MaxInt(Idx, 0);
+  J := MinInt(Count, L - I);
   for K := I to L - J - 1 do
     V[K] := V[K + J];
   SetLength(V, L - J);
@@ -1723,8 +1723,8 @@ begin
       Result := 0;
       exit;
     end;
-  I := MaxI(Idx, 0);
-  J := MinI(Count, L - I);
+  I := MaxInt(Idx, 0);
+  J := MinInt(Count, L - I);
   for K := I to L - J - 1 do
     V[K] := V[K + J];
   SetLength(V, L - J);
@@ -1740,8 +1740,8 @@ begin
       Result := 0;
       exit;
     end;
-  I := MaxI(Idx, 0);
-  J := MinI(Count, L - I);
+  I := MaxInt(Idx, 0);
+  J := MinInt(Count, L - I);
   for K := I to L - J - 1 do
     V[K] := V[K + J];
   SetLength(V, L - J);
@@ -1757,8 +1757,8 @@ begin
       Result := 0;
       exit;
     end;
-  I := MaxI(Idx, 0);
-  J := MinI(Count, L - I);
+  I := MaxInt(Idx, 0);
+  J := MinInt(Count, L - I);
   for K := I to L - J - 1 do
     V[K] := V[K + J];
   SetLength(V, L - J);
@@ -1774,8 +1774,8 @@ begin
       Result := 0;
       exit;
     end;
-  I := MaxI(Idx, 0);
-  J := MinI(Count, L - I);
+  I := MaxInt(Idx, 0);
+  J := MinInt(Count, L - I);
   for K := I to L - J - 1 do
     V[K] := V[K + J];
   SetLength(V, L - J);
@@ -1814,8 +1814,8 @@ begin
       Result := 0;
       exit;
     end;
-  I := MaxI(Idx, 0);
-  J := MinI(Count, L - I);
+  I := MaxInt(Idx, 0);
+  J := MinInt(Count, L - I);
   for K := I to I + J - 1 do
     V[K] := nil;
   M := L - J - I;
@@ -3995,7 +3995,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Length(V) - 1;
@@ -4028,7 +4028,7 @@ begin
     end
   else
     begin // linear search
-      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
         if V[I] = Find then
           begin
             Result := I;
@@ -4045,7 +4045,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Length(V) - 1;
@@ -4078,7 +4078,7 @@ begin
     end
   else
     begin // linear search
-      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
         if V[I] = Find then
           begin
             Result := I;
@@ -4095,7 +4095,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Length(V) - 1;
@@ -4128,7 +4128,7 @@ begin
     end
   else
     begin // linear search
-      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
         if V[I] = Find then
           begin
             Result := I;
@@ -4145,7 +4145,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Length(V) - 1;
@@ -4178,7 +4178,7 @@ begin
     end
   else
     begin // linear search
-      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
         if V[I] = Find then
           begin
             Result := I;
@@ -4195,7 +4195,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Length(V) - 1;
@@ -4228,7 +4228,7 @@ begin
     end
   else
     begin // linear search
-      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
         if V[I] = Find then
           begin
             Result := I;
@@ -4245,7 +4245,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Length(V) - 1;
@@ -4278,7 +4278,7 @@ begin
     end
   else
     begin // linear search
-      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
         if V[I] = Find then
           begin
             Result := I;
@@ -4295,7 +4295,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Length(V) - 1;
@@ -4328,7 +4328,7 @@ begin
     end
   else
     begin // linear search
-      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
         if V[I] = Find then
           begin
             Result := I;
@@ -4345,7 +4345,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Length(V) - 1;
@@ -4378,7 +4378,7 @@ begin
     end
   else
     begin // linear search
-      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
         if V[I] = Find then
           begin
             Result := I;
@@ -4395,7 +4395,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Length(V) - 1;
@@ -4428,7 +4428,7 @@ begin
     end
   else
     begin // linear search
-      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
         if V[I] = Find then
           begin
             Result := I;
@@ -4445,7 +4445,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Length(V) - 1;
@@ -4478,7 +4478,7 @@ begin
     end
   else
     begin // linear search
-      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
         if V[I] = Find then
           begin
             Result := I;
@@ -4495,7 +4495,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Length(V) - 1;
@@ -4528,7 +4528,7 @@ begin
     end
   else
     begin // linear search
-      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
         if V[I] = Find then
           begin
             Result := I;
@@ -4545,7 +4545,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Length(V) - 1;
@@ -4578,7 +4578,7 @@ begin
     end
   else
     begin // linear search
-      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
         if V[I] = Find then
           begin
             Result := I;
@@ -4595,7 +4595,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Length(V) - 1;
@@ -4628,7 +4628,7 @@ begin
     end
   else
     begin // linear search
-      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
         if V[I] = Find then
           begin
             Result := I;
@@ -4645,7 +4645,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Length(V) - 1;
@@ -4678,7 +4678,7 @@ begin
     end
   else
     begin // linear search
-      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
         if V[I] = Find then
           begin
             Result := I;
@@ -4695,7 +4695,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Length(V) - 1;
@@ -4728,7 +4728,7 @@ begin
     end
   else
     begin // linear search
-      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
         if V[I] = Find then
           begin
             Result := I;
@@ -4745,7 +4745,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Length(V) - 1;
@@ -4778,7 +4778,7 @@ begin
     end
   else
     begin // linear search
-      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
         if V[I] = Find then
           begin
             Result := I;
@@ -4795,7 +4795,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Length(V) - 1;
@@ -4828,7 +4828,7 @@ begin
     end
   else
     begin // linear search
-      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
         if V[I] = Find then
           begin
             Result := I;
@@ -4845,7 +4845,7 @@ var I, L, H : Integer;
 begin
   if IsSortedAscending then // binary search
     begin
-      if MaxI(PrevPos + 1, 0) = 0 then // find first
+      if MaxInt(PrevPos + 1, 0) = 0 then // find first
         begin
           L := 0;
           H := Length(V) - 1;
@@ -4878,7 +4878,7 @@ begin
     end
   else
     begin // linear search
-      for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+      for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
         if V[I] = Find then
           begin
             Result := I;
@@ -4891,7 +4891,7 @@ end;
 function DynArrayPosNext(const Find: TObject; const V: ObjectArray; const PrevPos: Integer): Integer;
 var I : Integer;
 begin
-  for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+  for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
     if V[I] = Find then
       begin
         Result := I;
@@ -4903,7 +4903,7 @@ end;
 function DynArrayPosNext(const ClassType: TClass; const V: ObjectArray; const PrevPos: Integer): Integer;
 var I : Integer;
 begin
-  for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+  for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
     if V[I] is ClassType then
       begin
         Result := I;
@@ -4916,7 +4916,7 @@ function DynArrayPosNext(const ClassName: String; const V: ObjectArray; const Pr
 var I : Integer;
     T : TObject;
 begin
-  for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+  for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
     begin
       T := V[I];
       if Assigned(T) and (T.ClassName = ClassName) then
@@ -4932,7 +4932,7 @@ end;
 function DynArrayPosNext(const Find: Pointer; const V: PointerArray; const PrevPos: Integer): Integer;
 var I : Integer;
 begin
-  for I := MaxI(PrevPos + 1, 0) to Length(V) - 1 do
+  for I := MaxInt(PrevPos + 1, 0) to Length(V) - 1 do
     if V[I] = Find then
       begin
         Result := I;

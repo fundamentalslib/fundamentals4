@@ -781,7 +781,6 @@ begin
       '6r6dC2qqq+DVm9Nlm/S9Gab9YSIA0g5MFg5WLwu1KNwuOODE4Le/91c=' +
       '-----END RSA PRIVATE KEY-----';
 
-
     {$ENDIF}
     Assert(S.State = ssInit);
     Assert(not S.Active);
@@ -950,7 +949,7 @@ end;
 
 procedure SelfTestClientServer_StopStart;
 const
-  TestClientCount = 3;
+  TestClientCount = 10;
   TestRepeatCount = 3;
 var C : array of TF4TCPClient;
     S : TF4TCPServer;
@@ -1053,26 +1052,18 @@ end;
 
 procedure SelfTest_ClientServer_A;
 begin
-  Writeln('{STCS1}');
   SelfTestClientServer(tmSimple, 1,  True);
-  Writeln('{STCS2}');
   SelfTestClientServer(tmSimple, 2,  True);
-  Writeln('{STCS5}');
   SelfTestClientServer(tmSimple, 5,  True);
   {$IFNDEF LINUX} // FAILS
-  Writeln('{STCS30}');
   SelfTestClientServer(tmSimple, 30, False);
   {$ENDIF}
-  Writeln('{STCS.SS}');
   SelfTestClientServer_StopStart;
   {$IFDEF TCPCLIENTSERVER_SELFTEST_TLS}
-  LogPrint('{STCS.SSL}');
   // SelfTestClientServer(tmTLS, 1, True, [ctoDontUseTLS10, ctoDontUseTLS11, ctoDontUseTLS12]); // SSL 3.0
-  LogPrint('{STCS.TLS}');
   SelfTestClientServer(tmTLS, 1, True, [ctoDontUseSSL3,  ctoDontUseTLS10, ctoDontUseTLS11]); // TLS 1.2
   SelfTestClientServer(tmTLS, 1, True, [ctoDontUseSSL3,  ctoDontUseTLS10, ctoDontUseTLS12]); // TLS 1.1
   SelfTestClientServer(tmTLS, 1, True, [ctoDontUseSSL3,  ctoDontUseTLS11, ctoDontUseTLS12]); // TLS 1.0
-  LogPrint('{STCSFin}');
   {$ENDIF}
 end;
 {$ENDIF}
@@ -1215,23 +1206,17 @@ begin
   SelfTest_ClientServer_Block;
   SelfTest_ClientServer_RetryConnect;
 
-  LogPrint('{ST1}');
   SelfTest_Buffer;
   {$IFDEF TCPSERVER_SELFTEST}
-  LogPrint('{ST2}');
   SelfTest_Server;
   {$ENDIF}
   {$IFDEF TCPCLIENT_SELFTEST}
-  LogPrint('{ST3}');
   SelfTest_Client;
   {$ENDIF}
   {$IFDEF TCPCLIENTSERVER_SELFTEST}
-  LogPrint('{ST4}');
   SelfTest_ClientServer_A;
-  LogPrint('{ST5}');
   SelfTest_ClientServer_Block;
   {$ENDIF}
-  LogPrint('{STFin}');
 end;
 {$ENDIF}
 
