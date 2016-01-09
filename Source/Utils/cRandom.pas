@@ -411,11 +411,13 @@ begin
   S := S xor A;
   S := S xor (Int64(B) shl 32);
   { System times }
+  {$IFDEF DELPHI2010_UP}
   GetSystemTimes(T1, T2, T3);
   A := T1.dwLowDateTime  xor T2.dwLowDateTime  xor T3.dwLowDateTime;
   B := T1.dwHighDateTime xor T2.dwHighDateTime xor T3.dwHighDateTime;
   S := S xor A;
   S := S xor (Int64(B) shl 32);
+  {$ENDIF}
   Result := S;
 end;
 {$ENDIF}
@@ -723,13 +725,14 @@ begin
 end;
 
 function mwcRandom32: LongWord;
-var S, T : Int64;
+var S, T : UInt64;
 begin
   if not mwcSeeded then
     mwcInitSeed(RandomSeed32);
   S := 1111111464;
   {$IFOPT Q+}{$DEFINE QOn}{$Q-}{$ELSE}{$UNDEF QOn}{$ENDIF}
-  T := Int64(mwcX) + Int64(mwcY);
+  T := mwcX;
+  T := T + mwcY;
   S := S * T;
   S := S + mwcC;
   {$IFDEF QOn}{$Q+}{$ENDIF}

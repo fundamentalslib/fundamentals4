@@ -1694,6 +1694,15 @@ begin
     end;
 end;
 
+{   Pre:   B is in range                                                       }
+function HugeWordIsBitSet_IR(const A: HugeWord; const B: Integer): Boolean; {$IFDEF UseInline}inline;{$ENDIF}
+var P : PLongWord;
+begin
+  P := A.Data;
+  Inc(P, B shr 5);
+  Result := (P^ and LongWord(1 shl (B and $1F)) <> 0);
+end;
+
 procedure HugeWordSetBit(var A: HugeWord; const B: Integer);
 var I, L : Integer;
     P : PLongWord;
@@ -1759,14 +1768,12 @@ begin
     begin
       V := P^;
       if V <> 0 then
-        begin
-          for J := 0 to HugeWordElementBits - 1 do
-            if V and BitMaskTable32[J] <> 0 then
-              begin
-                Result := I * HugeWordElementBits + J;
-                exit;
-              end;
-        end;
+        for J := 0 to HugeWordElementBits - 1 do
+          if V and BitMaskTable32[J] <> 0 then
+            begin
+              Result := I * HugeWordElementBits + J;
+              exit;
+            end;
       Inc(P);
     end;
   Result := -1;
@@ -1784,14 +1791,12 @@ begin
     begin
       V := P^;
       if V <> 0 then
-        begin
-          for J := HugeWordElementBits - 1 downto 0 do
-            if V and BitMaskTable32[J] <> 0 then
-              begin
-                Result := I * HugeWordElementBits + J;
-                exit;
-              end;
-        end;
+        for J := HugeWordElementBits - 1 downto 0 do
+          if V and BitMaskTable32[J] <> 0 then
+            begin
+              Result := I * HugeWordElementBits + J;
+              exit;
+            end;
       Dec(P);
     end;
   Result := -1;
@@ -1813,14 +1818,12 @@ begin
     begin
       V := P^;
       if V <> $FFFFFFFF then
-        begin
-          for J := 0 to HugeWordElementBits - 1 do
-            if V and BitMaskTable32[J] = 0 then
-              begin
-                Result := I * HugeWordElementBits + J;
-                exit;
-              end;
-        end;
+        for J := 0 to HugeWordElementBits - 1 do
+          if V and BitMaskTable32[J] = 0 then
+            begin
+              Result := I * HugeWordElementBits + J;
+              exit;
+            end;
       Inc(P);
     end;
   Result := A.Used * HugeWordElementBits;
@@ -2868,7 +2871,7 @@ begin
     C := HugeWordSetBitScanReverse(A);
     for I := 0 to C do
       begin
-        if HugeWordIsBitSet(A, I) then
+        if HugeWordIsBitSet_IR(A, I) then
           HugeWordAdd(Res, D);
         HugeWordShl1(D);
       end;

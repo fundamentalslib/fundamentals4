@@ -1550,7 +1550,6 @@ begin
   T := GetTickCount - T;
   Writeln('EncryptStr: ', T / 1000.0:0:3, 'ms');
 
-  // FAILS, keys generated no good!??
   T := GetTickCount;
   Dec := RSADecryptStr(rsaetPKCS1, Pri, Enc);
   Assert(Dec = Pln);

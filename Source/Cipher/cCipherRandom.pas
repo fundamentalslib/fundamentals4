@@ -100,10 +100,10 @@ begin
     // initialise 512 bits with multiple Pseudo Random Numbers Generators (PRNG)
     // and Pseudo Random System State (PRSS)
     for I := 0 to RandomSeedDataLen - 1 do
-      R512[I] := RandomUniform32 xor
-                 mwcRandom32 xor
-                 urnRandom32 xor
-                 RandomSeed32;
+      R512[I] := RandomUniform32;
+    R512[0] := R512[0] xor RandomSeed32;
+    for I := 0 to RandomSeedDataLen - 1 do
+      R512[I] := R512[I] xor urnRandom32;
     // hash 512 bits using SHA512
     H512 := CalcSHA512(R512, SizeOf(R512));
     // hash 512 bits using SHA256

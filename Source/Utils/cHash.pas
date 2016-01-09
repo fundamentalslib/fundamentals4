@@ -109,7 +109,7 @@
 
 {$IFDEF FREEPASCAL}
   {$WARNINGS OFF}{$HINTS OFF}
-  {$Q-,R-} // bug in fpc 2.4.0rc1
+  {$Q-,R-} // bug in fpc
 {$ENDIF}
 
 {$IFDEF DEBUG}

@@ -1376,7 +1376,9 @@ begin
     System.vtCurrency      : Result := TJSONFloat.Create(Value.VCurrency^);
     System.vtWideString    : Result := TJSONString.Create(ToStringW(WideString(Value.VWideString)));
     System.vtInt64         : Result := TJSONInteger.Create(Value.VInt64^);
+    {$IFDEF SupportUnicodeString}
     System.vtUnicodeString : Result := TJSONString.Create(UnicodeString(Value.VUnicodeString));
+    {$ENDIF}
   else
     raise EJSONValue.Create('VarRec value type not supported');
   end;

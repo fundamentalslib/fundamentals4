@@ -125,8 +125,6 @@
 {   FreePascal 2.6.0 Win32              4.50  2012/08/30                       }
 {   FreePascal 2.6.2 Linux x64          4.55  2015/04/01                       }
 {                                                                              }
-{ Todo:                                                                        }
-{ - F5 cSystem/cSysUtils.                                                      }
 {******************************************************************************}
 
 {$INCLUDE ..\cFundamentals.inc}
@@ -145,18 +143,6 @@
 unit cUtils;
 
 interface
-
-
-
-{                                                                              }
-{ Fundamentals Library constants                                               }
-{                                                                              }
-const
-  LibraryVersion      = '4.00';
-  LibraryMajorVersion = 4;
-  LibraryMinorVersion = 0;
-  LibraryName         = 'Fundamentals ' + LibraryVersion;
-  LibraryCopyright    = 'Copyright (c) 1998-2015 David J Butler';
 
 
 
@@ -200,6 +186,9 @@ type
   {$IFDEF FREEPASCAL}
   PNativeInt  = ^NativeInt;
   {$ENDIF}
+  {$IFDEF DELPHI2010}
+  PNativeInt  = ^NativeInt;
+  {$ENDIF}
 
   {$IFNDEF SupportNativeUInt}
   {$IFDEF CPU_X86_64}
@@ -210,6 +199,9 @@ type
   PNativeUInt = ^NativeUInt;
   {$ENDIF}
   {$IFDEF FREEPASCAL}
+  PNativeUInt = ^NativeUInt;
+  {$ENDIF}
+  {$IFDEF DELPHI2010}
   PNativeUInt = ^NativeUInt;
   {$ENDIF}
 
@@ -893,7 +885,7 @@ function  IsAsciiCharA(const C: AnsiChar): Boolean; {$IFDEF UseInline}inline;{$E
 function  IsAsciiCharW(const C: WideChar): Boolean; {$IFDEF UseInline}inline;{$ENDIF}
 function  IsAsciiChar(const C: Char): Boolean;      {$IFDEF UseInline}inline;{$ENDIF}
 
-function  IsAsciiBufB(const S: Pointer; const Len: Integer): Boolean;
+function  IsAsciiBufB(const Buf: Pointer; const Len: Integer): Boolean;
 function  IsAsciiBufW(const Buf: Pointer; const Len: Integer): Boolean;
 
 function  IsAsciiStringA(const S: AnsiString): Boolean;    {$IFDEF UseInline}inline;{$ENDIF}
@@ -2336,11 +2328,11 @@ begin
   Result := Ord(C) <= 127;
 end;
 
-function IsAsciiBufB(const S: Pointer; const Len: Integer): Boolean;
+function IsAsciiBufB(const Buf: Pointer; const Len: Integer): Boolean;
 var I : Integer;
     P : PByte;
 begin
-  P := S;
+  P := Buf;
   for I := 1 to Len do
     if P^ >= $80 then
       begin
@@ -3902,8 +3894,12 @@ end;
 {$ENDIF}
 {$ELSE}
 function ToWideString(const A: String): WideString;
+var L, I : Integer;
 begin
-  Result := WideString(A);
+  L := Length(A);
+  SetLength(Result, L);
+  for I := 1 to L do
+    Result[I] := WideChar(A[I]);
 end;
 {$ENDIF}
 
@@ -9800,7 +9796,7 @@ begin
   Assert(IsAsciiStringA(ToAnsiString('')), 'IsUSASCIIString');
   Assert(IsAsciiStringW(ToWideString('012XYZabc{}_ ')), 'IsUSASCIIWideString');
   W := WideChar(#$0080);
-  Assert(not IsAsciiStringW(ToWideString(W)), 'IsUSASCIIWideString');
+  Assert(not IsAsciiStringW(W), 'IsUSASCIIWideString');
   W := WideChar($2262);
   Assert(not IsAsciiStringW(W), 'IsUSASCIIWideString');
   Assert(IsAsciiStringW(StrEmptyW), 'IsUSASCIIWideString');
